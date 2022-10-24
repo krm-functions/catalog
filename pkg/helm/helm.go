@@ -90,9 +90,15 @@ func PullChart(chart t.HelmChartArgs) (string, string, error) {
 	helmCtxt := NewRunContext()
 	defer helmCtxt.DiscardContext()
 
-	helmCtxt.Run("repo", "add", "tmprepo", chart.Repo)
+	_, err := helmCtxt.Run("repo", "add", "tmprepo", chart.Repo)
+	if err != nil {
+		return "", "", err
+	}
 
-	helmCtxt.Run("repo", "update")
+	_, err = helmCtxt.Run("repo", "update")
+	if err != nil {
+		return "", "", err
+	}
 
 	// Search repo for chart, long listing in yaml format. May include other charts partially matching search
 	helmCtxt.Run("pull", chart.Name, "--repo", chart.Repo, "--version", chart.Version, "--destination", helmCtxt.repoConfigDir)
