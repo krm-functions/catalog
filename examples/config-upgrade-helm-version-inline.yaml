@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: upgrade-helm-version-inline
+data:
+  # Add annotation with information about upgrade options
+  annotateOnUpgradeAvailable: false
+
+  # Add checksum of upgradeable Chart version
+  annotateSumOnUpgradeAvailable: true
+
+  # Perform Helm chart version upgrade when upgrade is available
+  upgradeOnUpgradeAvailable: true
+
+  # Add checksum of current Chart version if not already annotated
+  annotateCurrentSum: true

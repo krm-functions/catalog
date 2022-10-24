@@ -1,0 +1,23 @@
+apiVersion: fn.kpt.dev/v1alpha1
+kind: RenderHelmChart
+metadata:
+  name: render-chart
+  annotations:
+    config.kubernetes.io/local-config: "true"
+helmCharts:
+- chartArgs:
+    name: cert-manager
+    version: v1.9.0
+    repo: https://charts.jetstack.io
+  templateOptions:
+    releaseName: cert-manager
+    namespace: cert-manager
+    values:
+      valuesFile: values-cert-manager.yaml
+- chartArgs:
+    name: external-secrets
+    version: 0.5.7
+    repo: https://charts.external-secrets.io
+  templateOptions:
+    releaseName: external-secrets
+    namespace: external-secrets
