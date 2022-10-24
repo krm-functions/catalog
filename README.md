@@ -43,10 +43,12 @@ for an introduction to `kpt` and KRM functions.
 TL;DR:
 
 ```
-git clone https://github.com/MichaelVL/krm-func-helm-upgrader.git
-cd krm-func-helm-upgrader
+git clone https://github.com/MichaelVL/helm-upgrader.git
+cd helm-upgrader
 
-kpt fn source examples | kpt fn eval - --image ghcr.io/michaelvl/krm-func-helm-upgrader --network --mount type=tmpfs,target=/tmp,rw=true --fn-config examples/config-upgrade-helm-version-inline.yaml | kpt fn sink examples-upgraded
+export VERSION=df9d6cd__linux_amd64  # Choose your arch
+
+kpt fn source examples | kpt fn eval - --image ghcr.io/michaelvl/helm-upgrader:$VERSION --network --mount type=tmpfs,target=/tmp,rw=true --fn-config examples/config-upgrade-helm-version-inline.yaml | kpt fn sink examples-upgraded
 ```
 
 The command above will process the manifests in the `examples` folder, run the
