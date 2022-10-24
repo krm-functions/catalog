@@ -4,6 +4,9 @@ on: [ push, pull_request ]
 
 jobs:
   crossbuild:
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         go-version: [ "1.19" ]
