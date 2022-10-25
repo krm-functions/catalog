@@ -33,6 +33,9 @@ func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) t.Hel
 	search = helm.FilterByChartName(search, chart)
 	versions := helm.ToList(search)
 	new_version, err := semver.Upgrade(versions, upgradeConstraint)
+	if err != nil {
+		panic(err)
+	}
 
 	new := chart
 	new.Version = new_version
@@ -52,7 +55,10 @@ func handleNewVersion(new t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.
 		}
 		if Config.UpgradeOnUpgradeAvailable {
 			upgradesDone++
-			kubeObject.SetNestedField(new.Version, "spec", "source", "targetRevision")
+			err := kubeObject.SetNestedField(new.Version, "spec", "source", "targetRevision")
+			if err != nil {
+				panic(err)
+			}
 		}
 		if Config.AnnotateSumOnUpgradeAvailable {
 			_, chartSum, _ := helm.PullChart(curr)

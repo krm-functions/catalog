@@ -101,7 +101,10 @@ func PullChart(chart t.HelmChartArgs) (string, string, error) {
 	}
 
 	// Search repo for chart, long listing in yaml format. May include other charts partially matching search
-	helmCtxt.Run("pull", chart.Name, "--repo", chart.Repo, "--version", chart.Version, "--destination", helmCtxt.repoConfigDir)
+	_, err = helmCtxt.Run("pull", chart.Name, "--repo", chart.Repo, "--version", chart.Version, "--destination", helmCtxt.repoConfigDir)
+	if err != nil {
+		return "", "", err
+	}
 
 	chartShaSum := helmCtxt.ChartFileSha256(chart) // TODO: Compare with .prov file content
 	return chartTarballName(chart), chartShaSum, nil
