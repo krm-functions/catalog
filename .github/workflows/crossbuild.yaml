@@ -27,4 +27,4 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Push containers
-      run: make all-push
+      run: make manifest-list
