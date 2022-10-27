@@ -46,9 +46,12 @@ TL;DR:
 git clone https://github.com/MichaelVL/helm-upgrader.git
 cd helm-upgrader
 
-export VERSION=df9d6cd__linux_amd64  # Choose your arch
+export VERSION=5acbb87
 
-kpt fn source examples | kpt fn eval - --image ghcr.io/michaelvl/helm-upgrader:$VERSION --network --mount type=tmpfs,target=/tmp,rw=true --fn-config examples/config-upgrade-helm-version-inline.yaml | kpt fn sink examples-upgraded
+kpt fn source examples | \
+  kpt fn eval - --image ghcr.io/michaelvl/helm-upgrader:$VERSION \
+    --network --mount type=tmpfs,target=/tmp,rw=true --fn-config examples/config-upgrade-helm-version-inline.yaml | \
+  kpt fn sink examples-upgraded
 ```
 
 The command above will process the manifests in the `examples` folder, run the
