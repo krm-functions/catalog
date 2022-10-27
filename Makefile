@@ -267,8 +267,6 @@ manifest-list: all-push
 	for bin in $(BINS); do                                    \
 	    platforms=$$(echo $(ALL_PLATFORMS) | sed 's/ /,/g');  \
 	    bin/tools/manifest-tool                               \
-	        --username=oauth2accesstoken                      \
-	        --password=$$(gcloud auth print-access-token)     \
 	        push from-args                                    \
 	        --platforms "$$platforms"                         \
 	        --template $(REGISTRY)/$$bin:$(VERSION)__OS_ARCH  \
