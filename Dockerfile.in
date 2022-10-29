@@ -47,6 +47,7 @@ ENV HELM_CACHE_HOME /tmp/helm/cache
 ARG HASH_BINARY=0
 
 # Add the platform-specific binary.
+RUN apk add skopeo
 COPY bin/{ARG_OS}_{ARG_ARCH}/{ARG_BIN} /{ARG_BIN}
 
 # This would be nicer as `nobody:nobody` but distroless has no such entries.

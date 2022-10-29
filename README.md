@@ -50,7 +50,7 @@ export VERSION=5acbb87
 
 kpt fn source examples | \
   kpt fn eval - --image ghcr.io/michaelvl/helm-upgrader:$VERSION \
-    --network --mount type=tmpfs,target=/tmp,rw=true --fn-config examples/config-upgrade-helm-version-inline.yaml | \
+    --network --mount type=tmpfs,target=/tmp,rw=true --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | \
   kpt fn sink examples-upgraded
 ```
 
@@ -97,3 +97,9 @@ metadata:
     experimental.helm.sh/upgrade-available: https://charts.jetstack.io/cert-manager:v1.8.2
     experimental.helm.sh/upgrade-chart-sum: sha256:b8d0dd5c95398db9308b649f7ef70ca3a0db1bb8859b43f9672c7f66871d0ef9
 ```
+
+## OCI Container Registries
+
+Charts stored in OCI container registries are supported. The chart repository
+must start with `oci://` to differentiate from standard HTTP-based chart
+repositories. See the example [`examples/krm-metacontroller.yaml`](examples/krm-metacontroller.yaml).

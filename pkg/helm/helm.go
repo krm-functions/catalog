@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	t "github.com/michaelvl/helm-upgrader/pkg/helmspecs"
+	"github.com/michaelvl/helm-upgrader/pkg/skopeo"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -52,38 +53,50 @@ func (ctxt *HelmRunContext) Run(args ...string) ([]byte, error) {
 }
 
 func RepoSearch(chart t.HelmChartArgs) ([]HelmRepoSearch, error) {
-	helmCtxt := NewRunContext()
-	defer helmCtxt.DiscardContext()
+	if strings.HasPrefix(chart.Repo, "oci://") {
+		// OCI Chart repo
+		ociSearch, _ := skopeo.ListTags(chart)
+		versions := make([]HelmRepoSearch, len(ociSearch.Tags))
+		for idx, v := range ociSearch.Tags {
+			versions[idx].Name = chart.Name
+			versions[idx].Version = v
+		}
+		return versions, nil
+	} else {
+		// Plain HTTP Helm repo
+		helmCtxt := NewRunContext()
+		defer helmCtxt.DiscardContext()
 
-	_, err := helmCtxt.Run("repo", "add", "tmprepo", chart.Repo)
-	if err != nil {
-		return nil, err
+		_, err := helmCtxt.Run("repo", "add", "tmprepo", chart.Repo)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = helmCtxt.Run("repo", "update")
+		if err != nil {
+			return nil, err
+		}
+
+		// Search repo for chart, long listing in yaml format. May include other charts partially matching search
+		out, err := helmCtxt.Run("search", "repo", "-l", "-o", "yaml", chart.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		var versions []HelmRepoSearch
+		if err := kyaml.Unmarshal(out, &versions); err != nil {
+			return nil, fmt.Errorf("Error parsing helm output: %q", err.Error())
+		}
+
+		// Normalize by stripping 'tmprepo/' chart name prefix
+		versions_normalized := make([]HelmRepoSearch, len(versions))
+		for idx, v := range versions {
+			v.Name = strings.TrimPrefix(v.Name, "tmprepo/")
+			versions_normalized[idx] = v
+		}
+
+		return versions_normalized, nil
 	}
-
-	_, err = helmCtxt.Run("repo", "update")
-	if err != nil {
-		return nil, err
-	}
-
-	// Search repo for chart, long listing in yaml format. May include other charts partially matching search
-	out, err := helmCtxt.Run("search", "repo", "-l", "-o", "yaml", chart.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	var versions []HelmRepoSearch
-	if err := kyaml.Unmarshal(out, &versions); err != nil {
-		return nil, fmt.Errorf("Error parsing helm output: %q", err.Error())
-	}
-
-	// Normalize by stripping 'tmprepo/' chart name prefix
-	versions_normalized := make([]HelmRepoSearch, len(versions))
-	for idx, v := range versions {
-		v.Name = strings.TrimPrefix(v.Name, "tmprepo/")
-		versions_normalized[idx] = v
-	}
-
-	return versions_normalized, nil
 }
 
 func PullChart(chart t.HelmChartArgs) (string, string, error) {
