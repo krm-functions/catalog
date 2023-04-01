@@ -1,6 +1,8 @@
-name: Build all platforms
+name: Build multi-arch container
 
-on: [ push, pull_request ]
+on:
+  push:
+    branches: [ "main" ]
 
 jobs:
   crossbuild:
