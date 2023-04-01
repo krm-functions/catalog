@@ -3,7 +3,7 @@
 # Parts adapted from https://github.com/thockin/go-build-template
 
 # The binaries to build (just the basenames)
-BINS ?= helm-upgrader
+BINS ?= krm-helm-upgrader
 
 # The platforms we support
 #ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64 linux/ppc64le linux/s390x
