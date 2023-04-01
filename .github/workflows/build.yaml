@@ -1,0 +1,69 @@
+name: Build and sign multi-arch container
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: none
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build containers
+      run: make all-container
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Push containers
+      run: make manifest-list | tee manifest.log
+
+    - name: Container meta
+      id: meta
+      run: |
+        # manifest-list outputs digest last
+        DIGEST=$(cat manifest.log | tail -n1 | grep 'Digest:' | cut -c9- | cut -d' ' -f1)
+        echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+        GITSHA=$(make version | tail -n1)
+        echo "sha=$GITSHA" >> $GITHUB_OUTPUT
+        IMAGE=$(echo ghcr.io/${{ github.repository }} | tr '[:upper:]' '[:lower:]')
+        echo "image=$IMAGE@$DIGEST" >> $GITHUB_OUTPUT
+
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+      digest: ${{ steps.meta.outputs.digest }}
+
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: none
+      packages: write
+      id-token: write
+
+    steps:
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: sigstore/cosign-installer@c3667d99424e7e6047999fb6246c0da843953c65 # tag=v3.0.1
+
+    - name: Sign container
+      run: cosign sign --yes ${{ needs.build.outputs.image }}
+
+    - name: Verify signature
+      run: cosign verify --certificate-identity 'https://github.com/${{ github.repository }}/.github/workflows/build.yaml@refs/heads/main' --certificate-oidc-issuer https://token.actions.githubusercontent.com ${{ needs.build.outputs.image }}
