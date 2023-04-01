@@ -22,9 +22,14 @@ spec:
     targetRevision: v1.8.1
 ```
 
-The chart version specified here `v1.8.1` is not the most recent version, and
-keeping chart version updated is a tedious and on-going activity. This KRM
-function automates this process.
+The chart version specified here `v1.8.1` is not the most recent
+version, and keeping chart version updated is a tedious and on-going
+activity. **This KRM function automates this process.** The following
+modes of operation is supported:
+
+- Rewrite the spec with the upgraded chart version according to constraints (see below).
+- Annotate the spec when new version is available. This can be useful for manual review and notification procedures.
+- Annotate spec with current and new SHA checksum. This is useful for keeping a software delivery chain secure.
 
 ## Usage
 
@@ -43,13 +48,13 @@ for an introduction to `kpt` and KRM functions.
 TL;DR:
 
 ```
-git clone https://github.com/MichaelVL/helm-upgrader.git
-cd helm-upgrader
+git clone https://github.com/MichaelVL/krm-helm-upgrader.git
+cd krm-helm-upgrader
 
 export VERSION=5acbb87
 
 kpt fn source examples | \
-  kpt fn eval - --image ghcr.io/michaelvl/helm-upgrader:$VERSION \
+  kpt fn eval - --image ghcr.io/michaelvl/krm-helm-upgrader:$VERSION \
     --network --mount type=tmpfs,target=/tmp,rw=true --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | \
   kpt fn sink examples-upgraded
 ```
@@ -103,3 +108,9 @@ metadata:
 Charts stored in OCI container registries are supported. The chart repository
 must start with `oci://` to differentiate from standard HTTP-based chart
 repositories. See the example [`examples/krm-metacontroller.yaml`](examples/krm-metacontroller.yaml).
+
+## Dependencies
+
+This function use [helm](https://helm.sh/) and
+[skopeo](https://github.com/containers/skopeo) to retreive available
+chart versions.

@@ -55,7 +55,10 @@ func (ctxt *HelmRunContext) Run(args ...string) ([]byte, error) {
 func RepoSearch(chart t.HelmChartArgs) ([]HelmRepoSearch, error) {
 	if strings.HasPrefix(chart.Repo, "oci://") {
 		// OCI Chart repo
-		ociSearch, _ := skopeo.ListTags(chart)
+		ociSearch, err := skopeo.ListTags(chart)
+		if err != nil {
+			return nil, err
+		}
 		versions := make([]HelmRepoSearch, len(ociSearch.Tags))
 		for idx, v := range ociSearch.Tags {
 			versions[idx].Name = chart.Name
