@@ -51,10 +51,10 @@ TL;DR:
 git clone https://github.com/michaelvl/krm-helm-upgrader.git
 cd krm-helm-upgrader
 
-export VERSION=b8a1bf6
+export VERSION=sha256:dd3fb059a1193ace2f06992110ebe39843c3c84e4ebc3d654970eb4a32a3661b
 
 kpt fn source examples | \
-  kpt fn eval - --image ghcr.io/michaelvl/krm-helm-upgrader:$VERSION \
+  kpt fn eval - --image ghcr.io/michaelvl/krm-helm-upgrader@$VERSION \
     --network --mount type=tmpfs,target=/tmp,rw=true --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | \
   kpt fn sink examples-upgraded
 ```
