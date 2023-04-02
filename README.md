@@ -48,10 +48,10 @@ for an introduction to `kpt` and KRM functions.
 TL;DR:
 
 ```
-git clone https://github.com/MichaelVL/krm-helm-upgrader.git
+git clone https://github.com/michaelvl/krm-helm-upgrader.git
 cd krm-helm-upgrader
 
-export VERSION=5acbb87
+export VERSION=b8a1bf6
 
 kpt fn source examples | \
   kpt fn eval - --image ghcr.io/michaelvl/krm-helm-upgrader:$VERSION \
