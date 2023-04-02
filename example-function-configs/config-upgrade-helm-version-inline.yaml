@@ -4,7 +4,7 @@ metadata:
   name: upgrade-helm-version-inline
 data:
   # Add annotation with information about upgrade options
-  annotateOnUpgradeAvailable: false
+  annotateOnUpgradeAvailable: true
 
   # Add checksum of upgradeable Chart version
   annotateSumOnUpgradeAvailable: true

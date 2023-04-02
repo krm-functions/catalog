@@ -22,6 +22,7 @@ const annotationUpgradeShaSum string = annotationUrl + "upgrade-chart-sum"
 
 var upgradesDone, upgradesAvailable int
 
+// Lookup versions and find a possible upgrade that fulfils constraints
 func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) (*t.HelmChartArgs, error) {
 	if upgradeConstraint == "" {
 		upgradeConstraint = "*"
@@ -42,7 +43,9 @@ func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) (*t.H
 	return &new, nil
 }
 
-func handleNewVersion(new t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) error {
+// Apply new version to chart spec
+func handleNewVersion(new t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (*t.HelmChartArgs, error) {
+	upgraded := curr
 	if new.Version != curr.Version {
 		upgradesAvailable++
 		anno := curr.Repo + "/" + curr.Name + ":" + new.Version
@@ -50,42 +53,45 @@ func handleNewVersion(new t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.
 			if idx >= 0 {
 				err := kubeObject.SetAnnotation(annotationUpgradeAvailable+"."+strconv.FormatInt(int64(idx), 10), anno)
 				if err != nil {
-					return err
+					return nil, err
 				}
 			} else {
 				err := kubeObject.SetAnnotation(annotationUpgradeAvailable, anno)
 				if err != nil {
-					return err
+					return nil, err
 				}
 			}
 		}
 		if Config.UpgradeOnUpgradeAvailable {
 			upgradesDone++
-			err := kubeObject.SetNestedField(new.Version, "spec", "source", "targetRevision")
-			if err != nil {
-				return err
-			}
+			upgraded.Version = new.Version
 		}
 		if Config.AnnotateSumOnUpgradeAvailable {
-			_, chartSum, _ := helm.PullChart(curr)
-			err := kubeObject.SetAnnotation(annotationUpgradeShaSum, "sha256:"+chartSum)
+			_, chartSum, err := helm.PullChart(new)
 			if err != nil {
-				return err
+				return nil, err
+			}
+			err = kubeObject.SetAnnotation(annotationUpgradeShaSum, "sha256:"+chartSum)
+			if err != nil {
+				return nil, err
 			}
 		}
+		upgraded_json, _ := json.Marshal(upgraded)
 		curr_json, _ := json.Marshal(curr)
-		new_json, _ := json.Marshal(new)
-		fmt.Fprintf(os.Stderr, "{\"current\": %s, \"upgraded\": %s, \"constraint\": %q}\n", string(curr_json), string(new_json), upgradeConstraint)
+		fmt.Fprintf(os.Stderr, "{\"current\": %s, \"upgraded\": %s, \"constraint\": %q}\n", string(curr_json), string(upgraded_json), upgradeConstraint)
 	} else {
 		if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(annotationShaSum) == "" {
-			_, chartSum, _ := helm.PullChart(curr)
-			err := kubeObject.SetAnnotation(annotationShaSum, "sha256:"+chartSum)
+			_, chartSum, err := helm.PullChart(curr)
 			if err != nil {
-				return err
+				return nil, err
+			}
+			err = kubeObject.SetAnnotation(annotationShaSum, "sha256:"+chartSum)
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
-	return nil
+	return &upgraded, nil
 }
 
 func Run(rl *fn.ResourceList) (bool, error) {
@@ -97,25 +103,30 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			upgradeConstraint := kubeObject.GetAnnotation(annotationUpgradeConstraint)
 
 			y := kubeObject.String()
-			spec, err := t.ParsePktSpec([]byte(y))
+			spec, err := t.ParseKptSpec([]byte(y))
 			if err != nil {
 				return false, err
 			}
-			for idx, helmChart := range spec.Charts {
+			for idx := range spec.Charts {
+				helmChart := &spec.Charts[idx]
 				new_version, err := evaluateChartVersion(helmChart.Args, upgradeConstraint)
 				if err != nil {
 					return false, err
 				}
-				err = handleNewVersion(*new_version, helmChart.Args, kubeObject, idx, upgradeConstraint)
+				upgraded, err := handleNewVersion(*new_version, helmChart.Args, kubeObject, idx, upgradeConstraint)
 				if err != nil {
 					return false, err
 				}
+				helmChart.Args.Version = upgraded.Version
+			}
+			err = kubeObject.SetNestedField(spec, "helmCharts")
+			if err != nil {
+				return false, err
 			}
 
 		} else if kubeObject.IsGVK("argoproj.io", "", "Application") {
 			upgradeConstraint := kubeObject.GetAnnotation(annotationUpgradeConstraint)
 
-			var err error
 			y := kubeObject.String()
 			app, err := t.ParseArgoCDSpec([]byte(y))
 			if err != nil {
@@ -126,7 +137,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			err = handleNewVersion(*new_version, chartArgs, kubeObject, -1, upgradeConstraint)
+			upgraded, err := handleNewVersion(*new_version, chartArgs, kubeObject, -1, upgradeConstraint)
+			if err != nil {
+				return false, err
+			}
+			err = kubeObject.SetNestedField(upgraded.Version, "spec", "source", "targetRevision")
 			if err != nil {
 				return false, err
 			}

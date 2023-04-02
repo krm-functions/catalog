@@ -6,13 +6,29 @@ import (
 )
 
 // Kpt Helm related types
+type HelmChart struct {
+	Args    HelmChartArgs       `json:"chartArgs,omitempty" yaml:"chartArgs,omitempty"`
+	Options HelmTemplateOptions `json:"templateOptions,omitempty" yaml:"templateOptions,omitempty"`
+}
 type HelmChartArgs struct {
 	Name    string `json:"name,omitempty" yaml:"name,omitempty"`
 	Version string `json:"version,omitempty" yaml:"version,omitempty"`
 	Repo    string `json:"repo,omitempty" yaml:"repo,omitempty"`
 }
-type HelmChart struct {
-	Args HelmChartArgs `json:"chartArgs,omitempty" yaml:"chartArgs,omitempty"`
+type HelmTemplateOptions struct {
+	ApiVersions []string `json:"apiVerions,omitempty" yaml:"apiVersions,omitempty"`
+	ReleaseName string   `json:"releaseName,omitempty" yaml:"releaseName,omitempty"`
+	Namespace string     `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
+	NameTemplate string  `json:"nameTemplate,omitempty" yaml:"nameTemplate,omitempty"`
+	IncludeCRDs bool     `json:"includeCRDs,omitempty" yaml:"includeCRDs,omitempty"`
+	SkipTests bool       `json:"skipTests,omitempty" yaml:"skipTests,omitempty"`
+	HelmValues           `json:"values,omitempty" yaml:"values,omitempty"`
+}
+type HelmValues struct {
+	ValuesFiles []string `json:"valuesFiles,omitempty" yaml:"valuesFiles,omitempty"`
+	ValuesInline map[string]any `json:"valuesInline,omitempty" yaml:"valuesInline,omitempty"`
+	ValuesMerge string    `json:"valuesMerge,omitempty" yaml:"valuesMerge,omitempty"`
 }
 
 // https://catalog.kpt.dev/render-helm-chart/v0.2/
@@ -35,7 +51,7 @@ type ArgoCDHelmApp struct {
 	Spec ArgoCDHelmSpec `json:"spec,omitempty" yaml:"spec,omitempty"`
 }
 
-func ParsePktSpec(b []byte) (*RenderHelmChart, error) {
+func ParseKptSpec(b []byte) (*RenderHelmChart, error) {
 	spec := &RenderHelmChart{}
 	if err := kyaml.Unmarshal(b, spec); err != nil {
 		return nil, err
