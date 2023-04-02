@@ -3,7 +3,8 @@ name: Build and sign multi-arch container
 on:
   push:
     branches: [ "main" ]
-
+    paths-ignore:
+      - 'README.md'
 jobs:
   build:
     runs-on: ubuntu-latest

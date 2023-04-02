@@ -119,7 +119,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				}
 				helmChart.Args.Version = upgraded.Version
 			}
-			err = kubeObject.SetNestedField(spec, "helmCharts")
+			err = kubeObject.SetNestedField(spec.Charts, "helmCharts")
 			if err != nil {
 				return false, err
 			}
