@@ -283,6 +283,7 @@ $(CONTAINER_DOTFILES): .buildx-initialized
 	    -e 's|{ARG_BIN}|$(BIN)$(BIN_EXTENSION)|g'  \
 	    -e 's|{ARG_ARCH}|$(ARCH)|g'                \
 	    -e 's|{ARG_OS}|$(OS)|g'                    \
+	    -e 's|{ARG_BUILDER_IMAGE}|$(BUILDER_IMAGE)|g' \
 	    -e 's|{ARG_FROM}|$(BASE_IMAGE)|g'          \
 	    Dockerfile.in > .dockerfile-$(BIN)-$(OS)_$(ARCH)
 	HASH_LICENSES=$$(find $(LICENSES) -type f                       \
