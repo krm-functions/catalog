@@ -32,8 +32,8 @@ ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64
 
 # The "FROM" part of the Dockerfile.  This should be a manifest-list which
 # supports all of the platforms listed in ALL_PLATFORMS.
-BUILDER_IMAGE ?= alpine:3.16
-BASE_IMAGE ?= alpine:3.16
+BUILDER_IMAGE ?= alpine:3.18
+BASE_IMAGE ?= alpine:3.18
 #BASE_IMAGE ?= gcr.io/distroless/static
 
 REGISTRY ?= ghcr.io/michaelvl
