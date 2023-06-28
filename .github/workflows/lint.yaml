@@ -4,11 +4,11 @@ on:
   push:
     paths-ignore:
       - 'README.md'
-      - 'scripts/'
+      - 'scripts/**'
   pull_request:
     paths-ignore:
       - 'README.md'
-      - 'scripts/'
+      - 'scripts/**'
 
 jobs:
   lint:

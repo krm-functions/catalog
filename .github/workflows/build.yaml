@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
     paths-ignore:
       - 'README.md'
-      - 'scripts/'
+      - 'scripts/**'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -62,7 +62,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - uses: sigstore/cosign-installer@c3667d99424e7e6047999fb6246c0da843953c65 # tag=v3.0.1
+    - uses: sigstore/cosign-installer@dd6b2e2b610a11fd73dd187a43d57cc1394e35f9 # tag=v3.0.5
 
     - name: Sign container
       run: cosign sign --yes ${{ needs.build.outputs.image }}
