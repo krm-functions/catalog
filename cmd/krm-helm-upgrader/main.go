@@ -71,9 +71,16 @@ func handleNewVersion(new t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.
 			if err != nil {
 				return nil, err
 			}
-			err = kubeObject.SetAnnotation(annotationUpgradeShaSum, "sha256:"+chartSum)
-			if err != nil {
-				return nil, err
+			if idx >= 0 {
+				err = kubeObject.SetAnnotation(annotationUpgradeShaSum+"."+strconv.FormatInt(int64(idx), 10), "sha256:"+chartSum)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				err = kubeObject.SetAnnotation(annotationUpgradeShaSum, "sha256:"+chartSum)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 		upgraded_json, _ := json.Marshal(upgraded)
