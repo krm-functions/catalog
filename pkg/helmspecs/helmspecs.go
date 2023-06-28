@@ -16,14 +16,14 @@ type HelmChartArgs struct {
 	Repo    string `json:"repo,omitempty" yaml:"repo,omitempty"`
 }
 type HelmTemplateOptions struct {
-	ApiVersions []string `json:"apiVerions,omitempty" yaml:"apiVersions,omitempty"`
+	ApiVersions []string `json:"apiVersions,omitempty" yaml:"apiVersions,omitempty"`
 	ReleaseName string   `json:"releaseName,omitempty" yaml:"releaseName,omitempty"`
 	Namespace string     `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
 	NameTemplate string  `json:"nameTemplate,omitempty" yaml:"nameTemplate,omitempty"`
 	IncludeCRDs bool     `json:"includeCRDs,omitempty" yaml:"includeCRDs,omitempty"`
 	SkipTests bool       `json:"skipTests,omitempty" yaml:"skipTests,omitempty"`
-	HelmValues           `json:"values,omitempty" yaml:"values,omitempty"`
+	Values HelmValues    `json:"values,omitempty" yaml:"values,omitempty"`
 }
 type HelmValues struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty" yaml:"valuesFiles,omitempty"`
