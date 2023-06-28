@@ -51,7 +51,7 @@ TL;DR:
 git clone https://github.com/michaelvl/krm-helm-upgrader.git
 cd krm-helm-upgrader
 
-export VERSION=sha256:dc470f03059a413b2d04f0610561abe537e76bf957fc4ac707d9f4b73d53d4d3
+export VERSION=sha256:b72f89d6ff3f71a2dd4a06c0734f099265e966f4ce1e4d27c472fa23f35ec15b
 
 kpt fn source examples | \
   kpt fn eval - --image ghcr.io/michaelvl/krm-helm-upgrader@$VERSION \
