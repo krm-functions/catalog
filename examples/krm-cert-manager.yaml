@@ -13,5 +13,7 @@ helmCharts:
     releaseName: cert-manager
     namespace: cert-manager
     values:
-      valuesFiles:
-      - values-cert-manager.yaml
+      valuesInline:
+        global:
+          commonLabels:
+            team_name: dev
