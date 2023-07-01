@@ -55,7 +55,7 @@ export VERSION=sha256:b72f89d6ff3f71a2dd4a06c0734f099265e966f4ce1e4d27c472fa23f3
 
 kpt fn source examples | \
   kpt fn eval - --image ghcr.io/michaelvl/krm-helm-upgrader@$VERSION \
-    --network --mount type=tmpfs,target=/tmp,rw=true --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | \
+    --network --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | \
   kpt fn sink examples-upgraded
 ```
 
