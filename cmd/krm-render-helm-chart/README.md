@@ -45,17 +45,25 @@ important reasons.
 
 ## The Solution
 
-The solution is to do away with the need to fetch the Helm chart
-through a network. Instead we use the approach we would use if we were
-collection plain Kubernetes YAML manifests into a package. **We fetch
-the upstream source manifests and store them in our own 'package' Git
-repository**. This has many benefits - availability, immutability
-etc.
+The solution is to separate sourcing and rendering of the Helm chart.
+This approach is similar to how we would handle a collection of plain
+Kubernetes YAML manifests in a package:
+
+1. Fetch YAML manifests from upstream.
+2. Store the upstream manifests in our own repo, optionally with
+   additional YAML manifests.
+3. Consume our component, potentially modify it through KRM function
+   manipulations.
+
+**Hence, we fetch the upstream source manifests and store them in our
+own 'package' Git repository**. This has many benefits - availability,
+immutability etc.
 
 If we similarly retrieve the Helm chart from its upstream source and
-store the chart inside a `RenderHelmChart` resource in base64 encoded
-form, we can render the chart with a hermetic KRM function through a
-declarative pipeline.
+store the full chart inside a `RenderHelmChart` resource in base64
+encoded form, we can render the chart with a hermetic KRM function
+through a declarative pipeline. Although the chart is not plain YAML,
+the principle is the same as for ordinary YAML manifests.
 
 The following example illustrates the example from above in this
 alternative form. The `templateOptions` part has been retained as this
@@ -68,19 +76,19 @@ apiVersion: experimental.helm.sh/v1alpha1
 kind: RenderHelmChart
 metadata:
   name: cert-manager
-spec:
-  templateOptions:
-    releaseName: cert-manager
-    namespace: cert-manager
-    values:
-      valuesInline:
-        global:
-          commonLabels:
-            team_name: dev
-  chart:            # base64 encoded helm chart file 'cert-manager-v1.9.0.tgz'
-    H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxt
-    AOz9+3bbNtY4DM/fugp8zvNbivtJ8il2Ez/TeR6PnXY8TRwv251TZ35jiIQk1CTAAqAdtZN7ea/l
-	...
+templateOptions:
+  releaseName: cert-manager
+  namespace: cert-manager
+  values:
+    valuesInline:
+      global:
+        commonLabels:
+          team_name: dev
+chart: |          # base64 encoded helm chart file 'cert-manager-v1.9.0.tgz'
+  H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxt
+  AOz9+3bbNtY4DM/fugp8zvNbivtJ8il2Ez/TeR6PnXY8TRwv251TZ35jiIQk1CTAAqAdtZN7ea/l
+  vbJ3YeNAkKIkSlZSpyW7VmOROG4A+4y9IyJUP8UMj4nYOZ1goQZTnCa/2+Szu7u7e/TiBfy7u7tb
+  ...
 ```
 
 The script [`source-chart.sh`](source-chart.sh) implements this

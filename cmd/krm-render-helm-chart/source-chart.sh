@@ -7,7 +7,8 @@ repo=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i mikefarah/yq:4.24.5 
 version=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i mikefarah/yq:4.24.5 '.helmCharts | .[0].chartArgs.version' -)
 templopts=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i mikefarah/yq:4.24.5 '.helmCharts | .[0].templateOptions' -)
 
-outname="$chartname-$version.tgz"
+outname="$chartname-$version.tgz"  # FIXME, common format, but not guaranteed
+
 echo "Fetching $chartname/$version@$repo --> $outname" 1>&2
 
 if [[ $repo =~ ^oci:// ]]; then
@@ -28,12 +29,11 @@ metadata:
     experimental.helm.sh/chart-name: "$chartname"
     experimental.helm.sh/chart-repo: "$repo"
     experimental.helm.sh/chart-version: "$version"
-spec:
 EOF
 
-echo "  templateOptions:"
-echo "$templopts" | sed 's/^/    /'
-echo "  chart:"
-base64 $outname | sed 's/^/    /'
+echo "templateOptions:"
+echo "$templopts" | sed 's/^/  /'
+echo "chart: |"
+base64 $outname | sed 's/^/  /'
 
 rm $outname
