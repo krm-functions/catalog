@@ -119,8 +119,15 @@ func (chart *HelmChart) Generate() (fn.KubeObjects, error) {
 		}
 	}
 
+	valuesFile := filepath.Join(tmpDir, "values.yaml")
+	err = chart.writeValuesFile(valuesFile)
+	if err != nil {
+		return nil, err
+	}
 	args := chart.buildHelmTemplateArgs()
+	args = append(args, "--values", valuesFile)
 	args = append(args, filepath.Join(tmpDir, chart.Args.Name))
+	fmt.Printf("<%v>\n", args)
 
 	helmCtxt := helm.NewRunContext()
 	defer helmCtxt.DiscardContext()
@@ -160,6 +167,16 @@ func (chart *HelmChart) Generate() (fn.KubeObjects, error) {
 	return objects, nil
 }
 
+// Write embedded values to a file for passing to Helm
+func (chart *HelmChart) writeValuesFile(valuesFilename string) error {
+	vals := chart.Options.Values.ValuesInline
+	b, err := kyaml.Marshal(vals)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(valuesFilename, b, 0644)
+}
+
 func (chart *HelmChart) buildHelmTemplateArgs() []string {
 	opts := chart.Options
 	args := []string{"template"}
@@ -172,9 +189,6 @@ func (chart *HelmChart) buildHelmTemplateArgs() []string {
 	if opts.NameTemplate != "" {
 		args = append(args, "--name-template", opts.NameTemplate)
 	}
-	//for _, valuesFile := range opts.ValuesFiles {
-	//	args = append(args, "-f", valuesFile)
-	//}
 	for _, apiVer := range opts.ApiVersions {
 		args = append(args, "--api-versions", apiVer)
 	}
