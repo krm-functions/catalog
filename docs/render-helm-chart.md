@@ -17,14 +17,12 @@ apiVersion: fn.kpt.dev/v1alpha1
 kind: RenderHelmChart
 metadata:
   name: render-chart
-  annotations:
-    config.kubernetes.io/local-config: "true"
 helmCharts:
-- chartArgs:
+- chartArgs:                   # --- How to source the chart
     name: cert-manager
     version: v1.9.0
     repo: https://charts.jetstack.io
-  templateOptions:
+  templateOptions:             # --- How to render the chart
     releaseName: cert-manager
     namespace: cert-manager
     values:
@@ -34,10 +32,10 @@ helmCharts:
             team_name: dev
 ```
 
-In this spec, the `chartArgs` part is 'how to source' the Helm chart,
-i.e. this points to a network location where the chart can be
-located. Because this is a network location, the function can only be
-run imperatively with `kpt fn eval --network --image
+In this spec, the `chartArgs` section define how to source the Helm
+chart, i.e. this points to a network location where the chart can be
+retrieved from. Because this is a network location, the function can
+only be run imperatively with `kpt fn eval --network --image
 gcr.io/kpt-fn/render-helm-chart:v0.2.2 ...`
 
 Using a network location in a render operation is troublesome for many
@@ -46,31 +44,28 @@ important reasons.
 
 ## The Solution
 
-The solution is to separate sourcing and rendering of the Helm chart.
-This approach is similar to how we would handle a collection of plain
-Kubernetes YAML manifests in a package:
+A solution is to **separate sourcing and rendering of the Helm
+chart**.  This approach is similar to how we would handle a collection
+of plain Kubernetes YAML manifests in a package:
 
-1. Fetch YAML manifests from upstream.
-2. Store the upstream manifests in our own repo, optionally with
-   additional YAML manifests.
-3. Consume our component, potentially modify it through KRM function
-   manipulations.
+1. Fetch YAML manifests from upstream source.
+2. Store the upstream manifests in our own Git repository, optionally with
+   additional YAML manifests. This is our *curated* package.
+3. Consume our package with our Git repository as single source.
+4. Modify our package as needed with KRM function pipelines.
 
 **Hence, we fetch the upstream source manifests and store them in our
 own 'package' Git repository**. This has many benefits - availability,
 immutability etc.
 
-If we similarly retrieve the Helm chart from its upstream source and
-store the full chart inside a `RenderHelmChart` resource in base64
-encoded form, we can render the chart with a hermetic KRM function
-through a declarative pipeline. Although the chart is not plain YAML,
-the principle is the same as for ordinary YAML manifests.
+If we similarly retrieve the Helm chart tar-ball from its upstream
+source and store the full chart inside a `RenderHelmChart` resource in
+base64 encoded form, **we can render the chart with a hermetic KRM
+function through a declarative pipeline**. Although the chart is not
+plain YAML, the principle is the same as for ordinary YAML manifests.
 
 The following example illustrates the example from above in this
-alternative form. The `templateOptions` part has been retained as this
-is specification for how to render the chart. However, the `chartArgs`
-part has been replaced by the actual chart in base64 encoded form
-as `chart`:
+alternative form - note how a `chart` section have been added:
 
 ```
 apiVersion: experimental.helm.sh/v1alpha1
@@ -100,7 +95,8 @@ helmCharts:
 Note, the `chartArgs` map may seem unnecessary after sourcing the Helm
 chart, however, keeping it in the `RenderHelmChart` specification
 allows for chart updates through modification of the `version` field
-and re-sourcing of the Helm chart.
+and re-sourcing of the Helm chart - possibly using the [helm-upgrader
+function](docs/helm-upgrader.md).
 
 The script [`source-chart.sh`](source-chart.sh) implements this
 conversion, including fetching the chart. Obviously, this script
