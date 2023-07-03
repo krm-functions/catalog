@@ -1,0 +1,19 @@
+apiVersion: experimental.helm.sh/v1alpha1
+kind: RenderHelmChart
+metadata:
+  name: render-chart
+  annotations:
+    config.kubernetes.io/local-config: "true"
+helmCharts:
+- chartArgs:
+    name: cert-manager
+    version: v1.9.0
+    repo: https://charts.jetstack.io
+  templateOptions:
+    releaseName: cert-managerrel
+    namespace: cert-managerns
+    values:
+      valuesInline:
+        global:
+          commonLabels:
+            team_name: dev

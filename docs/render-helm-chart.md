@@ -156,3 +156,24 @@ metadata:
   annotations:
    internal.config.kubernetes.io/path: cert-manager/cert-manager-release/deployment_cert-manager.yaml
 ```
+
+## Example Usage
+
+The file `examples/render-helm-chart/cert-manager-chart.yaml` have an
+example `RenderHelmChart` specification. First, source the Helm chart:
+
+```
+mkdir my-cert-manager-package
+scripts/source-chart.sh examples/render-helm-chart/cert-manager-chart.yaml > my-cert-manager-package/cert-manager.yaml
+cp examples/render-helm-chart/Kptfile my-cert-manager-package/
+```
+
+Now `my-cert-manager-package/cert-manager.yaml` holds your Helm chart
+package with the Helm chart embedded.
+
+Next, render the chart (this could possibly be part of a larger KRM
+pipeline):
+
+```
+kpt fn render my-cert-manager-package -o stdout
+```

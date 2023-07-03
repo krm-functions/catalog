@@ -53,26 +53,28 @@ cd krm-helm-upgrader
 
 export VERSION=sha256:b72f89d6ff3f71a2dd4a06c0734f099265e966f4ce1e4d27c472fa23f35ec15b
 
-kpt fn source examples | \
+kpt fn source examples/helm-upgrader | \
   kpt fn eval - --image ghcr.io/michaelvl/krm-helm-upgrader@$VERSION \
     --network --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | \
   kpt fn sink examples-upgraded
 ```
 
-The command above will process the manifests in the `examples` folder, run the
+> The command outputs some information on `stderr`, which can be ignored for now.
+
+The command above will process the manifests in the `examples/helm-upgrader` folder, run the
 `helm-upgrader` KRM function and write-back the Kubernetes manifests into
 `examples-upgraded`.
 
 Run `diff` to see the upgraded Helm charts:
 
 ```
-diff -r examples examples-upgraded
+diff -r examples/helm-upgrader examples-upgraded
 ```
 
 The output will contain lines like:
 
 ```
-diff -r examples/argo-app-cert-manager.yaml examples2/argo-app-cert-manager.yaml
+diff -r examples/helm-upgrader/argo-app-cert-manager.yaml examples-upgraded/argo-app-cert-manager.yaml
 15c16
 <     targetRevision: v1.8.1
 ---
