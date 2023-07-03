@@ -23,7 +23,7 @@ else
 endif
 
 # The binaries to build (just the basenames)
-BINS ?= krm-helm-upgrader
+BINS ?= krm-helm-upgrader krm-render-helm-chart
 
 # The platforms we support
 #ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64 linux/ppc64le linux/s390x
