@@ -133,7 +133,9 @@ The path annotation is constructed from the chart and release name,
 which are inserted as path before the final filename, which is
 generated from the rendered resource Kind and Name:
 
+```
 PathAnno := <chart-name>/<chart-release-name>/<resource-kind>_<resource-name>.yaml
+```
 
 Given the following `RenderHelmChart` input:
 
