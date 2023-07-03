@@ -127,7 +127,6 @@ func (chart *HelmChart) Generate() (fn.KubeObjects, error) {
 	args := chart.buildHelmTemplateArgs()
 	args = append(args, "--values", valuesFile)
 	args = append(args, filepath.Join(tmpDir, chart.Args.Name))
-	fmt.Printf("<%v>\n", args)
 
 	helmCtxt := helm.NewRunContext()
 	defer helmCtxt.DiscardContext()
