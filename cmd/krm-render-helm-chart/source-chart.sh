@@ -2,13 +2,15 @@
 
 RENDER_HELM_CHART_RESOURCE=$1
 
-name=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i mikefarah/yq:4.24.5 '.metadata.name' -)
-annotations=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i mikefarah/yq:4.24.5 '.metadata.annotations' -)
-chartname=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i mikefarah/yq:4.24.5 '.helmCharts | .[0].chartArgs.name' -)
-repo=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i mikefarah/yq:4.24.5 '.helmCharts | .[0].chartArgs.repo' -)
-version=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i mikefarah/yq:4.24.5 '.helmCharts | .[0].chartArgs.version' -)
-chartargs=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i mikefarah/yq:4.24.5 '.helmCharts | .[0].chartArgs' -)
-templopts=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i mikefarah/yq:4.24.5 '.helmCharts | .[0].templateOptions' -)
+YQ=mikefarah/yq:4.24.5
+
+name=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.metadata.name' -)
+annotations=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.metadata.annotations' -)
+chartname=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].chartArgs.name' -)
+repo=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].chartArgs.repo' -)
+version=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].chartArgs.version' -)
+chartargs=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].chartArgs' -)
+templopts=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].templateOptions' -)
 
 outname="$chartname-$version.tgz"  # FIXME, common format, but not guaranteed
 
