@@ -8,5 +8,5 @@ info:
   description: sample description
 pipeline:
   mutators:
-  - image: ghcr.io/michaelvl/krm-render-helm-chart@sha256:ccd15d2a4f1b5f49fb983c9f504f2c361c84b5c9a194fe490ab8ffc3bc773624
+  - image: ghcr.io/michaelvl/krm-render-helm-chart@sha256:b63ab13f00e771ca0c69ac9d4ff8ef909c8256f36b51484072930738333d21e2
   - image: gcr.io/kpt-fn/remove-local-config-resources:v0.1.0
