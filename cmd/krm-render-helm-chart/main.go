@@ -18,6 +18,9 @@ import (
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )
 
+const annotationUrl string = "experimental.helm.sh/"
+const annotationShaSum string = annotationUrl + "chart-sum"
+
 type HelmChart struct {
 	Args       t.HelmChartArgs       `json:"chartArgs,omitempty" yaml:"chartArgs,omitempty"`
 	Options    t.HelmTemplateOptions `json:"templateOptions,omitempty" yaml:"templateOptions,omitempty"`
@@ -56,11 +59,43 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				return false, err
 			}
 			for _, chart := range spec.Charts {
-				newobjs, err := chart.Generate()
+				newobjs, err := chart.Template()
 				if err != nil {
 					return false, err
 				}
 				outputs = append(outputs, newobjs...)
+			}
+		} else if kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") {
+			y := kubeObject.String()
+			spec, err := ParseRenderSpec([]byte(y))
+			if err != nil {
+				return false, err
+			}
+			for _, chart := range spec.Charts {
+				chartData, chartSum, err := chart.SourceChart()
+				if err != nil {
+					return false, err
+				}
+				err = kubeObject.SetAPIVersion("experimental.helm.sh/v1alpha1")
+				if err != nil {
+					return false, err
+				}
+				chs, found, err := kubeObject.NestedSlice("helmCharts")
+				if !found {
+					return false, fmt.Errorf("helmCharts key not found in %s", kubeObject.GetName())
+				}
+				if err != nil {
+					return false, err
+				}
+				err = chs[0].SetNestedField(base64.StdEncoding.EncodeToString(chartData), "chart")
+				if err != nil {
+					return false, err
+				}
+				err = kubeObject.SetAnnotation(annotationShaSum, "sha256:"+chartSum)
+				if err != nil {
+					return false, err
+				}
+				outputs = append(outputs, kubeObject)
 			}
 		} else {
 			outputs = append(outputs, kubeObject)
@@ -71,7 +106,25 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	return true, nil
 }
 
-func (chart *HelmChart) Generate() (fn.KubeObjects, error) {
+func (chart *HelmChart) SourceChart() ([]byte, string, error) {
+	tmpDir, err := os.MkdirTemp("", "chart-")
+	if err != nil {
+		return nil, "", err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	tarball, chartSum, err := helm.PullChart(chart.Args, tmpDir)
+	if err != nil {
+		return nil, "", err
+	}
+	buf, err := os.ReadFile(filepath.Join(tmpDir, tarball))
+	if err != nil {
+		return nil, "", err
+	}
+	return buf, chartSum, err
+}
+
+func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 	chartfile, err := base64.StdEncoding.DecodeString(chart.Chart)
 	if err != nil {
 		return nil, err

@@ -102,12 +102,19 @@ func RepoSearch(chart t.HelmChartArgs) ([]HelmRepoSearch, error) {
 	}
 }
 
-func PullChart(chart t.HelmChartArgs) (string, string, error) {
+func PullChart(chart t.HelmChartArgs, destinationPath string) (string, string, error) {
 	helmCtxt := NewRunContext()
 	defer helmCtxt.DiscardContext()
 
+	var dest string
+	if destinationPath == "" {
+		dest = helmCtxt.repoConfigDir
+	} else {
+		dest = destinationPath
+	}
+
 	if strings.HasPrefix(chart.Repo, "oci://") {
-		_, err := helmCtxt.Run("pull", chart.Repo+"/"+chart.Name, "--version", chart.Version, "--destination", helmCtxt.repoConfigDir)
+		_, err := helmCtxt.Run("pull", chart.Repo+"/"+chart.Name, "--version", chart.Version, "--destination", dest)
 		if err != nil {
 			return "", "", err
 		}
@@ -120,13 +127,13 @@ func PullChart(chart t.HelmChartArgs) (string, string, error) {
 		if err != nil {
 			return "", "", err
 		}
-		_, err = helmCtxt.Run("pull", chart.Name, "--repo", chart.Repo, "--version", chart.Version, "--destination", helmCtxt.repoConfigDir)
+		_, err = helmCtxt.Run("pull", chart.Name, "--repo", chart.Repo, "--version", chart.Version, "--destination", dest)
 		if err != nil {
 			return "", "", err
 		}
 	}
 
-	chartShaSum := helmCtxt.ChartFileSha256(chart) // TODO: Compare with .prov file content
+	chartShaSum := ChartFileSha256(dest, chart) // TODO: Compare with .prov file content
 	return chartTarballName(chart), chartShaSum, nil
 }
 
@@ -134,9 +141,9 @@ func chartTarballName(chart t.HelmChartArgs) string {
 	return chart.Name + "-" + chart.Version + ".tgz"
 }
 
-func (ctxt *HelmRunContext) ChartFileSha256(chart t.HelmChartArgs) string {
+func ChartFileSha256(pathDir string, chart t.HelmChartArgs) string {
 	fn := chartTarballName(chart)
-	dat, err := os.ReadFile(filepath.Join(ctxt.repoConfigDir, fn))
+	dat, err := os.ReadFile(filepath.Join(pathDir, fn))
 	if err != nil {
 		panic(fmt.Errorf("Cannot read file %q", fn))
 	}

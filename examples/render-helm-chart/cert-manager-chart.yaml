@@ -1,4 +1,4 @@
-apiVersion: experimental.helm.sh/v1alpha1
+apiVersion: fn.kpt.dev/v1alpha1
 kind: RenderHelmChart
 metadata:
   name: render-chart
