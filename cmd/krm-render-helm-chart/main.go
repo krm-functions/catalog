@@ -76,10 +76,25 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				kubeObject.SetAPIVersion("experimental.helm.sh/v1alpha1")
-				chs, _, _ := kubeObject.NestedSlice("helmCharts")
-				chs[0].SetNestedField(base64.StdEncoding.EncodeToString(chartData), "chart")
+				err = kubeObject.SetAPIVersion("experimental.helm.sh/v1alpha1")
+				if err != nil {
+					return false, err
+				}
+				chs, found, err := kubeObject.NestedSlice("helmCharts")
+				if !found {
+					return false, fmt.Errorf("helmCharts key not found in %s", kubeObject.GetName())
+				}
+				if err != nil {
+					return false, err
+				}
+				err = chs[0].SetNestedField(base64.StdEncoding.EncodeToString(chartData), "chart")
+				if err != nil {
+					return false, err
+				}
 				err = kubeObject.SetAnnotation(annotationShaSum, "sha256:"+chartSum)
+				if err != nil {
+					return false, err
+				}
 				outputs = append(outputs, kubeObject)
 			}
 		} else {
@@ -93,6 +108,9 @@ func Run(rl *fn.ResourceList) (bool, error) {
 
 func (chart *HelmChart) SourceChart() ([]byte, string, error) {
 	tarball, chartSum, err := helm.PullChart(chart.Args)
+	if err != nil {
+		return nil, "", err
+	}
 	buf, err := os.ReadFile(tarball)
 	if err != nil {
 		return nil, "", err
