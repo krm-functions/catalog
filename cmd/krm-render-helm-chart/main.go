@@ -107,11 +107,17 @@ func Run(rl *fn.ResourceList) (bool, error) {
 }
 
 func (chart *HelmChart) SourceChart() ([]byte, string, error) {
-	tarball, chartSum, err := helm.PullChart(chart.Args)
+	tmpDir, err := os.MkdirTemp("", "chart-")
 	if err != nil {
 		return nil, "", err
 	}
-	buf, err := os.ReadFile(tarball)
+	defer os.RemoveAll(tmpDir)
+
+	tarball, chartSum, err := helm.PullChart(chart.Args, tmpDir)
+	if err != nil {
+		return nil, "", err
+	}
+	buf, err := os.ReadFile(filepath.Join(tmpDir, tarball))
 	if err != nil {
 		return nil, "", err
 	}

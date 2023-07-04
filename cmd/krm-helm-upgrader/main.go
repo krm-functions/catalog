@@ -67,7 +67,7 @@ func handleNewVersion(new t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.
 			upgraded.Version = new.Version
 		}
 		if Config.AnnotateSumOnUpgradeAvailable {
-			_, chartSum, err := helm.PullChart(new)
+			_, chartSum, err := helm.PullChart(new, "")
 			if err != nil {
 				return nil, err
 			}
@@ -88,7 +88,7 @@ func handleNewVersion(new t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.
 		fmt.Fprintf(os.Stderr, "{\"current\": %s, \"upgraded\": %s, \"constraint\": %q}\n", string(curr_json), string(upgraded_json), upgradeConstraint)
 	} else {
 		if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(annotationShaSum) == "" {
-			_, chartSum, err := helm.PullChart(curr)
+			_, chartSum, err := helm.PullChart(curr, "")
 			if err != nil {
 				return nil, err
 			}
