@@ -18,6 +18,9 @@ import (
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )
 
+const annotationUrl string = "experimental.helm.sh/"
+const annotationShaSum string = annotationUrl + "chart-sum"
+
 type HelmChart struct {
 	Args       t.HelmChartArgs       `json:"chartArgs,omitempty" yaml:"chartArgs,omitempty"`
 	Options    t.HelmTemplateOptions `json:"templateOptions,omitempty" yaml:"templateOptions,omitempty"`
@@ -56,11 +59,28 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				return false, err
 			}
 			for _, chart := range spec.Charts {
-				newobjs, err := chart.Generate()
+				newobjs, err := chart.Template()
 				if err != nil {
 					return false, err
 				}
 				outputs = append(outputs, newobjs...)
+			}
+		} else if kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") {
+			y := kubeObject.String()
+			spec, err := ParseRenderSpec([]byte(y))
+			if err != nil {
+				return false, err
+			}
+			for _, chart := range spec.Charts {
+				chartData, chartSum, err := chart.SourceChart()
+				if err != nil {
+					return false, err
+				}
+				kubeObject.SetAPIVersion("experimental.helm.sh/v1alpha1")
+				chs, _, _ := kubeObject.NestedSlice("helmCharts")
+				chs[0].SetNestedField(base64.StdEncoding.EncodeToString(chartData), "chart")
+				err = kubeObject.SetAnnotation(annotationShaSum, "sha256:"+chartSum)
+				outputs = append(outputs, kubeObject)
 			}
 		} else {
 			outputs = append(outputs, kubeObject)
@@ -71,7 +91,16 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	return true, nil
 }
 
-func (chart *HelmChart) Generate() (fn.KubeObjects, error) {
+func (chart *HelmChart) SourceChart() ([]byte, string, error) {
+	tarball, chartSum, err := helm.PullChart(chart.Args)
+	buf, err := os.ReadFile(tarball)
+	if err != nil {
+		return nil, "", err
+	}
+	return buf, chartSum, err
+}
+
+func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 	chartfile, err := base64.StdEncoding.DecodeString(chart.Chart)
 	if err != nil {
 		return nil, err
