@@ -145,10 +145,7 @@ func PullChart(chart t.HelmChartArgs, destinationPath string, username, password
 }
 
 func isOciRepo(chart t.HelmChartArgs) bool {
-	if strings.HasPrefix(chart.Repo, "oci://") {
-		return true
-	}
-	return false
+	return strings.HasPrefix(chart.Repo, "oci://")
 }
 
 func chartTarballName(chart t.HelmChartArgs) string {
