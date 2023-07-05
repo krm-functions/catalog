@@ -160,19 +160,29 @@ metadata:
 ## Example Usage
 
 The file `examples/render-helm-chart/cert-manager-chart.yaml` have an
-example `RenderHelmChart` specification. First, source the Helm chart:
+example `RenderHelmChart` specification with `apiVersion:
+fn.kpt.dev/v1alpha1`. First, source the Helm chart:
 
 ```
-mkdir my-cert-manager-package
-scripts/source-chart.sh examples/render-helm-chart/cert-manager-chart.yaml > my-cert-manager-package/cert-manager.yaml
+export RENDER_HELM_CHART_IMAGE=ghcr.io/michaelvl/krm-render-helm-chart@sha256:00112a814f12597901d097d2768596d2812c2fb786b68159b9ea4a2a0c4bc652
+
+kpt fn source examples/render-helm-chart \
+ | kpt fn eval - --network -i $RENDER_HELM_CHART_IMAGE \
+ | kpt fn sink my-cert-manager-package
+```
+
+Now `my-cert-manager-package/cert-manager-chart.yaml` holds your Helm
+chart package with the Helm chart embedded. The apiVersion have been
+changed to `apiVersion: experimental.helm.sh/v1alpha1`
+
+Next, add a `Kptfile` that use the `render-helm-chart` KRM function:
+
+```
 cp examples/render-helm-chart/Kptfile my-cert-manager-package/
 ```
 
-Now `my-cert-manager-package/cert-manager.yaml` holds your Helm chart
-package with the Helm chart embedded.
-
-Next, render the chart (this could possibly be part of a larger KRM
-pipeline):
+Next, render the chart using the declarative pipeline in the
+`Kptfile`:
 
 ```
 kpt fn render my-cert-manager-package -o stdout
