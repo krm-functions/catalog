@@ -73,8 +73,13 @@ func (spec *RenderHelmChart) IsValidSpec() error {
 			return fmt.Errorf("Chart name, version or repo cannot be empty (%s,%s,%s)",
 				chart.Args.Name, chart.Args.Version, chart.Args.Repo)
 		}
-		if chart.Args.Auth != nil && chart.Args.Auth.Kind != "Secret" {
-			return fmt.Errorf("Chart auth kind must be 'Secret'")
+		if chart.Args.Auth != nil {
+			if chart.Args.Auth.Kind != "Secret" {
+				return fmt.Errorf("Chart auth kind must be 'Secret'")
+			}
+			if len(chart.Args.Auth.Name) == 0 {
+				return fmt.Errorf("Chart auth name must be defined")
+			}
 		}
 	}
 	return nil

@@ -52,9 +52,8 @@ func (ctxt *HelmRunContext) Run(args ...string) ([]byte, error) {
 	return stdout.Bytes(), nil
 }
 
-func RepoSearch(chart t.HelmChartArgs) ([]HelmRepoSearch, error) {
-	if strings.HasPrefix(chart.Repo, "oci://") {
-		// OCI Chart repo
+func RepoSearch(chart t.HelmChartArgs, username, password *string) ([]HelmRepoSearch, error) {
+	if isOciRepo(chart) {
 		ociSearch, err := skopeo.ListTags(chart)
 		if err != nil {
 			return nil, err
@@ -70,7 +69,11 @@ func RepoSearch(chart t.HelmChartArgs) ([]HelmRepoSearch, error) {
 		helmCtxt := NewRunContext()
 		defer helmCtxt.DiscardContext()
 
-		_, err := helmCtxt.Run("repo", "add", "tmprepo", chart.Repo)
+		addArgs := []string{"repo", "add", "tmprepo", chart.Repo}
+		if username != nil && password != nil {
+			addArgs = append(addArgs, "--username", *username, "--password", *password)
+		}
+		_, err := helmCtxt.Run(addArgs...)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +105,7 @@ func RepoSearch(chart t.HelmChartArgs) ([]HelmRepoSearch, error) {
 	}
 }
 
-func PullChart(chart t.HelmChartArgs, destinationPath string) (string, string, error) {
+func PullChart(chart t.HelmChartArgs, destinationPath string, username, password *string) (string, string, error) {
 	helmCtxt := NewRunContext()
 	defer helmCtxt.DiscardContext()
 
@@ -113,13 +116,17 @@ func PullChart(chart t.HelmChartArgs, destinationPath string) (string, string, e
 		dest = destinationPath
 	}
 
-	if strings.HasPrefix(chart.Repo, "oci://") {
+	if isOciRepo(chart) {
 		_, err := helmCtxt.Run("pull", chart.Repo+"/"+chart.Name, "--version", chart.Version, "--destination", dest)
 		if err != nil {
 			return "", "", err
 		}
 	} else {
-		_, err := helmCtxt.Run("repo", "add", "tmprepo", chart.Repo)
+		addArgs := []string{"repo", "add", "tmprepo", chart.Repo}
+		if username != nil && password != nil {
+			addArgs = append(addArgs, "--username", *username, "--password", *password)
+		}
+		_, err := helmCtxt.Run(addArgs...)
 		if err != nil {
 			return "", "", err
 		}
@@ -135,6 +142,13 @@ func PullChart(chart t.HelmChartArgs, destinationPath string) (string, string, e
 
 	chartShaSum := ChartFileSha256(dest, chart) // TODO: Compare with .prov file content
 	return chartTarballName(chart), chartShaSum, nil
+}
+
+func isOciRepo(chart t.HelmChartArgs) bool {
+	if strings.HasPrefix(chart.Repo, "oci://") {
+		return true
+	}
+	return false
 }
 
 func chartTarballName(chart t.HelmChartArgs) string {
