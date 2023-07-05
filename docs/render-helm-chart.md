@@ -99,8 +99,9 @@ and re-sourcing of the Helm chart - possibly using the [helm-upgrader
 function](docs/helm-upgrader.md).
 
 The script [`source-chart.sh`](source-chart.sh) implements this
-conversion, including fetching the chart. Obviously, this script
-should itself be a KRM function.
+conversion, including fetching the chart. The `render-helm-chart`
+function is also dual-purpose, i.e. it can both source and render Helm
+charts. See the example below for an example.
 
 For completeness and possibly future extensions, the script also adds
 the following annotation:
