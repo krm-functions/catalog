@@ -38,11 +38,6 @@ func ParseRenderSpec(b []byte) (*RenderHelmChart, error) {
 	if err := kyaml.Unmarshal(b, spec); err != nil {
 		return nil, err
 	}
-	for idx, chart := range spec.Charts {
-		if chart.Options.ReleaseName == "" {
-			return nil, fmt.Errorf("Invalid chart spec: ReleaseName required, index %d", idx)
-		}
-	}
 	return spec, nil
 }
 
@@ -57,6 +52,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			spec, err := ParseRenderSpec([]byte(y))
 			if err != nil {
 				return false, err
+			}
+			for idx, chart := range spec.Charts {
+				if chart.Options.ReleaseName == "" {
+					return false, fmt.Errorf("Invalid chart spec %s: ReleaseName required, index %d", kubeObject.GetName(), idx)
+				}
 			}
 			for _, chart := range spec.Charts {
 				newobjs, err := chart.Template()
