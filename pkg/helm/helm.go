@@ -47,7 +47,7 @@ func (ctxt *HelmRunContext) Run(args ...string) ([]byte, error) {
 	cmd.Stderr = stderr
 	err := cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("Error running helm command: %q: %q", args, err.Error())
+		return nil, fmt.Errorf("Error running helm command: %q: %q (%q)", args, stderr, err.Error())
 	}
 	return stdout.Bytes(), nil
 }
@@ -122,7 +122,8 @@ func PullChart(chart t.HelmChartArgs, destinationPath string, username, password
 			return "", "", err
 		}
 	} else {
-		addArgs := []string{"repo", "add", "tmprepo", chart.Repo}
+		repoAlias := "tmprepo"
+		addArgs := []string{"repo", "add", repoAlias, chart.Repo}
 		if username != nil && password != nil {
 			addArgs = append(addArgs, "--username", *username, "--password", *password)
 		}
@@ -134,7 +135,7 @@ func PullChart(chart t.HelmChartArgs, destinationPath string, username, password
 		if err != nil {
 			return "", "", err
 		}
-		_, err = helmCtxt.Run("pull", chart.Name, "--repo", chart.Repo, "--version", chart.Version, "--destination", dest)
+		_, err = helmCtxt.Run("pull", repoAlias+"/"+chart.Name, "--version", chart.Version, "--destination", dest)
 		if err != nil {
 			return "", "", err
 		}
