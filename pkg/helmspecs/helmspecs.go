@@ -11,9 +11,11 @@ type HelmChart struct {
 	Options HelmTemplateOptions `json:"templateOptions,omitempty" yaml:"templateOptions,omitempty"`
 }
 type HelmChartArgs struct {
-	Name    string `json:"name,omitempty" yaml:"name,omitempty"`
-	Version string `json:"version,omitempty" yaml:"version,omitempty"`
-	Repo    string `json:"repo,omitempty" yaml:"repo,omitempty"`
+	Name     string `json:"name,omitempty" yaml:"name,omitempty"`
+	Version  string `json:"version,omitempty" yaml:"version,omitempty"`
+	Repo     string `json:"repo,omitempty" yaml:"repo,omitempty"`
+	Registry string `json:"registry,omitempty" yaml:"registry,omitempty"`
+	Auth     *kyaml.ResourceIdentifier `json:"auth,omitempty" yaml:"auth,omitempty"`
 }
 type HelmTemplateOptions struct {
 	ApiVersions []string `json:"apiVersions,omitempty" yaml:"apiVersions,omitempty"`
@@ -56,22 +58,31 @@ func ParseKptSpec(b []byte) (*RenderHelmChart, error) {
 	if err := kyaml.Unmarshal(b, spec); err != nil {
 		return nil, err
 	}
-	if !spec.IsValidSpec() {
-		return spec, fmt.Errorf("Invalid chart spec: %+v\n", spec)
+	if err := spec.IsValidSpec(); err != nil {
+		return spec, err
 	}
 	return spec, nil
 }
 
-func (spec *RenderHelmChart) IsValidSpec() bool {
+func (spec *RenderHelmChart) IsValidSpec() error {
 	if spec.Kind != "RenderHelmChart" {
-		return false
+		return fmt.Errorf("Unsupported kind: %s", spec.Kind)
 	}
 	for _, chart := range spec.Charts {
 		if chart.Args.Name == "" || chart.Args.Version == "" || chart.Args.Repo == "" {
-			return false
+			return fmt.Errorf("Chart name, version or repo cannot be empty (%s,%s,%s)",
+				chart.Args.Name, chart.Args.Version, chart.Args.Repo)
+		}
+		if chart.Args.Auth != nil {
+			if chart.Args.Auth.Kind != "Secret" {
+				return fmt.Errorf("Chart auth kind must be 'Secret'")
+			}
+			if len(chart.Args.Auth.Name) == 0 {
+				return fmt.Errorf("Chart auth name must be defined")
+			}
 		}
 	}
-	return true
+	return nil
 }
 
 func ParseArgoCDSpec(b []byte) (*ArgoCDHelmApp, error) {

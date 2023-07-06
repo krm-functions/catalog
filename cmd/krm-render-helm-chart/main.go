@@ -72,7 +72,14 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				return false, err
 			}
 			for _, chart := range spec.Charts {
-				chartData, chartSum, err := chart.SourceChart()
+				var uname, pword *string
+				if chart.Args.Auth != nil {
+					uname, pword, err = lookupAuthSecret(&chart, rl)
+					if err != nil {
+						return false, err
+					}
+				}
+				chartData, chartSum, err := chart.SourceChart(uname, pword)
 				if err != nil {
 					return false, err
 				}
@@ -106,14 +113,58 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	return true, nil
 }
 
-func (chart *HelmChart) SourceChart() ([]byte, string, error) {
+func lookupAuthSecret(chart *HelmChart, rl *fn.ResourceList) (*string, *string, error) {
+	namespace := chart.Args.Auth.Namespace
+	if namespace == "" {
+		namespace = "default" // Default according to spec
+	}
+	for _, k := range rl.Items {
+		if !k.IsGVK("v1", "", "Secret") || k.GetName() != chart.Args.Auth.Name {
+			continue
+		}
+		oNamespace := k.GetNamespace()
+		if oNamespace == "" {
+			oNamespace = "default" // Default according to spec
+		}
+		if namespace == oNamespace {
+			uname, found, err := k.NestedString("data", "username")
+			if !found {
+				return nil, nil, fmt.Errorf("Key 'username' not found in Secret '%s'", chart.Args.Auth.Name)
+			}
+			if err != nil {
+				return nil, nil, err
+			}
+			pword, found, err := k.NestedString("data", "password")
+			if !found {
+				return nil, nil, fmt.Errorf("Key 'password' not found in Secret '%s'", chart.Args.Auth.Name)
+			}
+			if err != nil {
+				return nil, nil, err
+			}
+			u, err := base64.StdEncoding.DecodeString(uname)
+			if err != nil {
+				return nil, nil, err
+			}
+			uname = string(u)
+			p, err := base64.StdEncoding.DecodeString(pword)
+			if err != nil {
+				return nil, nil, err
+			}
+			pword = string(p)
+			return &uname, &pword, nil
+		}
+	}
+	return nil, nil, fmt.Errorf("Auth secret '%s' not found", chart.Args.Auth.Name)
+}
+
+func (chart *HelmChart) SourceChart(username, password *string) ([]byte, string, error) {
 	tmpDir, err := os.MkdirTemp("", "chart-")
 	if err != nil {
 		return nil, "", err
 	}
 	defer os.RemoveAll(tmpDir)
 
-	tarball, chartSum, err := helm.PullChart(chart.Args, tmpDir)
+	tarball, chartSum, err := helm.PullChart(chart.Args, tmpDir, username, password)
 	if err != nil {
 		return nil, "", err
 	}
