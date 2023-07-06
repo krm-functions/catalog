@@ -1,6 +1,7 @@
 #! /bin/bash
 
 RENDER_HELM_CHART_RESOURCE=$1
+CHART_FILE=$2   # Optional
 
 YQ=mikefarah/yq:4.24.5
 
@@ -12,14 +13,19 @@ version=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts 
 chartargs=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].chartArgs' -)
 templopts=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].templateOptions' -)
 
-outname="$chartname-$version.tgz"  # FIXME, common format, but not guaranteed
 
-echo "Fetching $chartname/$version@$repo --> $outname" 1>&2
 
-if [[ $repo =~ ^oci:// ]]; then
-    helm pull $repo/$chartname --version $version
+if [[ -z "$CHART_FILE" ]]; then
+    outname="$chartname-$version.tgz"  # FIXME, common format, but not guaranteed
+    echo "Fetching $chartname/$version@$repo --> $outname" 1>&2
+    if [[ $repo =~ ^oci:// ]]; then
+	helm pull $repo/$chartname --version $version
+    else
+	helm pull $chartname --repo $repo --version $version
+    fi
 else
-    helm pull $chartname --repo $repo --version $version
+    outname=$CHART_FILE
+    echo "Using existing chart file $outname" 1>&2
 fi
 
 shasum=$(sha256sum $outname | cut -d' ' -f1)
@@ -42,4 +48,6 @@ echo "$templopts" | sed 's/^/    /'
 echo "  chart: |"
 base64 $outname | sed 's/^/    /'
 
-rm $outname
+if [[ -z "$CHART_FILE" ]]; then
+    rm $outname
+fi

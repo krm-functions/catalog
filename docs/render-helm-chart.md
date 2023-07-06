@@ -1,9 +1,9 @@
 # Render Helm Chart Function
 
-TL;DR - this `render-helm-chart` KRM function supports declarative
-pipelines and thus solves the problem of the [baseline
-version](https://catalog.kpt.dev/render-helm-chart/v0.2/) that it can
-only be executed imperatively.
+TL;DR - this `render-helm-chart` KRM function supports Helm chart
+rendering in declarative pipelines and thus solves the problem of the
+[baseline version](https://catalog.kpt.dev/render-helm-chart/v0.2/)
+that it can only be executed imperatively.
 
 ## The Problem of the Baseline `render-helm-chart`
 
@@ -162,7 +162,32 @@ metadata:
 
 The file `examples/render-helm-chart/cert-manager-chart.yaml` have an
 example `RenderHelmChart` specification with `apiVersion:
-fn.kpt.dev/v1alpha1`. First, source the Helm chart:
+fn.kpt.dev/v1alpha1`:
+
+```
+# examples/render-helm-chart/cert-manager-chart.yaml
+apiVersion: fn.kpt.dev/v1alpha1
+kind: RenderHelmChart
+metadata:
+  name: render-chart
+  annotations:
+    config.kubernetes.io/local-config: "true"
+helmCharts:
+- chartArgs:
+    name: cert-manager
+    version: v1.12.2
+    repo: https://charts.jetstack.io
+  templateOptions:
+    releaseName: cert-managerrel
+    namespace: cert-managerns
+    values:
+      valuesInline:
+        global:
+          commonLabels:
+            team_name: dev  # kpt-set: ${teamName}
+```
+
+First we source the Helm chart using the `render-helm-chart` function using an imperative execution:
 
 ```
 export RENDER_HELM_CHART_IMAGE=ghcr.io/michaelvl/krm-render-helm-chart@sha256:00112a814f12597901d097d2768596d2812c2fb786b68159b9ea4a2a0c4bc652
@@ -174,9 +199,62 @@ kpt fn source examples/render-helm-chart \
 
 Now `my-cert-manager-package/cert-manager-chart.yaml` holds your Helm
 chart package with the Helm chart embedded. The apiVersion have been
-changed to `apiVersion: experimental.helm.sh/v1alpha1`
+changed to `apiVersion: experimental.helm.sh/v1alpha1`:
 
-Next, add a `Kptfile` that use the `render-helm-chart` KRM function:
+```
+# my-cert-manager-package/cert-manager-chart.yaml
+apiVersion: experimental.helm.sh/v1alpha1
+kind: RenderHelmChart
+metadata:
+  name: render-chart
+  annotations:
+    config.kubernetes.io/local-config: "true"
+    experimental.helm.sh/chart-sum: sha256:552561ed2dfd3b36553934327034d1dd58ead06b0166eb3eb29c7ad3ca0b8248
+helmCharts:
+- chartArgs:
+    name: cert-manager
+    version: v1.12.2
+    repo: https://charts.jetstack.io
+  templateOptions:
+    releaseName: cert-managerrel
+    namespace: cert-managerns
+    values:
+      valuesInline:
+        global:
+          commonLabels:
+            team_name: dev # kpt-set: ${teamName}
+  chart: H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZ ... <shorted for clarity!>
+```
+
+The chart have not been rendered, only sourced.
+
+Next, we will render the chart using a declarative pipeline. Note,
+that the chart values have an `kpt-set`.
+
+We create a pipeline using a `Kptfile` that use the
+`render-helm-chart` KRM function and an `apply-setters` to change the
+label in the values of the chart:
+
+```
+# examples/render-helm-chart/Kptfile
+apiVersion: kpt.dev/v1
+kind: Kptfile
+metadata:
+  name: subpkg
+  annotations:
+    config.kubernetes.io/local-config: "true"
+info:
+  description: sample description
+pipeline:
+  mutators:
+  - image: gcr.io/kpt-fn/apply-setters:v0.2.0
+    configMap:
+      teamName: blue-team
+  - image: ghcr.io/michaelvl/krm-render-helm-chart@sha256:b63ab13f00e771ca0c69ac9d4ff8ef909c8256f36b51484072930738333d21e2
+  - image: gcr.io/kpt-fn/remove-local-config-resources:v0.1.0
+```
+
+Copy the `Kptfile` to the package folder:
 
 ```
 cp examples/render-helm-chart/Kptfile my-cert-manager-package/
@@ -188,3 +266,5 @@ Next, render the chart using the declarative pipeline in the
 ```
 kpt fn render my-cert-manager-package -o stdout
 ```
+
+Notice how the labels on the rendered chart have `team_name: blue-team`.
