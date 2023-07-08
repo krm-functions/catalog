@@ -18,4 +18,4 @@ IMAGE=ghcr.io/michaelvl/krm-helm-upgrader
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
 echo "Using digest: $DIGEST"
 
-sed -i -E "s#(^export VERSION=).*#\1$DIGEST#" README.md
+sed -i -E "s#(.*?ghcr.io/michaelvl/krm-.*@).*#\1$DIGEST#" docs/*.md
