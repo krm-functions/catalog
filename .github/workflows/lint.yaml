@@ -5,10 +5,12 @@ on:
     paths-ignore:
       - 'README.md'
       - 'scripts/**'
+      - 'docs/**'
   pull_request:
     paths-ignore:
       - 'README.md'
       - 'scripts/**'
+      - 'docs/**'
 
 jobs:
   lint:

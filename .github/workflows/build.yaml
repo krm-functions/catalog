@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - 'README.md'
       - 'scripts/**'
+      - 'docs/**'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -46,26 +47,27 @@ jobs:
       image: ${{ steps.meta.outputs.image }}
       digest: ${{ steps.meta.outputs.digest }}
 
-  sign:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: none
-      packages: write
-      id-token: write
+  # Disabled since it currently use the wrong image name - image name is not defined by repo name as assumed above
+  # sign:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: none
+  #     packages: write
+  #     id-token: write
 
-    steps:
-    - name: Log in to the Container registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+  #   steps:
+  #   - name: Log in to the Container registry
+  #     uses: docker/login-action@v2
+  #     with:
+  #       registry: ghcr.io
+  #       username: ${{ github.actor }}
+  #       password: ${{ secrets.GITHUB_TOKEN }}
 
-    - uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # tag=v3.1.1
+  #   - uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # tag=v3.1.1
 
-    - name: Sign container
-      run: cosign sign --yes ${{ needs.build.outputs.image }}
+  #   - name: Sign container
+  #     run: cosign sign --yes ${{ needs.build.outputs.image }}
 
-    - name: Verify signature
-      run: cosign verify --certificate-identity 'https://github.com/${{ github.repository }}/.github/workflows/build.yaml@refs/heads/main' --certificate-oidc-issuer https://token.actions.githubusercontent.com ${{ needs.build.outputs.image }}
+  #   - name: Verify signature
+  #     run: cosign verify --certificate-identity 'https://github.com/${{ github.repository }}/.github/workflows/build.yaml@refs/heads/main' --certificate-oidc-issuer https://token.actions.githubusercontent.com ${{ needs.build.outputs.image }}
