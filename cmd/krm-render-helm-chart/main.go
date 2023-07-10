@@ -256,7 +256,13 @@ func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 		}
 		annoVal := fmt.Sprintf("%s/%s/%s_%s.yaml",
 			chart.Args.Name, chart.Options.ReleaseName, strings.ToLower(o.GetKind()), o.GetName())
-		err = o.SetAnnotation(kioutil.PathAnnotation, annoVal)
+		currAnno := o.GetAnnotations()
+		if len(currAnno) == 0 {
+			currAnno = map[string]string{kioutil.PathAnnotation: annoVal}
+		} else {
+			currAnno[kioutil.PathAnnotation] = annoVal
+		}
+		err = o.SetNestedStringMap(currAnno, "metadata", "annotations")
 		if err != nil {
 			return nil, err
 		}
