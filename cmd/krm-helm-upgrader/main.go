@@ -106,7 +106,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	parseConfig(cfg)
 
 	for _, kubeObject := range rl.Items {
-		if kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") {
+		if kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") || kubeObject.IsGVK("experimental.helm.sh", "", "RenderHelmChart") {
 			upgradeConstraint := kubeObject.GetAnnotation(annotationUpgradeConstraint)
 
 			y := kubeObject.String()

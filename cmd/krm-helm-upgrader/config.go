@@ -22,6 +22,8 @@ func parseConfig(configmap *fn.KubeObject) {
 	}
 	if val, found, _ := configmap.NestedBool("data", "upgradeOnUpgradeAvailable"); found {
 		Config.UpgradeOnUpgradeAvailable = val
+	} else {
+		Config.UpgradeOnUpgradeAvailable = val // Not found, default to upgrade
 	}
 	if val, found, _ := configmap.NestedBool("data", "annotateCurrentSum"); found {
 		Config.AnnotateCurrentSum = val
