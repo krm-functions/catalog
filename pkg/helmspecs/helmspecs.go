@@ -2,6 +2,7 @@ package helmspecs
 
 import (
 	"fmt"
+
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
@@ -11,26 +12,26 @@ type HelmChart struct {
 	Options HelmTemplateOptions `json:"templateOptions,omitempty" yaml:"templateOptions,omitempty"`
 }
 type HelmChartArgs struct {
-	Name     string `json:"name,omitempty" yaml:"name,omitempty"`
-	Version  string `json:"version,omitempty" yaml:"version,omitempty"`
-	Repo     string `json:"repo,omitempty" yaml:"repo,omitempty"`
-	Registry string `json:"registry,omitempty" yaml:"registry,omitempty"`
+	Name     string                    `json:"name,omitempty" yaml:"name,omitempty"`
+	Version  string                    `json:"version,omitempty" yaml:"version,omitempty"`
+	Repo     string                    `json:"repo,omitempty" yaml:"repo,omitempty"`
+	Registry string                    `json:"registry,omitempty" yaml:"registry,omitempty"`
 	Auth     *kyaml.ResourceIdentifier `json:"auth,omitempty" yaml:"auth,omitempty"`
 }
 type HelmTemplateOptions struct {
-	ApiVersions []string `json:"apiVersions,omitempty" yaml:"apiVersions,omitempty"`
-	ReleaseName string   `json:"releaseName,omitempty" yaml:"releaseName,omitempty"`
-	Namespace string     `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
-	NameTemplate string  `json:"nameTemplate,omitempty" yaml:"nameTemplate,omitempty"`
-	IncludeCRDs bool     `json:"includeCRDs,omitempty" yaml:"includeCRDs,omitempty"`
-	SkipTests bool       `json:"skipTests,omitempty" yaml:"skipTests,omitempty"`
-	Values HelmValues    `json:"values,omitempty" yaml:"values,omitempty"`
+	APIVersions  []string   `json:"apiVersions,omitempty" yaml:"apiVersions,omitempty"`
+	ReleaseName  string     `json:"releaseName,omitempty" yaml:"releaseName,omitempty"`
+	Namespace    string     `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Description  string     `json:"description,omitempty" yaml:"description,omitempty"`
+	NameTemplate string     `json:"nameTemplate,omitempty" yaml:"nameTemplate,omitempty"`
+	IncludeCRDs  bool       `json:"includeCRDs,omitempty" yaml:"includeCRDs,omitempty"`
+	SkipTests    bool       `json:"skipTests,omitempty" yaml:"skipTests,omitempty"`
+	Values       HelmValues `json:"values,omitempty" yaml:"values,omitempty"`
 }
 type HelmValues struct {
-	ValuesFiles []string `json:"valuesFiles,omitempty" yaml:"valuesFiles,omitempty"`
+	ValuesFiles  []string       `json:"valuesFiles,omitempty" yaml:"valuesFiles,omitempty"`
 	ValuesInline map[string]any `json:"valuesInline,omitempty" yaml:"valuesInline,omitempty"`
-	ValuesMerge string    `json:"valuesMerge,omitempty" yaml:"valuesMerge,omitempty"`
+	ValuesMerge  string         `json:"valuesMerge,omitempty" yaml:"valuesMerge,omitempty"`
 }
 
 // https://catalog.kpt.dev/render-helm-chart/v0.2/
@@ -66,19 +67,20 @@ func ParseKptSpec(b []byte) (*RenderHelmChart, error) {
 
 func (spec *RenderHelmChart) IsValidSpec() error {
 	if spec.Kind != "RenderHelmChart" {
-		return fmt.Errorf("Unsupported kind: %s", spec.Kind)
+		return fmt.Errorf("unsupported kind: %s", spec.Kind)
 	}
-	for _, chart := range spec.Charts {
+	for idx := range spec.Charts {
+		chart := &spec.Charts[idx]
 		if chart.Args.Name == "" || chart.Args.Version == "" || chart.Args.Repo == "" {
-			return fmt.Errorf("Chart name, version or repo cannot be empty (%s,%s,%s)",
+			return fmt.Errorf("chart name, version or repo cannot be empty (%s,%s,%s)",
 				chart.Args.Name, chart.Args.Version, chart.Args.Repo)
 		}
 		if chart.Args.Auth != nil {
 			if chart.Args.Auth.Kind != "Secret" {
-				return fmt.Errorf("Chart auth kind must be 'Secret'")
+				return fmt.Errorf("chart auth kind must be 'Secret'")
 			}
-			if len(chart.Args.Auth.Name) == 0 {
-				return fmt.Errorf("Chart auth name must be defined")
+			if chart.Args.Auth.Name == "" {
+				return fmt.Errorf("chart auth name must be defined")
 			}
 		}
 	}
@@ -91,7 +93,7 @@ func ParseArgoCDSpec(b []byte) (*ArgoCDHelmApp, error) {
 		return nil, err
 	}
 	if !app.IsValidSpec() {
-		return app, fmt.Errorf("Invalid chart spec: %+v\n", app)
+		return app, fmt.Errorf("invalid chart spec: %+v", app)
 	}
 	return app, nil
 }

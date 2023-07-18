@@ -3,9 +3,10 @@ package skopeo
 import (
 	"bytes"
 	"fmt"
-	t "github.com/michaelvl/helm-upgrader/pkg/helmspecs"
 	"os/exec"
 	"regexp"
+
+	t "github.com/michaelvl/helm-upgrader/pkg/helmspecs"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
@@ -22,7 +23,7 @@ func Run(args ...string) ([]byte, error) {
 	cmd.Stderr = stderr
 	err := cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("Error running skopeo command: %q: %q", args, err.Error())
+		return nil, fmt.Errorf("error running skopeo command: %q: %q", args, err.Error())
 	}
 	return stdout.Bytes(), nil
 }
@@ -36,7 +37,7 @@ func ListTags(chart t.HelmChartArgs) (*RepoTags, error) {
 
 	var search RepoTags
 	if err := kyaml.Unmarshal(out, &search); err != nil {
-		return nil, fmt.Errorf("Error parsing skopeo output: %q", err.Error())
+		return nil, fmt.Errorf("error parsing skopeo output: %q", err.Error())
 	}
 	return &search, nil
 }

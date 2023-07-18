@@ -10,24 +10,26 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 	"github.com/michaelvl/helm-upgrader/pkg/helm"
 	t "github.com/michaelvl/helm-upgrader/pkg/helmspecs"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
-	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )
 
-const annotationUrl string = "experimental.helm.sh/"
-const annotationShaSum string = annotationUrl + "chart-sum"
+const annotationURL string = "experimental.helm.sh/"
+const annotationShaSum string = annotationURL + "chart-sum"
 
+// We cannot use types from helmspecs due to the additional 'Chart' field
 type HelmChart struct {
-	Args       t.HelmChartArgs       `json:"chartArgs,omitempty" yaml:"chartArgs,omitempty"`
-	Options    t.HelmTemplateOptions `json:"templateOptions,omitempty" yaml:"templateOptions,omitempty"`
-	Chart      string                `json:"chart,omitempty" yaml:"chart,omitempty"`
+	Args    t.HelmChartArgs       `json:"chartArgs,omitempty" yaml:"chartArgs,omitempty"`
+	Options t.HelmTemplateOptions `json:"templateOptions,omitempty" yaml:"templateOptions,omitempty"`
+	Chart   string                `json:"chart,omitempty" yaml:"chart,omitempty"`
 }
 
 type RenderHelmChart struct {
-	ApiVersion string      `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
+	APIVersion string      `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
 	Kind       string      `json:"kind,omitempty" yaml:"kind,omitempty"`
 	Charts     []HelmChart `json:"helmCharts,omitempty" yaml:"helmCharts,omitempty"`
 }
@@ -54,7 +56,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			}
 			for idx := range spec.Charts {
 				if spec.Charts[idx].Options.ReleaseName == "" {
-					return false, fmt.Errorf("Invalid chart spec %s: ReleaseName required, index %d", kubeObject.GetName(), idx)
+					return false, fmt.Errorf("invalid chart spec %s: ReleaseName required, index %d", kubeObject.GetName(), idx)
 				}
 			}
 			for idx := range spec.Charts {
@@ -70,10 +72,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			for _, chart := range spec.Charts {
+			for idx := range spec.Charts {
+				chart := &spec.Charts[idx]
 				var uname, pword *string
 				if chart.Args.Auth != nil {
-					uname, pword, err = lookupAuthSecret(&chart, rl)
+					uname, pword, err = lookupAuthSecret(chart, rl)
 					if err != nil {
 						return false, err
 					}
@@ -112,7 +115,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	return true, nil
 }
 
-func lookupAuthSecret(chart *HelmChart, rl *fn.ResourceList) (*string, *string, error) {
+func lookupAuthSecret(chart *HelmChart, rl *fn.ResourceList) (username *string, password *string, err error) {
 	namespace := chart.Args.Auth.Namespace
 	if namespace == "" {
 		namespace = "default" // Default according to spec
@@ -128,14 +131,14 @@ func lookupAuthSecret(chart *HelmChart, rl *fn.ResourceList) (*string, *string, 
 		if namespace == oNamespace {
 			uname, found, err := k.NestedString("data", "username")
 			if !found {
-				return nil, nil, fmt.Errorf("Key 'username' not found in Secret '%s'", chart.Args.Auth.Name)
+				return nil, nil, fmt.Errorf("key 'username' not found in Secret '%s'", chart.Args.Auth.Name)
 			}
 			if err != nil {
 				return nil, nil, err
 			}
 			pword, found, err := k.NestedString("data", "password")
 			if !found {
-				return nil, nil, fmt.Errorf("Key 'password' not found in Secret '%s'", chart.Args.Auth.Name)
+				return nil, nil, fmt.Errorf("key 'password' not found in Secret '%s'", chart.Args.Auth.Name)
 			}
 			if err != nil {
 				return nil, nil, err
@@ -153,10 +156,10 @@ func lookupAuthSecret(chart *HelmChart, rl *fn.ResourceList) (*string, *string, 
 			return &uname, &pword, nil
 		}
 	}
-	return nil, nil, fmt.Errorf("Auth secret '%s' not found", chart.Args.Auth.Name)
+	return nil, nil, fmt.Errorf("auth secret '%s' not found", chart.Args.Auth.Name)
 }
 
-func (chart *HelmChart) SourceChart(username, password *string) ([]byte, string, error) {
+func (chart *HelmChart) SourceChart(username, password *string) (chartData []byte, chartSha256Sum string, err error) {
 	tmpDir, err := os.MkdirTemp("", "chart-")
 	if err != nil {
 		return nil, "", err
@@ -192,32 +195,32 @@ func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 	defer gzr.Close()
 	tr := tar.NewReader(gzr)
 
-	// Extract tar achive files
+	// Extract tar archive files
 	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
+		hdr, xtErr := tr.Next()
+		if xtErr == io.EOF {
 			break // End of archive
-		} else if err != nil {
-			return nil, err
+		} else if xtErr != nil {
+			return nil, xtErr
 		}
 		fname := filepath.Join(tmpDir, hdr.Name)
 		fdir := filepath.Dir(fname)
-		if hdr.Typeflag ==  tar.TypeReg {
+		if hdr.Typeflag == tar.TypeReg {
 			// Not all tarfiles have explicit directories, i.e. we always create directories if they do not exist
-			if _, err := os.Stat(fdir); err != nil {
-				if err = os.MkdirAll(fdir, 0755); err != nil {
-					return nil, err
+			if _, fErr := os.Stat(fdir); fErr != nil {
+				if mkdErr := os.MkdirAll(fdir, 0o755); mkdErr != nil {
+					return nil, mkdErr
 				}
 			}
 
-			file, err:= os.OpenFile(fname, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(hdr.Mode))
-			if err != nil {
-				return nil, err
+			file, fErr := os.OpenFile(fname, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(hdr.Mode))
+			if fErr != nil {
+				return nil, fErr
 			}
-			_, err =io.Copy(file, tr)
+			_, fErr = io.Copy(file, tr)
 			file.Close()
-			if err != nil {
-				return nil, err
+			if fErr != nil {
+				return nil, fErr
 			}
 		}
 	}
@@ -245,12 +248,12 @@ func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 
 	var objects fn.KubeObjects
 	for i := range nodes {
-		o, err := fn.ParseKubeObject([]byte(nodes[i].MustString()))
-		if err != nil {
-			if strings.Contains(err.Error(), "expected exactly one object, got 0") {
+		o, parseErr := fn.ParseKubeObject([]byte(nodes[i].MustString()))
+		if parseErr != nil {
+			if strings.Contains(parseErr.Error(), "expected exactly one object, got 0") {
 				continue
 			}
-			return nil, fmt.Errorf("failed to parse %s: %s", nodes[i].MustString(), err.Error())
+			return nil, fmt.Errorf("failed to parse %s: %s", nodes[i].MustString(), parseErr.Error())
 		}
 		// The sink function conveniently sets path if none is defined
 
@@ -283,7 +286,7 @@ func (chart *HelmChart) writeValuesFile(valuesFilename string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(valuesFilename, b, 0644)
+	return os.WriteFile(valuesFilename, b, 0o600)
 }
 
 func (chart *HelmChart) buildHelmTemplateArgs() []string {
@@ -298,7 +301,7 @@ func (chart *HelmChart) buildHelmTemplateArgs() []string {
 	if opts.NameTemplate != "" {
 		args = append(args, "--name-template", opts.NameTemplate)
 	}
-	for _, apiVer := range opts.ApiVersions {
+	for _, apiVer := range opts.APIVersions {
 		args = append(args, "--api-versions", apiVer)
 	}
 	if opts.Description != "" {
