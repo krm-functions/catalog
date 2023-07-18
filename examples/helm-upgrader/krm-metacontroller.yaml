@@ -4,6 +4,7 @@ metadata:
   name: render-chart
   annotations:
     config.kubernetes.io/local-config: "true"
+    experimental.helm.sh/upgrade-constraint: "<=4.10.0"
 helmCharts:
 - chartArgs:
     name: metacontroller-helm

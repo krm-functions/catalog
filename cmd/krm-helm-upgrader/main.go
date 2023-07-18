@@ -14,11 +14,11 @@ import (
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )
 
-const annotationUrl string = "experimental.helm.sh/"
-const annotationUpgradeConstraint string = annotationUrl + "upgrade-constraint"
-const annotationUpgradeAvailable string = annotationUrl + "upgrade-available"
-const annotationShaSum string = annotationUrl + "chart-sum"
-const annotationUpgradeShaSum string = annotationUrl + "upgrade-chart-sum"
+const annotationURL string = "experimental.helm.sh/"
+const annotationUpgradeConstraint string = annotationURL + "upgrade-constraint"
+const annotationUpgradeAvailable string = annotationURL + "upgrade-available"
+const annotationShaSum string = annotationURL + "chart-sum"
+const annotationUpgradeShaSum string = annotationURL + "upgrade-chart-sum"
 
 var upgradesDone, upgradesAvailable int
 
@@ -27,28 +27,28 @@ func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) (*t.H
 	if upgradeConstraint == "" {
 		upgradeConstraint = "*"
 	}
-	search, err := helm.RepoSearch(chart, nil, nil)
+	search, err := helm.SearchRepo(chart, nil, nil)
 	if err != nil {
 		return nil, err
 	}
 	search = helm.FilterByChartName(search, chart)
 	versions := helm.ToList(search)
-	new_version, err := semver.Upgrade(versions, upgradeConstraint)
+	newVersion, err := semver.Upgrade(versions, upgradeConstraint)
 	if err != nil {
 		return nil, err
 	}
 
-	new := chart
-	new.Version = new_version
-	return &new, nil
+	newChart := chart
+	newChart.Version = newVersion
+	return &newChart, nil
 }
 
 // Apply new version to chart spec
-func handleNewVersion(new t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (*t.HelmChartArgs, error) {
+func handleNewVersion(newChart t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (*t.HelmChartArgs, error) {
 	upgraded := curr
-	if new.Version != curr.Version {
+	if newChart.Version != curr.Version {
 		upgradesAvailable++
-		anno := curr.Repo + "/" + curr.Name + ":" + new.Version
+		anno := curr.Repo + "/" + curr.Name + ":" + newChart.Version
 		if Config.AnnotateOnUpgradeAvailable {
 			if idx >= 0 {
 				err := kubeObject.SetAnnotation(annotationUpgradeAvailable+"."+strconv.FormatInt(int64(idx), 10), anno)
@@ -64,10 +64,10 @@ func handleNewVersion(new t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.
 		}
 		if Config.UpgradeOnUpgradeAvailable {
 			upgradesDone++
-			upgraded.Version = new.Version
+			upgraded.Version = newChart.Version
 		}
 		if Config.AnnotateSumOnUpgradeAvailable {
-			_, chartSum, err := helm.PullChart(new, "", nil, nil)
+			_, chartSum, err := helm.PullChart(newChart, "", nil, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -83,9 +83,9 @@ func handleNewVersion(new t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.
 				}
 			}
 		}
-		upgraded_json, _ := json.Marshal(upgraded)
-		curr_json, _ := json.Marshal(curr)
-		fmt.Fprintf(os.Stderr, "{\"current\": %s, \"upgraded\": %s, \"constraint\": %q}\n", string(curr_json), string(upgraded_json), upgradeConstraint)
+		upgradedJSON, _ := json.Marshal(upgraded)
+		currJSON, _ := json.Marshal(curr)
+		fmt.Fprintf(os.Stderr, "{\"current\": %s, \"upgraded\": %s, \"constraint\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint)
 	} else {
 		if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(annotationShaSum) == "" {
 			_, chartSum, err := helm.PullChart(curr, "", nil, nil)
@@ -116,11 +116,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			}
 			for idx := range spec.Charts {
 				helmChart := &spec.Charts[idx]
-				new_version, err := evaluateChartVersion(helmChart.Args, upgradeConstraint)
+				newVersion, err := evaluateChartVersion(helmChart.Args, upgradeConstraint)
 				if err != nil {
 					return false, err
 				}
-				upgraded, err := handleNewVersion(*new_version, helmChart.Args, kubeObject, idx, upgradeConstraint)
+				upgraded, err := handleNewVersion(*newVersion, helmChart.Args, kubeObject, idx, upgradeConstraint)
 				if err != nil {
 					return false, err
 				}
@@ -130,7 +130,6 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-
 		} else if kubeObject.IsGVK("argoproj.io", "", "Application") {
 			upgradeConstraint := kubeObject.GetAnnotation(annotationUpgradeConstraint)
 
@@ -140,11 +139,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				return false, err
 			}
 			chartArgs := app.Spec.Source.ToKptSpec()
-			new_version, err := evaluateChartVersion(chartArgs, upgradeConstraint)
+			newVersion, err := evaluateChartVersion(chartArgs, upgradeConstraint)
 			if err != nil {
 				return false, err
 			}
-			upgraded, err := handleNewVersion(*new_version, chartArgs, kubeObject, -1, upgradeConstraint)
+			upgraded, err := handleNewVersion(*newVersion, chartArgs, kubeObject, -1, upgradeConstraint)
 			if err != nil {
 				return false, err
 			}

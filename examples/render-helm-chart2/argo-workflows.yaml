@@ -1,0 +1,14 @@
+apiVersion: fn.kpt.dev/v1alpha1
+kind: RenderHelmChart
+metadata:
+  name: render-chart
+  annotations:
+    config.kubernetes.io/local-config: "true"
+helmCharts:
+- chartArgs:
+    name: argo-workflows
+    version: 0.31.0
+    repo: https://argoproj.github.io/argo-helm
+  templateOptions:
+    releaseName: argo-workflows
+    namespace: argo-workflow-ns

@@ -2,8 +2,9 @@ package semver
 
 import (
 	"fmt"
-	version "github.com/Masterminds/semver"
 	"sort"
+
+	version "github.com/Masterminds/semver"
 )
 
 func Sort(versionsRaw []string) []*version.Version {
@@ -30,7 +31,7 @@ func Sort(versionsRaw []string) []*version.Version {
 func Upgrade(versions []string, constraint string) (string, error) {
 	constraints, err := version.NewConstraint(constraint)
 	if err != nil {
-		return "", fmt.Errorf("Error parsing constraint %q: %q", constraint, err.Error())
+		return "", fmt.Errorf("error parsing constraint %q: %q", constraint, err.Error())
 	}
 	vers := Sort(versions)
 	for _, v := range vers {
@@ -38,5 +39,5 @@ func Upgrade(versions []string, constraint string) (string, error) {
 			return v.Original(), nil
 		}
 	}
-	return "", fmt.Errorf("No version found that satisfies constraint: %q", constraint)
+	return "", fmt.Errorf("no version found that satisfies constraint: %q", constraint)
 }

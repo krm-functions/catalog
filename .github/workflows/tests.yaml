@@ -1,12 +1,25 @@
 name: Run tests
 
-on: [ push, pull_request ]
+on: [ pull_request ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
+    - name: checkout code
       uses: actions/checkout@v3
-    - name: Test
+
+    - name: build local binaries for test
+      run: make build
+
+    - name: install kpt
+      run: |
+        curl -sLO https://github.com/GoogleContainerTools/kpt/releases/download/v1.0.0-beta.38/kpt_linux_amd64-1.0.0-beta.38.tar.gz
+        tar -xzf kpt_linux_amd64-1.0.0-beta.38.tar.gz
+        mv kpt /usr/local/bin/
+
+    - name: code tests
       run: make test GOFLAGS="-v"
+
+    - name: e2e tests
+      run: make e2e-tests

@@ -96,6 +96,8 @@ metadata:
     experimental.helm.sh/upgrade-constraint: "1.8.*"
 ```
 
+See also [supported upgrade constraints format](https://github.com/Masterminds/semver).
+
 ### Annotate Instead of Upgrade
 
 ```

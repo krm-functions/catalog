@@ -124,40 +124,6 @@ resource to the output. This is different that the [upstream
 `render-helm-chart`](https://catalog.kpt.dev/render-helm-chart/v0.2/)
 which reads the `RenderHelmChart` resource from `FunctionConfig`.
 
-## Handling of `internal.config.kubernetes.io/path` Annotation
-
-The path annotation is constructed from the chart and release name,
-which are inserted as path before the final filename, which is
-generated from the rendered resource Kind and Name:
-
-```
-PathAnno := <chart-name>/<chart-release-name>/<resource-kind>_<resource-name>.yaml
-```
-
-Given the following `RenderHelmChart` input:
-
-```
-# some/path/chart-render.yaml
-apiVersion: experimental.helm.sh/v1alpha1
-kind: RenderHelmChart
-metadata:
-  name: cert-manager
-...
-templateOptions:
-  releaseName: cert-manager-release
-```
-
-Generated resources will have a path annotation like:
-
-```
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cert-manager
-  annotations:
-   internal.config.kubernetes.io/path: cert-manager/cert-manager-release/deployment_cert-manager.yaml
-```
-
 ## Example Usage
 
 The file `examples/render-helm-chart/cert-manager-chart.yaml` have an
