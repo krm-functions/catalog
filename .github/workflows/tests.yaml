@@ -9,6 +9,9 @@ jobs:
     - name: checkout code
       uses: actions/checkout@v3
 
+    - name: build local binaries for test
+      run: make build
+
     - name: install kpt
       run: |
         curl -sLO https://github.com/GoogleContainerTools/kpt/releases/download/v1.0.0-beta.38/kpt_linux_amd64-1.0.0-beta.38.tar.gz
