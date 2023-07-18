@@ -13,7 +13,6 @@ import (
 	"github.com/michaelvl/helm-upgrader/pkg/helm"
 	t "github.com/michaelvl/helm-upgrader/pkg/helmspecs"
 	"sigs.k8s.io/kustomize/kyaml/kio"
-	"sigs.k8s.io/kustomize/kyaml/kio/kioutil"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )
@@ -254,18 +253,20 @@ func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 			}
 			return nil, fmt.Errorf("failed to parse %s: %s", nodes[i].MustString(), err.Error())
 		}
-		annoVal := fmt.Sprintf("%s/%s/%s_%s.yaml",
-			chart.Args.Name, chart.Options.ReleaseName, strings.ToLower(o.GetKind()), o.GetName())
-		currAnno := o.GetAnnotations()
-		if len(currAnno) == 0 {
-			currAnno = map[string]string{kioutil.PathAnnotation: annoVal}
-		} else {
-			currAnno[kioutil.PathAnnotation] = annoVal
-		}
-		err = o.SetNestedStringMap(currAnno, "metadata", "annotations")
-		if err != nil {
-			return nil, err
-		}
+		// The sink function conveniently sets path if none is defined
+
+		// annoVal := fmt.Sprintf("%s/%s/%s_%s.yaml",
+		// 	chart.Args.Name, chart.Options.ReleaseName, strings.ToLower(o.GetKind()), o.GetName())
+		// currAnno := o.GetAnnotations()
+		// if len(currAnno) == 0 {
+		// 	currAnno = map[string]string{kioutil.PathAnnotation: annoVal}
+		// } else {
+		// 	currAnno[kioutil.PathAnnotation] = annoVal
+		// }
+		// err = o.SetNestedStringMap(currAnno, "metadata", "annotations")
+		// if err != nil {
+		// 	return nil, err
+		// }
 		objects = append(objects, o)
 	}
 
