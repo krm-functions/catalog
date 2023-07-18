@@ -15,12 +15,12 @@ func TestUpgrade(t *testing.T) {
 		{"*", "v1.4.0"},
 	}
 	for _, test := range combs {
-		new_v, err := Upgrade(versions, test.constraint)
+		newVer, err := Upgrade(versions, test.constraint)
 		if err != nil {
 			t.Errorf("Semver upgrade failure %q", err.Error())
 		}
-		if new_v != test.expect {
-			t.Errorf("Semver upgrade mismatch, got %q from test %+v", new_v, test)
+		if newVer != test.expect {
+			t.Errorf("Semver upgrade mismatch, got %q from test %+v", newVer, test)
 		}
 	}
 }

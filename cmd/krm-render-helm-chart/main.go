@@ -42,8 +42,8 @@ func ParseRenderSpec(b []byte) (*RenderHelmChart, error) {
 
 func Run(rl *fn.ResourceList) (bool, error) {
 	var outputs fn.KubeObjects
-	//cfg := rl.FunctionConfig
-	//parseConfig(cfg)
+	// cfg := rl.FunctionConfig
+	// parseConfig(cfg)
 
 	for _, kubeObject := range rl.Items {
 		if kubeObject.IsGVK("experimental.helm.sh", "", "RenderHelmChart") {
@@ -52,13 +52,13 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			for idx, chart := range spec.Charts {
-				if chart.Options.ReleaseName == "" {
+			for idx := range spec.Charts {
+				if spec.Charts[idx].Options.ReleaseName == "" {
 					return false, fmt.Errorf("Invalid chart spec %s: ReleaseName required, index %d", kubeObject.GetName(), idx)
 				}
 			}
-			for _, chart := range spec.Charts {
-				newobjs, err := chart.Template()
+			for idx := range spec.Charts {
+				newobjs, err := spec.Charts[idx].Template()
 				if err != nil {
 					return false, err
 				}
@@ -214,8 +214,8 @@ func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 			if err != nil {
 				return nil, err
 			}
-			defer file.Close()
 			_, err =io.Copy(file, tr)
+			file.Close()
 			if err != nil {
 				return nil, err
 			}
@@ -228,8 +228,7 @@ func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 		return nil, err
 	}
 	args := chart.buildHelmTemplateArgs()
-	args = append(args, "--values", valuesFile)
-	args = append(args, filepath.Join(tmpDir, chart.Args.Name))
+	args = append(args, "--values", valuesFile, filepath.Join(tmpDir, chart.Args.Name))
 
 	helmCtxt := helm.NewRunContext()
 	defer helmCtxt.DiscardContext()
@@ -315,7 +314,7 @@ func (chart *HelmChart) buildHelmTemplateArgs() []string {
 }
 
 func main() {
-	//fmt.Fprintf(os.Stderr, "version: %s\n", version.Version)
+	// fmt.Fprintf(os.Stderr, "version: %s\n", version.Version)
 	if err := fn.AsMain(fn.ResourceListProcessorFunc(Run)); err != nil {
 		os.Exit(1)
 	}
