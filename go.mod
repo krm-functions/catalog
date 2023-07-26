@@ -25,7 +25,6 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
-	golang.org/x/build v0.0.0-20230630152042-ac6243232470 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

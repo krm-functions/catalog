@@ -44,8 +44,8 @@ func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) (*t.H
 }
 
 // Apply new version to chart spec
-func handleNewVersion(newChart t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (*t.HelmChartArgs, error) {
-	upgraded := curr
+func handleNewVersion(newChart t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (upgraded *t.HelmChartArgs, info string, err error) {
+	upgraded = &curr
 	if newChart.Version != curr.Version {
 		upgradesAvailable++
 		anno := curr.Repo + "/" + curr.Name + ":" + newChart.Version
@@ -53,12 +53,12 @@ func handleNewVersion(newChart t.HelmChartArgs, curr t.HelmChartArgs, kubeObject
 			if idx >= 0 {
 				err := kubeObject.SetAnnotation(annotationUpgradeAvailable+"."+strconv.FormatInt(int64(idx), 10), anno)
 				if err != nil {
-					return nil, err
+					return nil, "", err
 				}
 			} else {
 				err := kubeObject.SetAnnotation(annotationUpgradeAvailable, anno)
 				if err != nil {
-					return nil, err
+					return nil, "", err
 				}
 			}
 		}
@@ -69,41 +69,42 @@ func handleNewVersion(newChart t.HelmChartArgs, curr t.HelmChartArgs, kubeObject
 		if Config.AnnotateSumOnUpgradeAvailable {
 			_, chartSum, err := helm.PullChart(newChart, "", nil, nil)
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
 			if idx >= 0 {
 				err = kubeObject.SetAnnotation(annotationUpgradeShaSum+"."+strconv.FormatInt(int64(idx), 10), "sha256:"+chartSum)
 				if err != nil {
-					return nil, err
+					return nil, "", err
 				}
 			} else {
 				err = kubeObject.SetAnnotation(annotationUpgradeShaSum, "sha256:"+chartSum)
 				if err != nil {
-					return nil, err
+					return nil, "", err
 				}
 			}
 		}
 		upgradedJSON, _ := json.Marshal(upgraded)
 		currJSON, _ := json.Marshal(curr)
-		fmt.Fprintf(os.Stderr, "{\"current\": %s, \"upgraded\": %s, \"constraint\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint)
+		info = fmt.Sprintf("{\"current\": %s, \"upgraded\": %s, \"constraint\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint)
 	} else {
 		if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(annotationShaSum) == "" {
 			_, chartSum, err := helm.PullChart(curr, "", nil, nil)
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
 			err = kubeObject.SetAnnotation(annotationShaSum, "sha256:"+chartSum)
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
 		}
 	}
-	return &upgraded, nil
+	return upgraded, info, nil
 }
 
 func Run(rl *fn.ResourceList) (bool, error) {
 	cfg := rl.FunctionConfig
 	parseConfig(cfg)
+	results := &rl.Results
 
 	for _, kubeObject := range rl.Items {
 		if kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") || kubeObject.IsGVK("experimental.helm.sh", "", "RenderHelmChart") {
@@ -120,11 +121,12 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				upgraded, err := handleNewVersion(*newVersion, helmChart.Args, kubeObject, idx, upgradeConstraint)
+				upgraded, info, err := handleNewVersion(*newVersion, helmChart.Args, kubeObject, idx, upgradeConstraint)
 				if err != nil {
 					return false, err
 				}
 				helmChart.Args.Version = upgraded.Version
+				*results = append(*results, fn.ConfigObjectResult(info, kubeObject, fn.Info))
 			}
 			err = kubeObject.SetNestedField(spec.Charts, "helmCharts")
 			if err != nil {
@@ -143,10 +145,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			upgraded, err := handleNewVersion(*newVersion, chartArgs, kubeObject, -1, upgradeConstraint)
+			upgraded, info, err := handleNewVersion(*newVersion, chartArgs, kubeObject, -1, upgradeConstraint)
 			if err != nil {
 				return false, err
 			}
+			*results = append(*results, fn.ConfigObjectResult(info, kubeObject, fn.Info))
 			err = kubeObject.SetNestedField(upgraded.Version, "spec", "source", "targetRevision")
 			if err != nil {
 				return false, err
@@ -154,7 +157,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 		}
 	}
 
-	fmt.Fprintf(os.Stderr, "{\"upgradesDone\": %d, \"upgradesAvailable\": %d, \"upgradesSkipped\": %d}\n", upgradesDone, upgradesAvailable, upgradesAvailable-upgradesDone)
+	*results = append(*results, fn.GeneralResult(fmt.Sprintf("{\"upgradesDone\": %d, \"upgradesAvailable\": %d, \"upgradesSkipped\": %d}\n", upgradesDone, upgradesAvailable, upgradesAvailable-upgradesDone),fn.Info))
 	return true, nil
 }
 
