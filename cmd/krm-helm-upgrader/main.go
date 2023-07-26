@@ -44,8 +44,9 @@ func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) (*t.H
 }
 
 // Apply new version to chart spec
-func handleNewVersion(newChart t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (upgraded *t.HelmChartArgs, info string, err error) {
-	upgraded = &curr
+func handleNewVersion(newChart t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (*t.HelmChartArgs, string, error) {
+	upgraded := curr
+	var info string
 	if newChart.Version != curr.Version {
 		upgradesAvailable++
 		anno := curr.Repo + "/" + curr.Name + ":" + newChart.Version
@@ -98,7 +99,7 @@ func handleNewVersion(newChart t.HelmChartArgs, curr t.HelmChartArgs, kubeObject
 			}
 		}
 	}
-	return upgraded, info, nil
+	return &upgraded, info, nil
 }
 
 func Run(rl *fn.ResourceList) (bool, error) {
