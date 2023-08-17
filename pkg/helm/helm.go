@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	t "github.com/michaelvl/helm-upgrader/pkg/helmspecs"
-	"github.com/michaelvl/helm-upgrader/pkg/skopeo"
+	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
+	"github.com/michaelvl/krm-functions/pkg/skopeo"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )
 

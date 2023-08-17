@@ -20,10 +20,10 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/michaelvl/helm-upgrader/pkg/helm"
-	t "github.com/michaelvl/helm-upgrader/pkg/helmspecs"
-	"github.com/michaelvl/helm-upgrader/pkg/semver"
-	"github.com/michaelvl/helm-upgrader/pkg/version"
+	"github.com/michaelvl/krm-functions/pkg/helm"
+	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
+	"github.com/michaelvl/krm-functions/pkg/semver"
+	"github.com/michaelvl/krm-functions/pkg/version"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )

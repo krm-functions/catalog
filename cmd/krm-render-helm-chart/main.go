@@ -26,8 +26,8 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
-	"github.com/michaelvl/helm-upgrader/pkg/helm"
-	t "github.com/michaelvl/helm-upgrader/pkg/helmspecs"
+	"github.com/michaelvl/krm-functions/pkg/helm"
+	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )

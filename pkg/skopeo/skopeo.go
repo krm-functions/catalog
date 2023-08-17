@@ -20,7 +20,7 @@ import (
 	"os/exec"
 	"regexp"
 
-	t "github.com/michaelvl/helm-upgrader/pkg/helmspecs"
+	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )
 

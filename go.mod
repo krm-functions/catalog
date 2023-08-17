@@ -1,4 +1,4 @@
-module github.com/michaelvl/helm-upgrader
+module github.com/michaelvl/krm-functions
 
 go 1.19
 
