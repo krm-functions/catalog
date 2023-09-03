@@ -8,6 +8,11 @@ This repository have two [KRM functions](https://medium.com/@michael.vittrup.lar
 - [render-helm-chart](docs/render-helm-chart.md) A variant of the
   [baseline
   `render-helm-chart`](https://catalog.kpt.dev/render-helm-chart/v0.2/)
-  that can be used in [declarative
+  function, which can be used in [declarative
   pipelines](https://kpt.dev/book/04-using-functions/01-declarative-function-execution)
   through Kptfiles.
+- [apply-setters](docs/apply-setters.md) A variant of the [baseline
+  `apply-setters`](https://catalog.kpt.dev/apply-setters/v0.2/)
+  function, which supports merning of multiple sources of
+  apply-setters configuration and accepts configuration through both
+  function-config and primary resource list.
