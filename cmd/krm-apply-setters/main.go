@@ -21,6 +21,12 @@ import (
 	"github.com/GoogleContainerTools/kpt-functions-catalog/functions/go/apply-setters/applysetters"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
+	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
+)
+
+const (
+	configGroup = "experimental.fn.kpt.dev/v1alpha1"
+	configKind  = "ApplySetters"
 )
 
 func main() {
@@ -82,10 +88,32 @@ func (asp *ApplySettersProcessor) Process(rl *framework.ResourceList) error {
 	return nil
 }
 
+func GetDataMap(rn *kyaml.RNode) map[string]string {
+	n, err := rn.Pipe(kyaml.Lookup("setters", "data"))
+	if err != nil {
+		return nil
+	}
+	result := map[string]string{}
+	_ = n.VisitFields(func(node *kyaml.MapNode) error {
+		result[kyaml.GetValue(node.Key)] = kyaml.GetValue(node.Value)
+		return nil
+	})
+	return result
+}
+
 func getSetters(rl *framework.ResourceList) (applysetters.ApplySetters, error) {
 	var setters applysetters.ApplySetters
 
+	// Standard setters from function-config, ConfigMap-style
 	applysetters.Decode(rl.FunctionConfig, &setters)
+
+	for _, rn := range rl.Items {
+		if rn.GetKind() == configKind && rn.GetApiVersion() == configGroup {
+			for k, v := range GetDataMap(rn) {
+				setters.Setters = append(setters.Setters, applysetters.Setter{Name: k, Value: v})
+			}
+		}
+	}
 
 	return setters, nil
 }

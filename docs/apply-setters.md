@@ -3,7 +3,6 @@
 TL;DR - this `apply-setters` KRM function ...
 ..
 [baseline apply-setters](https://catalog.kpt.dev/apply-setters/v0.2/)
-that it can only be executed imperatively.
 
 ## Configuration Management
 
