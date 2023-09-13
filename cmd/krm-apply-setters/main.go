@@ -147,21 +147,24 @@ func getReferenceSetters(rn *kyaml.RNode, resources []*kyaml.RNode) map[string]s
 }
 
 func lookFieldPathSetter(source *ktypes.SourceSelector, resources []*kyaml.RNode) (string, error) {
-	// FIXME remove
-	fmt.Fprintf(os.Stderr, "source: %+v\n", source)
+	var selected []*kyaml.RNode
 	for _, rn := range resources {
 		resId := resid.FromRNode(rn)
 		if resId.IsSelectedBy(source.ResId) {
-			fmt.Fprintf(os.Stderr, "selected by: %+v\n", resId)
-			fmt.Fprintf(os.Stderr, "lookup fieldpath: %v: %+v\n", source.FieldPath, rn.GetNamespace())
-			val, err := rn.GetFieldValue(source.FieldPath)
-			if err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("%v", val), nil
+			selected = append(selected, rn)
 		}
 	}
-	return "", nil
+	if len (selected) == 0 {
+		return "", fmt.Errorf("Nothing matched by %+v", source)
+	}
+	if len (selected) > 1 {
+		return "", fmt.Errorf("Multiple resources (%v) match %+v", len(selected), source)
+	}
+	val, err := selected[0].GetFieldValue(source.FieldPath)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%v", val), nil
 }
 
 func getSetters(rl *framework.ResourceList) (applysetters.ApplySetters, error) {

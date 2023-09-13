@@ -35,3 +35,7 @@ render-helm-chart-example:
 	cp examples/render-helm-chart/Kptfile my-cert-manager-package/
 	kpt fn render my-cert-manager-package -o stdout | grep -q 'team_name: blue-team'
 	rm -rf my-cert-manager-package
+
+.PHONY: apply-setters
+apply-setters:
+	xx
