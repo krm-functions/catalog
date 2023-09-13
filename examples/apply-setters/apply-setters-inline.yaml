@@ -1,0 +1,21 @@
+apiVersion: experimental.fn.kpt.dev/v1alpha1
+kind: ApplySetters
+metadata:
+  name: inline-setters-spec
+  annotations:
+    config.kubernetes.io/local-config: true
+setters:
+  # These work like traditional ConfigMap-based apply-setters function-config
+  data:
+    bar: valueBar
+    baz: valueBaz
+
+  # These references resource, and reads from a field path and turns read
+  # data into a setters value . This is similar to the
+  # apply-replacements KRM function.
+  references:
+  - source:
+      kind: Deployment          # A resource to locate
+      name: my-nginx
+      fieldPath: spec.replicas  # Read this field from resource
+    as: deployReplicas          # Use read value as setter with this name

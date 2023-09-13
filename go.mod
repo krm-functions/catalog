@@ -38,5 +38,6 @@ require (
 	k8s.io/klog/v2 v2.90.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230601164746-7562a1006961 // indirect
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
+	sigs.k8s.io/kustomize/api v0.14.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )

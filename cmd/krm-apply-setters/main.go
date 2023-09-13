@@ -21,12 +21,14 @@ import (
 	"github.com/GoogleContainerTools/kpt-functions-catalog/functions/go/apply-setters/applysetters"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
+	"sigs.k8s.io/kustomize/kyaml/resid"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
+	ktypes "sigs.k8s.io/kustomize/api/types"
 )
 
 const (
-	configGroup = "experimental.fn.kpt.dev/v1alpha1"
-	configKind  = "ApplySetters"
+	configApiVersion = "experimental.fn.kpt.dev/v1alpha1"
+	configKind       = "ApplySetters"
 )
 
 func main() {
@@ -88,7 +90,8 @@ func (asp *ApplySettersProcessor) Process(rl *framework.ResourceList) error {
 	return nil
 }
 
-func GetDataMap(rn *kyaml.RNode) map[string]string {
+// getDataMap is called with an ApplySetters resource and return setters as defined by 'data'
+func getDataMap(rn *kyaml.RNode) map[string]string {
 	n, err := rn.Pipe(kyaml.Lookup("setters", "data"))
 	if err != nil {
 		return nil
@@ -101,6 +104,66 @@ func GetDataMap(rn *kyaml.RNode) map[string]string {
 	return result
 }
 
+// getReferenceSetters is called with an ApplySetters resource and return setters as defined by 'references'
+func getReferenceSetters(rn *kyaml.RNode, resources []*kyaml.RNode) map[string]string {
+	n, err := rn.Pipe(kyaml.Lookup("setters", "references"))
+	if err != nil {
+		return nil
+	}
+	result := map[string]string{}
+	_ = n.VisitElements(func(node *kyaml.RNode) error {
+		source := &ktypes.SourceSelector{}
+
+		val, err := node.GetString("source.kind")
+		if err != nil {
+			return err
+		}
+		source.ResId.Gvk.Kind = val
+		val, err = node.GetString("source.name")
+		if err != nil {
+			return err
+		}
+		source.ResId.Name = val
+		// TODO: More fields
+
+		val, err = node.GetString("source.fieldPath")
+		if err != nil {
+			return err
+		}
+		source.FieldPath = val
+
+		setterValue, err := lookFieldPathSetter(source, resources)
+		if err != nil {
+			return err
+		}
+		asSetter, err := node.GetString("as")
+		if err != nil {
+			return err
+		}
+		result[asSetter] = setterValue
+		return nil
+	})
+	return result
+}
+
+func lookFieldPathSetter(source *ktypes.SourceSelector, resources []*kyaml.RNode) (string, error) {
+	// FIXME remove
+	fmt.Fprintf(os.Stderr, "source: %+v\n", source)
+	for _, rn := range resources {
+		resId := resid.FromRNode(rn)
+		if resId.IsSelectedBy(source.ResId) {
+			fmt.Fprintf(os.Stderr, "selected by: %+v\n", resId)
+			fmt.Fprintf(os.Stderr, "lookup fieldpath: %v: %+v\n", source.FieldPath, rn.GetNamespace())
+			val, err := rn.GetFieldValue(source.FieldPath)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("%v", val), nil
+		}
+	}
+	return "", nil
+}
+
 func getSetters(rl *framework.ResourceList) (applysetters.ApplySetters, error) {
 	var setters applysetters.ApplySetters
 
@@ -108,8 +171,11 @@ func getSetters(rl *framework.ResourceList) (applysetters.ApplySetters, error) {
 	applysetters.Decode(rl.FunctionConfig, &setters)
 
 	for _, rn := range rl.Items {
-		if rn.GetKind() == configKind && rn.GetApiVersion() == configGroup {
-			for k, v := range GetDataMap(rn) {
+		if rn.GetKind() == configKind && rn.GetApiVersion() == configApiVersion {
+			for k, v := range getDataMap(rn) {
+				setters.Setters = append(setters.Setters, applysetters.Setter{Name: k, Value: v})
+			}
+			for k, v := range getReferenceSetters(rn, rl.Items) {
 				setters.Setters = append(setters.Setters, applysetters.Setter{Name: k, Value: v})
 			}
 		}
