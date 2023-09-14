@@ -17,6 +17,8 @@ apiVersion: experimental.fn.kpt.dev/v1alpha1
 kind: ApplySetters
 metadata:
   name: inline-setters-spec
+  annotations:
+    config.kubernetes.io/local-config: true
 setters:
   # These work like traditional ConfigMap-based apply-setters function-config
   data:
@@ -27,11 +29,17 @@ setters:
   # data into a setters value . This is similar to the
   # apply-replacements KRM function.
   references:
-  - source:
-      kind: Deployment          # A resource to locate
+
+  - setterName: deployReplicas   # Use the value from source below as setter with this name
+    source:
+      kind: Deployment           # A resource to locate
       name: my-nginx
-      fieldPath: spec.replicas  # Read this field from resource
-    as: deployReplicas          # Use read value as setter with this name
+      fieldPath: spec.replicas   # Read this field from resource
+
+  - setterName: kptGitSha
+    source:
+      kind: Kptfile
+      fieldPath: upstream.git.ref
 ```
 
 ## Configuration Management
@@ -75,3 +83,38 @@ code-defined preparation of the input for the `apply-repalcements`
 function. This enables a wide range of modifications to be applied in
 a render pipeline, but it still suffers from the disadvantages of the
 `apply-replacements` function.
+
+## Example Usage
+
+```shell
+export APPLY_SETTERS_IMAGE=ghcr.io/michaelvl/krm-apply-setters@
+
+kpt fn source examples/apply-setters \
+ | kpt fn eval - --truncate-output=false -i $APPLY_SETTERS_IMAGE --fn-config example-function-configs/apply-setters/cm-setters.yaml \
+ | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap
+```
+
+Notice, how the `replicas` field from the `Deployment` is inserted
+into the `ConfigMap` and the Git SHA from the `Kptfile` resource is
+inserted into the `Deployment` `version` label:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apply-setters-fn-config
+data:
+  ...
+  replicas: "4" # kpt-set: ${deployReplicas}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-nginx
+  namespace: olo
+  labels:
+    app.kubernetes.io/version: "a1b2c3d4e5e6" # kpt-set: ${kptGitSha}
+spec:
+  replicas: 4
+...
+```

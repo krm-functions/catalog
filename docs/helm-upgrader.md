@@ -51,7 +51,7 @@ TL;DR:
 git clone https://github.com/michaelvl/krm-functions.git
 cd krm-functions
 
-export HELM_UPGRADER_IMG=ghcr.io/michaelvl/krm-helm-upgrader@sha256:6f88a5b244c615f714efd76599e5c44e3932f8ff7321b3d846c5789151bc2373
+export HELM_UPGRADER_IMG=ghcr.io/michaelvl/krm-helm-upgrader@
 
 kpt fn source examples/helm-upgrader | \
   kpt fn eval - --image $HELM_UPGRADER_IMG \

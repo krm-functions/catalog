@@ -22,3 +22,8 @@ IMAGE=ghcr.io/michaelvl/krm-render-helm-chart
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
 echo "Using digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/michaelvl/krm-.*@).*#\1$DIGEST#" docs/render-helm-chart.md
+
+IMAGE=ghcr.io/michaelvl/krm-apply-setters
+DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
+echo "Using digest: $DIGEST"
+sed -i -E "s#(.*?ghcr.io/michaelvl/krm-.*@).*#\1$DIGEST#" docs/apply-setters.md
