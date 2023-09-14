@@ -10,12 +10,16 @@ setters:
     bar: valueBar
     baz: valueBaz
 
-  # These references resource, and reads from a field path and turns read
+  # These references resources, and reads from a field path and turns read
   # data into a setters value . This is similar to the
   # apply-replacements KRM function.
   references:
-  - source:
-      kind: Deployment          # A resource to locate
+  - setterName: deployReplicas   # Use the value from source below as setter with this name
+    source:
+      kind: Deployment           # A resource to locate
       name: my-nginx
-      fieldPath: spec.replicas  # Read this field from resource
-    as: deployReplicas          # Use read value as setter with this name
+      fieldPath: spec.replicas   # Read this field from resource
+  - setterName: kptGitSha
+    source:
+      kind: Kptfile
+      fieldPath: upstream.git.ref

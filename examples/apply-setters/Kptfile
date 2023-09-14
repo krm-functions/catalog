@@ -1,0 +1,33 @@
+apiVersion: kpt.dev/v1
+kind: Kptfile
+metadata:
+  name: test-pkg
+  annotations:
+    config.kubernetes.io/local-config: "true"
+upstream:
+  type: git
+  git:
+    repo: git@github.com:some/repo
+    directory: /pkgtst
+    ref: a1b2c3d4e5e6
+  updateStrategy: force-delete-replace
+upstreamLock:
+  type: git
+  git:
+    repo: git@github.com:some/repo
+    directory: /pkgtst
+    ref: a1b2c3d4e5e6
+    commit: a1b2c3d4e5e6
+info:
+  description: a test package
+pipeline:
+  mutators:
+    - image: gcr.io/kpt-fn/set-namespace:v0.4.1
+      configPath: package-context.yaml
+      name: set package-context namespace
+    - image: gcr.io/kpt-fn/apply-replacements:v0.1.1
+      configPath: update-rolebinding.yaml
+      name: update role binding
+  validators:
+    - image: gcr.io/kpt-fn/kubeval:v0.3
+      name: validation

@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: my-nginx
   namespace: olo
+  labels:
+    app.kubernetes.io/version: "" # kpt-set: ${kptGitSha}
 spec:
   replicas: 4
   selector:

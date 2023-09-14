@@ -1,8 +1,38 @@
 # Apply-Setters Function
 
-TL;DR - this `apply-setters` KRM function ...
-..
-[baseline apply-setters](https://catalog.kpt.dev/apply-setters/v0.2/)
+TL;DR - this `apply-setters` KRM function provides two extensions to
+the [baseline
+apply-setters](https://catalog.kpt.dev/apply-setters/v0.2/) function:
+
+- It accepts one or more `ApplySetters` resource(s) through the main
+  resource input. This means setters values can be manipulated by a
+  pipeline of KRM functions and that setters from multiple sources can
+  be integrated.
+- Setters can take values from other resources through a field-path.
+
+The example `ApplySetters` resource below illustrates this:
+
+```yaml
+apiVersion: experimental.fn.kpt.dev/v1alpha1
+kind: ApplySetters
+metadata:
+  name: inline-setters-spec
+setters:
+  # These work like traditional ConfigMap-based apply-setters function-config
+  data:
+    bar: valueBar
+    baz: valueBaz
+
+  # These references resources, and reads from a field path and turns read
+  # data into a setters value . This is similar to the
+  # apply-replacements KRM function.
+  references:
+  - source:
+      kind: Deployment          # A resource to locate
+      name: my-nginx
+      fieldPath: spec.replicas  # Read this field from resource
+    as: deployReplicas          # Use read value as setter with this name
+```
 
 ## Configuration Management
 

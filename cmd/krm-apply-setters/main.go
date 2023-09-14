@@ -15,29 +15,26 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/GoogleContainerTools/kpt-functions-catalog/functions/go/apply-setters/applysetters"
+	ktypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
 	"sigs.k8s.io/kustomize/kyaml/resid"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
-	ktypes "sigs.k8s.io/kustomize/api/types"
 )
 
 const (
-	configApiVersion = "experimental.fn.kpt.dev/v1alpha1"
+	configAPIVersion = "experimental.fn.kpt.dev/v1alpha1"
 	configKind       = "ApplySetters"
 )
 
 func main() {
 	asp := ApplySettersProcessor{}
 	cmd := command.Build(&asp, command.StandaloneEnabled, false)
-
-	//cmd.Short = generated.ApplySettersShort
-	//cmd.Long = generated.ApplySettersLong
-	//cmd.Example = generated.ApplySettersExamples
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -51,24 +48,19 @@ func (asp *ApplySettersProcessor) Process(rl *framework.ResourceList) error {
 	var results framework.Results
 
 	results = append(results, &framework.Result{
-		Message: "apply-setters",
+		Message:  "apply-setters",
 		Severity: framework.Info,
 	})
 
-	setters, err := getSetters(rl)
-	if err != nil {
-		results = append(results, &framework.Result{
-			Message: "no setters definitions found",
-		})
-		return nil
-	}
+	setters := getSetters(rl)
 
-	_, err = setters.Filter(rl.Items)
+	_, err := setters.Filter(rl.Items)
 	if err != nil {
 		results = append(results, &framework.Result{
 			Message:  fmt.Sprintf("failed to apply setters: %s", err.Error()),
 			Severity: framework.Error,
 		})
+		rl.Results = results
 		return err
 	}
 
@@ -113,30 +105,44 @@ func getReferenceSetters(rn *kyaml.RNode, resources []*kyaml.RNode) map[string]s
 	result := map[string]string{}
 	_ = n.VisitElements(func(node *kyaml.RNode) error {
 		source := &ktypes.SourceSelector{}
+		notFound := &kyaml.NoFieldError{}
 
-		val, err := node.GetString("source.kind")
-		if err != nil {
-			return err
+		getOrErr := func(path string, valueDest *string) error {
+			val, err := node.GetString(path)
+			if err != nil {
+				if errors.As(err, notFound) {
+					return nil
+				}
+				return err
+			}
+			*valueDest = val
+			return nil
 		}
-		source.ResId.Gvk.Kind = val
-		val, err = node.GetString("source.name")
-		if err != nil {
-			return err
-		}
-		source.ResId.Name = val
-		// TODO: More fields
 
-		val, err = node.GetString("source.fieldPath")
-		if err != nil {
+		if err := getOrErr("source.group", &source.ResId.Gvk.Group); err != nil {
 			return err
 		}
-		source.FieldPath = val
+		if err := getOrErr("source.version", &source.ResId.Gvk.Version); err != nil {
+			return err
+		}
+		if err := getOrErr("source.kind", &source.ResId.Gvk.Kind); err != nil {
+			return err
+		}
+		if err := getOrErr("source.name", &source.ResId.Name); err != nil {
+			return err
+		}
+		if err := getOrErr("source.namespace", &source.ResId.Namespace); err != nil {
+			return err
+		}
+		if err := getOrErr("source.fieldPath", &source.FieldPath); err != nil {
+			return err
+		}
 
-		setterValue, err := lookFieldPathSetter(source, resources)
+		setterValue, err := lookupFieldPathSetter(source, resources)
 		if err != nil {
 			return err
 		}
-		asSetter, err := node.GetString("as")
+		asSetter, err := node.GetString("setterName")
 		if err != nil {
 			return err
 		}
@@ -146,19 +152,19 @@ func getReferenceSetters(rn *kyaml.RNode, resources []*kyaml.RNode) map[string]s
 	return result
 }
 
-func lookFieldPathSetter(source *ktypes.SourceSelector, resources []*kyaml.RNode) (string, error) {
+func lookupFieldPathSetter(source *ktypes.SourceSelector, resources []*kyaml.RNode) (string, error) {
 	var selected []*kyaml.RNode
 	for _, rn := range resources {
-		resId := resid.FromRNode(rn)
-		if resId.IsSelectedBy(source.ResId) {
+		resID := resid.FromRNode(rn)
+		if resID.IsSelectedBy(source.ResId) {
 			selected = append(selected, rn)
 		}
 	}
-	if len (selected) == 0 {
-		return "", fmt.Errorf("Nothing matched by %+v", source)
+	if len(selected) == 0 {
+		return "", fmt.Errorf("nothing matched by %+v", source)
 	}
-	if len (selected) > 1 {
-		return "", fmt.Errorf("Multiple resources (%v) match %+v", len(selected), source)
+	if len(selected) > 1 {
+		return "", fmt.Errorf("multiple resources (%v) match %+v", len(selected), source)
 	}
 	val, err := selected[0].GetFieldValue(source.FieldPath)
 	if err != nil {
@@ -167,14 +173,14 @@ func lookFieldPathSetter(source *ktypes.SourceSelector, resources []*kyaml.RNode
 	return fmt.Sprintf("%v", val), nil
 }
 
-func getSetters(rl *framework.ResourceList) (applysetters.ApplySetters, error) {
+func getSetters(rl *framework.ResourceList) applysetters.ApplySetters {
 	var setters applysetters.ApplySetters
 
 	// Standard setters from function-config, ConfigMap-style
 	applysetters.Decode(rl.FunctionConfig, &setters)
 
 	for _, rn := range rl.Items {
-		if rn.GetKind() == configKind && rn.GetApiVersion() == configApiVersion {
+		if rn.GetKind() == configKind && rn.GetApiVersion() == configAPIVersion {
 			for k, v := range getDataMap(rn) {
 				setters.Setters = append(setters.Setters, applysetters.Setter{Name: k, Value: v})
 			}
@@ -184,5 +190,5 @@ func getSetters(rl *framework.ResourceList) (applysetters.ApplySetters, error) {
 		}
 	}
 
-	return setters, nil
+	return setters
 }
