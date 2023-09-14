@@ -13,7 +13,7 @@ This repository have three [KRM functions](https://medium.com/@michael.vittrup.l
   through Kptfiles.
 - [apply-setters](docs/apply-setters.md) A variant of the [baseline
   `apply-setters`](https://catalog.kpt.dev/apply-setters/v0.2/)
-  function, which supports merning of multiple sources of
+  function, which supports merge of multiple sources of
   apply-setters configuration and accepts configuration through both
   function-config and primary resource list. Also supports reading
   setter values from other resources.
