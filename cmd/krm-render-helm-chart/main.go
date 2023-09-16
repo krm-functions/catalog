@@ -129,7 +129,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	return true, nil
 }
 
-func lookupAuthSecret(chart *HelmChart, rl *fn.ResourceList) (username *string, password *string, err error) {
+func lookupAuthSecret(chart *HelmChart, rl *fn.ResourceList) (username, password *string, err error) {
 	namespace := chart.Args.Auth.Namespace
 	if namespace == "" {
 		namespace = "default" // Default according to spec

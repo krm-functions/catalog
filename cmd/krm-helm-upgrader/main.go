@@ -23,7 +23,6 @@ import (
 	"github.com/michaelvl/krm-functions/pkg/helm"
 	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
 	"github.com/michaelvl/krm-functions/pkg/semver"
-	"github.com/michaelvl/krm-functions/pkg/version"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )
@@ -57,8 +56,8 @@ func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) (*t.H
 	return &newChart, nil
 }
 
-// Apply new version to chart spec
-func handleNewVersion(newChart t.HelmChartArgs, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (*t.HelmChartArgs, string, error) {
+// handleNewVersion applies new version to chart spec according to upgradeConstraint
+func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (*t.HelmChartArgs, string, error) {
 	upgraded := curr
 	var info string
 	if newChart.Version != curr.Version {
@@ -101,16 +100,14 @@ func handleNewVersion(newChart t.HelmChartArgs, curr t.HelmChartArgs, kubeObject
 		upgradedJSON, _ := json.Marshal(upgraded)
 		currJSON, _ := json.Marshal(curr)
 		info = fmt.Sprintf("{\"current\": %s, \"upgraded\": %s, \"constraint\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint)
-	} else {
-		if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(annotationShaSum) == "" {
-			_, chartSum, err := helm.PullChart(curr, "", nil, nil)
-			if err != nil {
-				return nil, "", err
-			}
-			err = kubeObject.SetAnnotation(annotationShaSum, "sha256:"+chartSum)
-			if err != nil {
-				return nil, "", err
-			}
+	} else if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(annotationShaSum) == "" {
+		_, chartSum, err := helm.PullChart(curr, "", nil, nil)
+		if err != nil {
+			return nil, "", err
+		}
+		err = kubeObject.SetAnnotation(annotationShaSum, "sha256:"+chartSum)
+		if err != nil {
+			return nil, "", err
 		}
 	}
 	return &upgraded, info, nil
@@ -132,11 +129,13 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			}
 			for idx := range spec.Charts {
 				helmChart := &spec.Charts[idx]
-				newVersion, err := evaluateChartVersion(helmChart.Args, upgradeConstraint)
+				var newVersion, upgraded *t.HelmChartArgs
+				var info string
+				newVersion, err = evaluateChartVersion(helmChart.Args, upgradeConstraint)
 				if err != nil {
 					return false, err
 				}
-				upgraded, info, err := handleNewVersion(*newVersion, helmChart.Args, kubeObject, idx, upgradeConstraint)
+				upgraded, info, err = handleNewVersion(*newVersion, helmChart.Args, kubeObject, idx, upgradeConstraint)
 				if err != nil {
 					return false, err
 				}
@@ -172,12 +171,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 		}
 	}
 
-	*results = append(*results, fn.GeneralResult(fmt.Sprintf("{\"upgradesDone\": %d, \"upgradesAvailable\": %d, \"upgradesSkipped\": %d}\n", upgradesDone, upgradesAvailable, upgradesAvailable-upgradesDone),fn.Info))
+	*results = append(*results, fn.GeneralResult(fmt.Sprintf("{\"upgradesDone\": %d, \"upgradesAvailable\": %d, \"upgradesSkipped\": %d}\n", upgradesDone, upgradesAvailable, upgradesAvailable-upgradesDone), fn.Info))
 	return true, nil
 }
 
 func main() {
-	fmt.Fprintf(os.Stderr, "version: %s\n", version.Version)
 	if err := fn.AsMain(fn.ResourceListProcessorFunc(Run)); err != nil {
 		os.Exit(1)
 	}

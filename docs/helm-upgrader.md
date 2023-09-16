@@ -59,8 +59,6 @@ kpt fn source examples/helm-upgrader | \
   kpt fn sink examples-upgraded
 ```
 
-> The command outputs some information on `stderr`, which can be ignored for now.
-
 The command above will process the manifests in the `examples/helm-upgrader` folder, run the
 `helm-upgrader` KRM function and write-back the Kubernetes manifests into
 `examples-upgraded`.

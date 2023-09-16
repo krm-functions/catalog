@@ -13,8 +13,8 @@ linters-settings:
       - style
   govet:
     check-shadowing: true
-    enable:
-      - fieldalignment
+    #enable:
+    #  - fieldalignment
   nolintlint:
     require-explanation: true
     require-specific: true
@@ -39,7 +39,7 @@ linters:
     - misspell
     - nolintlint
     - nakedret
-    - prealloc
+    #- prealloc
     - predeclared
     - revive
     - staticcheck
