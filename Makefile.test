@@ -1,8 +1,9 @@
 HELM_UPGRADER_BIN := bin/linux_amd64/krm-helm-upgrader
 HELM_RENDER_BIN := bin/linux_amd64/krm-render-helm-chart
 BASELINE_RENDER_HELM_CHART := gcr.io/kpt-fn/render-helm-chart:v0.2.2
+APPLY_SETTERS_BIN := bin/linux_amd64/krm-apply-setters
 
-e2e-tests: test-render-helm-chart render-helm-chart-example test-helm-upgrader
+e2e-tests: test-render-helm-chart render-helm-chart-example test-helm-upgrader test-apply-setters
 
 .PHONY: test-helm-upgrader
 test-helm-upgrader:
@@ -36,6 +37,12 @@ render-helm-chart-example:
 	kpt fn render my-cert-manager-package -o stdout | grep -q 'team_name: blue-team'
 	rm -rf my-cert-manager-package
 
-.PHONY: apply-setters
-apply-setters:
-	xx
+.PHONY: test-apply-setters
+test-apply-setters:
+	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false --exec $(APPLY_SETTERS_BIN) --fn-config example-function-configs/apply-setters/cm-setters.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.yaml
+	grep -e 'foo: "valueFoo"' test-out.yaml
+	grep -e 'bar: "valueBar"' test-out.yaml
+	grep -e 'baz: "valueBaz"' test-out.yaml
+	grep -e 'replicas: "4"' test-out.yaml
+	grep -e 'app.kubernetes.io/version: "a1b2c3d4e5e6"' test-out.yaml
+	rm test-out.yaml
