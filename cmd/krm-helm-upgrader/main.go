@@ -1,11 +1,11 @@
 // Copyright 2023 Michael Vittrup Larsen
-
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,10 +33,11 @@ const annotationUpgradeAvailable string = annotationURL + "upgrade-available"
 const annotationShaSum string = annotationURL + "chart-sum"
 const annotationUpgradeShaSum string = annotationURL + "upgrade-chart-sum"
 
-var upgradesDone, upgradesAvailable int
+var upgradesEvaluated, upgradesDone, upgradesAvailable int
 
 // Lookup versions and find a possible upgrade that fulfils constraints
 func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) (*t.HelmChartArgs, error) {
+	upgradesEvaluated++
 	if upgradeConstraint == "" {
 		upgradeConstraint = "*"
 	}
@@ -116,6 +117,7 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 func Run(rl *fn.ResourceList) (bool, error) {
 	cfg := rl.FunctionConfig
 	parseConfig(cfg)
+	fmt.Fprintf(os.Stderr, "3<<%+v>>\n", Config)
 	results := &rl.Results
 
 	for _, kubeObject := range rl.Items {
@@ -171,7 +173,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 		}
 	}
 
-	*results = append(*results, fn.GeneralResult(fmt.Sprintf("{\"upgradesDone\": %d, \"upgradesAvailable\": %d, \"upgradesSkipped\": %d}\n", upgradesDone, upgradesAvailable, upgradesAvailable-upgradesDone), fn.Info))
+	*results = append(*results, fn.GeneralResult(fmt.Sprintf("{\"upgradesEvaluated\": %d, \"upgradesDone\": %d, \"upgradesAvailable\": %d, \"upgradesSkipped\": %d}\n", upgradesEvaluated, upgradesDone, upgradesAvailable, upgradesAvailable-upgradesDone), fn.Info))
 	return true, nil
 }
 
