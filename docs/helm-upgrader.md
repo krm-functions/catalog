@@ -47,15 +47,23 @@ for an introduction to `kpt` and KRM functions.
 
 TL;DR:
 
-```
+Start by cloning this repository with example files:
+
+```shell
 git clone https://github.com/michaelvl/krm-functions.git
 cd krm-functions
+```
 
+Run the `helm-upgrader` function using `kpt`:
+
+```
 export HELM_UPGRADER_IMG=ghcr.io/michaelvl/krm-helm-upgrader@sha256:0c28729bd3a4002aa3dd85456b60034d6d6b3cad61c8aa38c3ecd6963ca91e8a
 
 kpt fn source examples/helm-upgrader | \
-  kpt fn eval - --image $HELM_UPGRADER_IMG \
-    --network --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | \
+  kpt fn eval - \
+    --image $HELM_UPGRADER_IMG \
+    --network --truncate-output=false \
+	--fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | \
   kpt fn sink examples-upgraded
 ```
 
