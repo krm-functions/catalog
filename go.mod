@@ -6,7 +6,8 @@ require (
 	github.com/GoogleContainerTools/kpt-functions-catalog/functions/go/apply-setters v0.2.0
 	github.com/GoogleContainerTools/kpt-functions-sdk/go/fn v0.0.0-20230302070146-e8e9cb3c3ae2
 	github.com/Masterminds/semver v1.5.0
-	sigs.k8s.io/kustomize/kyaml v0.14.3
+	sigs.k8s.io/kustomize/api v0.14.0
+	sigs.k8s.io/kustomize/kyaml v0.15.0
 )
 
 require (
@@ -30,7 +31,7 @@ require (
 	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -38,6 +39,5 @@ require (
 	k8s.io/klog/v2 v2.90.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230601164746-7562a1006961 // indirect
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
-	sigs.k8s.io/kustomize/api v0.14.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
