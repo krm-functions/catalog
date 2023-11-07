@@ -117,7 +117,6 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 func Run(rl *fn.ResourceList) (bool, error) {
 	cfg := rl.FunctionConfig
 	parseConfig(cfg)
-	fmt.Fprintf(os.Stderr, "3<<%+v>>\n", Config)
 	results := &rl.Results
 
 	for _, kubeObject := range rl.Items {

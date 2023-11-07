@@ -12,7 +12,7 @@ test-helm-upgrader:
 	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.yaml
 	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.yaml
 	#grep -e '.*upgrade-available.1: .*/external-secrets:0.8.1' test-out.yaml
-	rm test-out.yaml
+	#rm test-out.yaml
 
 .PHONY: test-render-helm-chart
 test-render-helm-chart:
