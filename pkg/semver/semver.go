@@ -55,3 +55,15 @@ func Upgrade(versions []string, constraint string) (string, error) {
 	}
 	return "", fmt.Errorf("no version found that satisfies constraint: %q", constraint)
 }
+
+func Diff(fromVer, toVer string) (string, error) {
+	from, err := version.NewVersion(fromVer)
+	if err != nil {
+		return "", err
+	}
+	to, err := version.NewVersion(toVer)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%d.%d.%d", to.Major()-from.Major(), to.Minor()-from.Minor(), to.Patch()-from.Patch()), nil
+}

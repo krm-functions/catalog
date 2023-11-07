@@ -38,3 +38,23 @@ func TestUpgrade(t *testing.T) {
 		}
 	}
 }
+
+func TestVersionDiff(t *testing.T) {
+	combs := []struct {
+		from     string
+		to       string
+		expected string
+	}{
+		{"1.1.1", "1.1.2", "0.0.1"},
+		{"2.0.0", "2.1.0", "0.1.0"},
+	}
+	for _, test := range combs {
+		d, err := Diff(test.from, test.to)
+		if err != nil {
+			t.Errorf("Semver diff failure %q", err.Error())
+		}
+		if d != test.expected {
+			t.Errorf("Semver diff mismatch, got %q from test %+v", d, test)
+		}
+	}
+}

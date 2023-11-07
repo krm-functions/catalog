@@ -1,5 +1,6 @@
 -include Makefile.local
 -include Makefile.test
+-include Makefile.extra
 # Copyright 2016 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +25,7 @@ else
 endif
 
 # The binaries to build (just the basenames)
-BINS ?= krm-helm-upgrader krm-render-helm-chart krm-apply-setters
+BINS ?= krm-helm-upgrader krm-render-helm-chart krm-apply-setters template-kyaml
 
 # The platforms we support
 #ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64 linux/ppc64le linux/s390x

@@ -100,7 +100,11 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 		}
 		upgradedJSON, _ := json.Marshal(upgraded)
 		currJSON, _ := json.Marshal(curr)
-		info = fmt.Sprintf("{\"current\": %s, \"upgraded\": %s, \"constraint\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint)
+		distance, err := semver.Diff(curr.Version, upgraded.Version)
+		if err != nil {
+			return nil, "", err
+		}
+		info = fmt.Sprintf("{\"current\": %s, \"upgraded\": %s, \"constraint\": %q, \"VersionDistance\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint, distance)
 	} else if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(annotationShaSum) == "" {
 		_, chartSum, err := helm.PullChart(curr, "", nil, nil)
 		if err != nil {
