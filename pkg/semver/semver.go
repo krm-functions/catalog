@@ -55,7 +55,13 @@ func Upgrade(versions []string, constraint string) (string, error) {
 	}
 	return "", fmt.Errorf("no version found that satisfies constraint: %q", constraint)
 }
-
+// Diff will calculate the difference between two semver
+// versions. Since semver are not a well-defined numeric, the
+// subtraction is limited to the difference between leftmost non-zero
+// difference, i.e. if a difference is found in the major numbers,
+// then that difference is returned and the others are represeneted as
+// zeros.  E.g. the difference between `2.0.0' and '1.6.99' is
+// '1.0.0'.
 func Diff(fromVer, toVer string) (string, error) {
 	from, err := version.NewVersion(fromVer)
 	if err != nil {
@@ -65,5 +71,13 @@ func Diff(fromVer, toVer string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%d.%d.%d", to.Major()-from.Major(), to.Minor()-from.Minor(), to.Patch()-from.Patch()), nil
+	var major, minor, patch int64
+	major = to.Major() - from.Major()
+	if major == 0 {
+		minor = to.Minor() - from.Minor()
+		if minor == 0 {
+			patch = to.Patch() - from.Patch()
+		}
+	}
+	return fmt.Sprintf("%d.%d.%d", major, minor, patch), nil
 }
