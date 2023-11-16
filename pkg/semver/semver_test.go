@@ -19,7 +19,7 @@ import (
 )
 
 func TestUpgrade(t *testing.T) {
-	versions := []string{"1.1.0", "1.1.1", "1.1.2", "1.2.0", "1.3.0", "v1.4.0"}
+	versions := []string{"1.3.5", "1.1.0", "1.1.1", "1.1.2", "1.2.0", "1.3.0", "v1.4.0"}
 
 	combs := []struct {
 		constraint string
@@ -27,6 +27,7 @@ func TestUpgrade(t *testing.T) {
 	}{
 		{"1.1.*", "1.1.2"},
 		{"*", "v1.4.0"},
+		{"1.3.*", "1.3.5"},
 	}
 	for _, test := range combs {
 		newVer, err := Upgrade(versions, test.constraint)
@@ -40,6 +41,7 @@ func TestUpgrade(t *testing.T) {
 }
 
 func TestVersionDiff(t *testing.T) {
+	// nolint: goimports
 	combs := []struct {
 		to       string
 		from     string
@@ -49,6 +51,8 @@ func TestVersionDiff(t *testing.T) {
 		{"2.1.0", "2.0.0", "0.1.0"},
 		{"2.1.0", "2.0.9", "0.1.0"},
 		{"2.1.0", "2.0.99","0.1.0"},
+		{"2.3.0", "2.0.99","0.3.0"},
+		{"4.3.0", "2.0.99","2.0.0"},
 	}
 	for _, test := range combs {
 		d, err := Diff(test.from, test.to)

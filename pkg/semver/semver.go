@@ -18,30 +18,35 @@ import (
 	"fmt"
 	"sort"
 
-	version "github.com/Masterminds/semver"
+	version "github.com/Masterminds/semver/v3"
 )
 
+// Sort versions in descending order
+//
+// Sorting require, that we can reliably order the versions. If a
+// mixed versioning scheme is used, e.g. a mix of semver and
+// date-based versions (e.g. '2023-11-11'), then ordering versions
+// without heuristics is impossible. To handle this we only accept
+// semver v2.0.0 versions with the only exception being a leading 'v'.
 func Sort(versionsRaw []string) []*version.Version {
-	versions := make([]*version.Version, len(versionsRaw))
-	for i, raw := range versionsRaw {
-		v, _ := version.NewVersion(raw)
-		versions[i] = v
+	versions := make([]*version.Version, 0, len(versionsRaw))
+	for _, raw := range versionsRaw {
+		rawOrig := raw
+		if len(raw) > 0 && raw[0] == 'v' {
+			raw = raw[1:]
+		}
+		_, err := version.StrictNewVersion(raw) // Only accept semver-2
+		if err == nil {
+			v, _ := version.NewVersion(rawOrig) // Parse with optional leading 'v'
+			versions = append(versions, v)
+		}
 	}
 
 	sort.Sort(sort.Reverse(version.Collection(versions)))
 	return versions
 }
 
-// func Sort(versions []string) []string {
-// 	// Sort, most recent first
-// 	semver.Sort(versions)
-// 	versions2 := make([]string, len(versions))
-// 	for idx, v := range versions {
-// 		versions2[len(versions)-idx-1] = v
-// 	}
-// 	return versions2
-// }
-
+// Upgrade returns the highest version from versions that fulfill constraint
 func Upgrade(versions []string, constraint string) (string, error) {
 	constraints, err := version.NewConstraint(constraint)
 	if err != nil {
@@ -55,13 +60,14 @@ func Upgrade(versions []string, constraint string) (string, error) {
 	}
 	return "", fmt.Errorf("no version found that satisfies constraint: %q", constraint)
 }
+
 // Diff will calculate the difference between two semver
 // versions. Since semver are not a well-defined numeric, the
 // subtraction is limited to the difference between leftmost non-zero
 // difference, i.e. if a difference is found in the major numbers,
 // then that difference is returned and the others are represeneted as
 // zeros.  E.g. the difference between `2.0.0' and '1.6.99' is
-// '1.0.0'.
+// '1.0.0'
 func Diff(fromVer, toVer string) (string, error) {
 	from, err := version.NewVersion(fromVer)
 	if err != nil {
@@ -71,7 +77,7 @@ func Diff(fromVer, toVer string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var major, minor, patch int64
+	var major, minor, patch uint64
 	major = to.Major() - from.Major()
 	if major == 0 {
 		minor = to.Minor() - from.Minor()

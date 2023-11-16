@@ -119,6 +119,42 @@ Charts stored in OCI container registries are supported. The chart repository
 must start with `oci://` to differentiate from standard HTTP-based chart
 repositories. See the example [`examples/krm-metacontroller.yaml`](examples/krm-metacontroller.yaml).
 
+## SemVer Ordering and Difference
+
+Upgrading [semantic versions](https://semver.org/) require that we can
+reliably order the versions. If a mixed versioning scheme is used,
+e.g. a mix of semver and date-based versions (e.g. '2023-11-11'), then
+ordering versions without heuristics is impossible. To handle this we
+only accept semver v2.0.0 versions with the only exception being a
+leading 'v'.
+
+## Function Result
+
+This function returns a JSON result, which may look like:
+
+```json
+{
+  "current": {
+    "name": "cert-manager",
+    "version": "v1.9.0",
+    "repo": "https://charts.jetstack.io"
+  },
+  "upgraded": {
+    "name": "cert-manager",
+    "version": "v1.13.2",
+    "repo": "https://charts.jetstack.io"
+  },
+  "constraint": "",
+  "semverDistance": "0.4.0"
+}
+```
+
+The `semverDistance` is an approximate difference between the current
+and most recent version that fulfill the upgrade constrant. Since
+semver differences are not well-defined mathematically, the difference
+is given by the difference in the left-most place where a difference
+is found, hence the 'minor' version in this example.
+
 ## Dependencies
 
 This function use [helm](https://helm.sh/) and

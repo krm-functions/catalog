@@ -35,7 +35,7 @@ const annotationUpgradeShaSum string = annotationURL + "upgrade-chart-sum"
 
 var upgradesEvaluated, upgradesDone, upgradesAvailable int
 
-// Lookup versions and find a possible upgrade that fulfils constraints
+// evaluateChartVersion looks up versions and find a possible upgrade that fulfills upgradeConstraint
 func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) (*t.HelmChartArgs, error) {
 	upgradesEvaluated++
 	if upgradeConstraint == "" {
@@ -104,7 +104,7 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 		if err != nil {
 			return nil, "", err
 		}
-		info = fmt.Sprintf("{\"current\": %s, \"upgraded\": %s, \"constraint\": %q, \"VersionDistance\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint, distance)
+		info = fmt.Sprintf("{\"current\": %s, \"upgraded\": %s, \"constraint\": %q, \"semverDistance\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint, distance)
 	} else if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(annotationShaSum) == "" {
 		_, chartSum, err := helm.PullChart(curr, "", nil, nil)
 		if err != nil {
