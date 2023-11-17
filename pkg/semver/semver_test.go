@@ -41,7 +41,6 @@ func TestUpgrade(t *testing.T) {
 }
 
 func TestVersionDiff(t *testing.T) {
-	// nolint: goimports
 	combs := []struct {
 		to       string
 		from     string
@@ -50,9 +49,9 @@ func TestVersionDiff(t *testing.T) {
 		{"1.1.2", "1.1.1", "0.0.1"},
 		{"2.1.0", "2.0.0", "0.1.0"},
 		{"2.1.0", "2.0.9", "0.1.0"},
-		{"2.1.0", "2.0.99","0.1.0"},
-		{"2.3.0", "2.0.99","0.3.0"},
-		{"4.3.0", "2.0.99","2.0.0"},
+		{"2.1.0", "2.0.99", "0.1.0"},
+		{"2.3.0", "2.0.99", "0.3.0"},
+		{"4.3.0", "2.0.99", "2.0.0"},
 	}
 	for _, test := range combs {
 		d, err := Diff(test.from, test.to)
