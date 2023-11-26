@@ -22,6 +22,22 @@ spec:
     targetRevision: v1.8.1
 ```
 
+Similarly, the *kpt render-helm-chart* format may look like this:
+
+```yaml
+apiVersion: fn.kpt.dev/v1alpha1
+kind: RenderHelmChart
+metadata:
+  name: cert-manager
+helmCharts:
+- chartArgs:
+    name: cert-manager
+    version: v1.8.1
+    repo: https://charts.jetstack.io
+  templateOptions:
+    releaseName: cert-manager
+```
+
 The chart version specified here `v1.8.1` is not the most recent
 version, and keeping chart version updated is a tedious and on-going
 activity. **This KRM function automates this process.** The following
