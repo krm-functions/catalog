@@ -1,0 +1,17 @@
+apiVersion: fn.kpt.dev/v1alpha1
+kind: RenderHelmChart
+metadata:
+  name: render-chart
+  annotations:
+    config.kubernetes.io/local-config: "true"
+helmCharts:
+- chartArgs:
+    name: flannel
+    version: v0.23.0
+    repo: https://flannel-io.github.io/flannel
+  templateOptions:
+    releaseName: flannel
+    namespace: kube-flannel
+    values:
+      inlineValues:
+        podCidr: "10.244.0.0/16"

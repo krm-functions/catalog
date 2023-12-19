@@ -156,23 +156,34 @@ func PullChart(chart t.HelmChartArgs, destinationPath string, username, password
 		}
 	}
 
-	chartShaSum := ChartFileSha256(dest, chart) // TODO: Compare with .prov file content
-	return chartTarballName(chart), chartShaSum, nil
+	tarball := chartTarballName(chart)
+	if _, err := os.Stat(tarball); err != nil {
+		options, err := os.ReadDir(dest)
+		if err != nil {
+			return "", "", err
+		}
+		if len(options) != 1 {
+			return "", "", fmt.Errorf("cannot determine normalized tarball name, found %d files", len(options))
+		}
+		tarball = options[0].Name()
+	}
+	chartShaSum := ChartFileSha256(filepath.Join(dest, tarball)) // TODO: Compare with .prov file content
+	return tarball, chartShaSum, nil
 }
 
 func isOciRepo(chart t.HelmChartArgs) bool {
 	return strings.HasPrefix(chart.Repo, "oci://")
 }
 
+// chartTarballName returns the normalized tarball name 'name-v1.2.3.tgz'
 func chartTarballName(chart t.HelmChartArgs) string {
 	return chart.Name + "-" + chart.Version + ".tgz"
 }
 
-func ChartFileSha256(pathDir string, chart t.HelmChartArgs) string {
-	fn := chartTarballName(chart)
-	dat, err := os.ReadFile(filepath.Join(pathDir, fn))
+func ChartFileSha256(chartFile string) string {
+	dat, err := os.ReadFile(chartFile)
 	if err != nil {
-		panic(fmt.Errorf("cannot read file %q", fn))
+		panic(fmt.Errorf("cannot read file %q", chartFile))
 	}
 	return fmt.Sprintf("%x", sha256.Sum256(dat))
 }

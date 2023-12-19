@@ -61,6 +61,13 @@ func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) (*t.H
 func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (*t.HelmChartArgs, string, error) {
 	upgraded := curr
 	var info string
+
+	tmpDir, err := os.MkdirTemp("", "chart-")
+	if err != nil {
+		return nil, "", err
+	}
+	defer os.RemoveAll(tmpDir)
+
 	if newChart.Version != curr.Version {
 		upgradesAvailable++
 		anno := curr.Repo + "/" + curr.Name + ":" + newChart.Version
@@ -82,7 +89,7 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 			upgraded.Version = newChart.Version
 		}
 		if Config.AnnotateSumOnUpgradeAvailable {
-			_, chartSum, err := helm.PullChart(newChart, "", nil, nil)
+			_, chartSum, err := helm.PullChart(newChart, tmpDir, nil, nil)
 			if err != nil {
 				return nil, "", err
 			}
@@ -106,7 +113,7 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 		}
 		info = fmt.Sprintf("{\"current\": %s, \"upgraded\": %s, \"constraint\": %q, \"semverDistance\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint, distance)
 	} else if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(annotationShaSum) == "" {
-		_, chartSum, err := helm.PullChart(curr, "", nil, nil)
+		_, chartSum, err := helm.PullChart(curr, tmpDir, nil, nil)
 		if err != nil {
 			return nil, "", err
 		}
