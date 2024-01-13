@@ -5,14 +5,15 @@ APPLY_SETTERS_BIN := bin/linux_amd64/krm-apply-setters
 
 e2e-tests: test-render-helm-chart render-helm-chart-example render-helm-chart-example2 test-helm-upgrader test-apply-setters
 
+# BEWARE: These tests are fragile - we want to test upgrades, but without upgrade-constraints tests might fail when charts are updated
 .PHONY: test-helm-upgrader
 test-helm-upgrader:
 	kpt fn source examples/helm-upgrader --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | $(HELM_UPGRADER_BIN) > test-out.yaml
 	grep -e '.*upgrade-available: .*cert-manager:v1.8.2' test-out.yaml
 	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.yaml
 	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.yaml
-	grep -e '.*upgrade-available.0: .*karpenter:v0.33.0' test-out.yaml
-	#grep -e '.*upgrade-available.1: .*/external-secrets:0.8.1' test-out.yaml
+	grep -e '.*upgrade-available.0: .*karpenter:v0.33.1' test-out.yaml
+	grep -e '.*upgrade-available.1: .*/external-secrets:0.9.11' test-out.yaml
 	rm test-out.yaml
 
 .PHONY: test-render-helm-chart
