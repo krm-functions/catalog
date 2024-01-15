@@ -19,21 +19,27 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/michaelvl/krm-functions/pkg/helm"
 	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-const annotationURL string = "experimental.helm.sh/"
-const annotationShaSum string = annotationURL + "chart-sum"
+const (
+	annotationURL              = "experimental.helm.sh/"
+	annotationShaSum           = annotationURL + "chart-sum"
+	maxChartTemplateFileLength = 1024 * 1024
+)
 
 // We cannot use types from helmspecs due to the additional 'Chart' field
 type HelmChart struct {
@@ -58,11 +64,10 @@ func ParseRenderSpec(b []byte) (*RenderHelmChart, error) {
 
 func Run(rl *fn.ResourceList) (bool, error) {
 	var outputs fn.KubeObjects
-	// cfg := rl.FunctionConfig
-	// parseConfig(cfg)
 
 	for _, kubeObject := range rl.Items {
-		if kubeObject.IsGVK("experimental.helm.sh", "", "RenderHelmChart") {
+		switch {
+		case kubeObject.IsGVK("experimental.helm.sh", "", "RenderHelmChart"):
 			y := kubeObject.String()
 			spec, err := ParseRenderSpec([]byte(y))
 			if err != nil {
@@ -80,7 +85,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				}
 				outputs = append(outputs, newobjs...)
 			}
-		} else if kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") {
+		case kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart"):
 			y := kubeObject.String()
 			spec, err := ParseRenderSpec([]byte(y))
 			if err != nil {
@@ -120,7 +125,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				}
 				outputs = append(outputs, kubeObject)
 			}
-		} else {
+		default:
 			outputs = append(outputs, kubeObject)
 		}
 	}
@@ -217,23 +222,27 @@ func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 		} else if xtErr != nil {
 			return nil, xtErr
 		}
-		fname := filepath.Join(tmpDir, hdr.Name)
-		fdir := filepath.Dir(fname)
+		fname := hdr.Name
+		if path.IsAbs(fname) {
+			return nil, errors.New("chart contains file with absolute path")
+		}
+		fileWithPath, fnerr := securejoin.SecureJoin(tmpDir, fname)
+		if fnerr != nil {
+			return nil, fnerr
+		}
 		if hdr.Typeflag == tar.TypeReg {
-			// Not all tarfiles have explicit directories, i.e. we always create directories if they do not exist
-			if _, fErr := os.Stat(fdir); fErr != nil {
-				if mkdErr := os.MkdirAll(fdir, 0o755); mkdErr != nil {
-					return nil, mkdErr
-				}
+			fdir := filepath.Dir(fileWithPath)
+			if mkdErr := os.MkdirAll(fdir, 0o755); mkdErr != nil {
+				return nil, mkdErr
 			}
 
-			file, fErr := os.OpenFile(fname, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(hdr.Mode))
+			file, fErr := os.OpenFile(fileWithPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(hdr.Mode))
 			if fErr != nil {
 				return nil, fErr
 			}
-			_, fErr = io.Copy(file, tr)
+			_, fErr = io.CopyN(file, tr, maxChartTemplateFileLength)
 			file.Close()
-			if fErr != nil {
+			if fErr != nil && fErr != io.EOF {
 				return nil, fErr
 			}
 		}
@@ -269,20 +278,6 @@ func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 			}
 			return nil, fmt.Errorf("failed to parse %s: %s", nodes[i].MustString(), parseErr.Error())
 		}
-		// The sink function conveniently sets path if none is defined
-
-		// annoVal := fmt.Sprintf("%s/%s/%s_%s.yaml",
-		// 	chart.Args.Name, chart.Options.ReleaseName, strings.ToLower(o.GetKind()), o.GetName())
-		// currAnno := o.GetAnnotations()
-		// if len(currAnno) == 0 {
-		// 	currAnno = map[string]string{kioutil.PathAnnotation: annoVal}
-		// } else {
-		// 	currAnno[kioutil.PathAnnotation] = annoVal
-		// }
-		// err = o.SetNestedStringMap(currAnno, "metadata", "annotations")
-		// if err != nil {
-		// 	return nil, err
-		// }
 		objects = append(objects, o)
 	}
 
@@ -331,7 +326,6 @@ func (chart *HelmChart) buildHelmTemplateArgs() []string {
 }
 
 func main() {
-	// fmt.Fprintf(os.Stderr, "version: %s\n", version.Version)
 	if err := fn.AsMain(fn.ResourceListProcessorFunc(Run)); err != nil {
 		os.Exit(1)
 	}

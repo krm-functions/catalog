@@ -28,18 +28,18 @@ type fnConfig struct {
 var Config fnConfig
 
 func parseConfig(configmap *fn.KubeObject) {
-	if val, found, err := configmap.NestedBool("data", "annotateOnUpgradeAvailable"); err==nil && found {
+	if val, found, err := configmap.NestedBool("data", "annotateOnUpgradeAvailable"); err == nil && found {
 		Config.AnnotateOnUpgradeAvailable = val
 	}
-	if val, found, err := configmap.NestedBool("data", "annotateSumOnUpgradeAvailable"); err==nil && found {
+	if val, found, err := configmap.NestedBool("data", "annotateSumOnUpgradeAvailable"); err == nil && found {
 		Config.AnnotateSumOnUpgradeAvailable = val
 	}
-	if val, found, err := configmap.NestedBool("data", "upgradeOnUpgradeAvailable"); err==nil && found {
+	if val, found, err := configmap.NestedBool("data", "upgradeOnUpgradeAvailable"); err == nil && found {
 		Config.UpgradeOnUpgradeAvailable = val
 	} else {
 		Config.UpgradeOnUpgradeAvailable = true // Not found, default to upgrade
 	}
-	if val, found, err := configmap.NestedBool("data", "annotateCurrentSum"); err==nil && found {
+	if val, found, err := configmap.NestedBool("data", "annotateCurrentSum"); err == nil && found {
 		Config.AnnotateCurrentSum = val
 	}
 }
