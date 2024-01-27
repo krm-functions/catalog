@@ -20,7 +20,7 @@ This repository contain [KRM functions](https://medium.com/@michael.vittrup.lars
   other resources.
 - [gatekeeper](https://github.com/michaelvl/krm-gatekeeper) A
   re-implementation of the [baseline
-  gatekeeper](https://catalog.kpt.dev/gatekeeper/v0.2/) function,
+  `gatekeeper`](https://catalog.kpt.dev/gatekeeper/v0.2/) function,
   which suppors newer variants of the Rego language (e.g. as used in
   the
   [gatekeeper-library](https://github.com/open-policy-agent/gatekeeper-library))
