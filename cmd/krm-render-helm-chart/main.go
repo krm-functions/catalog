@@ -41,27 +41,6 @@ const (
 	maxChartTemplateFileLength = 1024 * 1024
 )
 
-// We cannot use types from helmspecs due to the additional 'Chart' field
-type HelmChart struct {
-	Args    t.HelmChartArgs       `json:"chartArgs,omitempty" yaml:"chartArgs,omitempty"`
-	Options t.HelmTemplateOptions `json:"templateOptions,omitempty" yaml:"templateOptions,omitempty"`
-	Chart   string                `json:"chart,omitempty" yaml:"chart,omitempty"`
-}
-
-type RenderHelmChart struct {
-	APIVersion string      `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
-	Kind       string      `json:"kind,omitempty" yaml:"kind,omitempty"`
-	Charts     []HelmChart `json:"helmCharts,omitempty" yaml:"helmCharts,omitempty"`
-}
-
-func ParseRenderSpec(b []byte) (*RenderHelmChart, error) {
-	spec := &RenderHelmChart{}
-	if err := kyaml.Unmarshal(b, spec); err != nil {
-		return nil, err
-	}
-	return spec, nil
-}
-
 func Run(rl *fn.ResourceList) (bool, error) {
 	var outputs fn.KubeObjects
 
@@ -69,7 +48,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 		switch {
 		case kubeObject.IsGVK("experimental.helm.sh", "", "RenderHelmChart"):
 			y := kubeObject.String()
-			spec, err := ParseRenderSpec([]byte(y))
+			spec, err := t.ParseKptSpec([]byte(y))
 			if err != nil {
 				return false, err
 			}
@@ -79,7 +58,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				}
 			}
 			for idx := range spec.Charts {
-				newobjs, err := spec.Charts[idx].Template()
+				newobjs, err := Template(&spec.Charts[idx])
 				if err != nil {
 					return false, err
 				}
@@ -87,7 +66,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			}
 		case kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart"):
 			y := kubeObject.String()
-			spec, err := ParseRenderSpec([]byte(y))
+			spec, err := t.ParseKptSpec([]byte(y))
 			if err != nil {
 				return false, err
 			}
@@ -95,12 +74,12 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				chart := &spec.Charts[idx]
 				var uname, pword *string
 				if chart.Args.Auth != nil {
-					uname, pword, err = lookupAuthSecret(chart, rl)
+					uname, pword, err = helm.LookupAuthSecret(chart.Args.Auth.Name, chart.Args.Auth.Namespace, rl)
 					if err != nil {
 						return false, err
 					}
 				}
-				chartData, chartSum, err := chart.SourceChart(uname, pword)
+				chartData, chartSum, err := SourceChart(chart, uname, pword)
 				if err != nil {
 					return false, err
 				}
@@ -134,51 +113,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	return true, nil
 }
 
-func lookupAuthSecret(chart *HelmChart, rl *fn.ResourceList) (username, password *string, err error) {
-	namespace := chart.Args.Auth.Namespace
-	if namespace == "" {
-		namespace = "default" // Default according to spec
-	}
-	for _, k := range rl.Items {
-		if !k.IsGVK("v1", "", "Secret") || k.GetName() != chart.Args.Auth.Name {
-			continue
-		}
-		oNamespace := k.GetNamespace()
-		if oNamespace == "" {
-			oNamespace = "default" // Default according to spec
-		}
-		if namespace == oNamespace {
-			uname, found, err := k.NestedString("data", "username")
-			if !found {
-				return nil, nil, fmt.Errorf("key 'username' not found in Secret '%s'", chart.Args.Auth.Name)
-			}
-			if err != nil {
-				return nil, nil, err
-			}
-			pword, found, err := k.NestedString("data", "password")
-			if !found {
-				return nil, nil, fmt.Errorf("key 'password' not found in Secret '%s'", chart.Args.Auth.Name)
-			}
-			if err != nil {
-				return nil, nil, err
-			}
-			u, err := base64.StdEncoding.DecodeString(uname)
-			if err != nil {
-				return nil, nil, err
-			}
-			uname = string(u)
-			p, err := base64.StdEncoding.DecodeString(pword)
-			if err != nil {
-				return nil, nil, err
-			}
-			pword = string(p)
-			return &uname, &pword, nil
-		}
-	}
-	return nil, nil, fmt.Errorf("auth secret '%s' not found", chart.Args.Auth.Name)
-}
-
-func (chart *HelmChart) SourceChart(username, password *string) (chartData []byte, chartSha256Sum string, err error) {
+func SourceChart(chart *t.HelmChart, username, password *string) (chartData []byte, chartSha256Sum string, err error) {
 	tmpDir, err := os.MkdirTemp("", "chart-")
 	if err != nil {
 		return nil, "", err
@@ -196,7 +131,7 @@ func (chart *HelmChart) SourceChart(username, password *string) (chartData []byt
 	return buf, chartSum, err
 }
 
-func (chart *HelmChart) Template() (fn.KubeObjects, error) {
+func Template(chart *t.HelmChart) (fn.KubeObjects, error) {
 	chartfile, err := base64.StdEncoding.DecodeString(chart.Chart)
 	if err != nil {
 		return nil, err
@@ -249,11 +184,11 @@ func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 	}
 
 	valuesFile := filepath.Join(tmpDir, "values.yaml")
-	err = chart.writeValuesFile(valuesFile)
+	err = writeValuesFile(chart, valuesFile)
 	if err != nil {
 		return nil, err
 	}
-	args := chart.buildHelmTemplateArgs()
+	args := buildHelmTemplateArgs(chart)
 	args = append(args, "--values", valuesFile, filepath.Join(tmpDir, chart.Args.Name))
 
 	helmCtxt := helm.NewRunContext()
@@ -289,7 +224,7 @@ func (chart *HelmChart) Template() (fn.KubeObjects, error) {
 }
 
 // Write embedded values to a file for passing to Helm
-func (chart *HelmChart) writeValuesFile(valuesFilename string) error {
+func writeValuesFile(chart *t.HelmChart, valuesFilename string) error {
 	vals := chart.Options.Values.ValuesInline
 	b, err := kyaml.Marshal(vals)
 	if err != nil {
@@ -298,7 +233,7 @@ func (chart *HelmChart) writeValuesFile(valuesFilename string) error {
 	return os.WriteFile(valuesFilename, b, 0o600)
 }
 
-func (chart *HelmChart) buildHelmTemplateArgs() []string {
+func buildHelmTemplateArgs(chart *t.HelmChart) []string {
 	opts := chart.Options
 	args := []string{"template"}
 	if opts.ReleaseName != "" {
