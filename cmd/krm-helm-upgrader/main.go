@@ -36,12 +36,12 @@ const annotationUpgradeShaSum string = annotationURL + "upgrade-chart-sum"
 var upgradesEvaluated, upgradesDone, upgradesAvailable int
 
 // evaluateChartVersion looks up versions and find a possible upgrade that fulfills upgradeConstraint
-func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string) (*t.HelmChartArgs, error) {
+func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string, username, password *string) (*t.HelmChartArgs, error) {
 	upgradesEvaluated++
 	if upgradeConstraint == "" {
 		upgradeConstraint = "*"
 	}
-	search, err := helm.SearchRepo(chart, nil, nil)
+	search, err := helm.SearchRepo(chart, username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,14 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				helmChart := &spec.Charts[idx]
 				var newVersion, upgraded *t.HelmChartArgs
 				var info string
-				newVersion, err = evaluateChartVersion(helmChart.Args, upgradeConstraint)
+				var uname, pword *string
+				if helmChart.Args.Auth != nil {
+					uname, pword, err = helm.LookupAuthSecret(helmChart.Args.Auth.Name, helmChart.Args.Auth.Namespace, rl)
+					if err != nil {
+						return false, err
+					}
+				}
+				newVersion, err = evaluateChartVersion(helmChart.Args, upgradeConstraint, uname, pword)
 				if err != nil {
 					return false, err
 				}
@@ -167,7 +174,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				return false, err
 			}
 			chartArgs := app.Spec.Source.ToKptSpec()
-			newVersion, err := evaluateChartVersion(chartArgs, upgradeConstraint)
+			newVersion, err := evaluateChartVersion(chartArgs, upgradeConstraint, nil, nil) // FIXME private repo not supported with Argo apps
 			if err != nil {
 				return false, err
 			}

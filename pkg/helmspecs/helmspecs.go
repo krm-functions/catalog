@@ -24,6 +24,8 @@ import (
 type HelmChart struct {
 	Args    HelmChartArgs       `json:"chartArgs,omitempty" yaml:"chartArgs,omitempty"`
 	Options HelmTemplateOptions `json:"templateOptions,omitempty" yaml:"templateOptions,omitempty"`
+	// This is an extension field from api version 'experimental.helm.sh/v1alpha1'
+	Chart string `json:"chart,omitempty" yaml:"chart,omitempty"`
 }
 type HelmChartArgs struct {
 	Name     string                    `json:"name,omitempty" yaml:"name,omitempty"`
