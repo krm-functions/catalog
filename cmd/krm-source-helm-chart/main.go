@@ -28,6 +28,7 @@ const (
 	annotationURL    = apiGroup
 	annotationShaSum = annotationURL + "/chart-sum"
 	apiGroup         = "experimental.helm.sh"
+	apiVersion       = apiGroup + "/v1alpha1"
 )
 
 func Run(rl *fn.ResourceList) (bool, error) {
@@ -53,7 +54,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				err = kubeObject.SetAPIVersion(apiGroup + "/v1alpha1")
+				err = kubeObject.SetAPIVersion(apiVersion)
 				if err != nil {
 					return false, err
 				}
@@ -64,19 +65,17 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				err = chs[0].SetNestedField(base64.StdEncoding.EncodeToString(chartData), "chart")
+				err = chs[idx].SetNestedField(base64.StdEncoding.EncodeToString(chartData), "chart")
 				if err != nil {
 					return false, err
 				}
-				err = kubeObject.SetAnnotation(annotationShaSum, "sha256:"+chartSum)
+				err = kubeObject.SetAnnotation(annotationShaSum+"/"+chart.Args.Name, "sha256:"+chartSum)
 				if err != nil {
 					return false, err
 				}
-				outputs = append(outputs, kubeObject)
 			}
-		} else {
-			outputs = append(outputs, kubeObject)
 		}
+		outputs = append(outputs, kubeObject)
 	}
 
 	rl.Items = outputs

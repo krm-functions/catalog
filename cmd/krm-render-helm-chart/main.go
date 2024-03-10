@@ -27,6 +27,7 @@ import (
 const (
 	annotationURL    = "experimental.helm.sh"
 	annotationShaSum = annotationURL + "/chart-sum"
+	apiVersion       = annotationURL + "/v1alpha1"
 )
 
 func Run(rl *fn.ResourceList) (bool, error) {
@@ -96,7 +97,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				err = kubeObject.SetAPIVersion("experimental.helm.sh/v1alpha1")
+				err = kubeObject.SetAPIVersion(apiVersion)
 				if err != nil {
 					return false, err
 				}
@@ -107,7 +108,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				err = chs[0].SetNestedField(base64.StdEncoding.EncodeToString(chartData), "chart")
+				err = chs[idx].SetNestedField(base64.StdEncoding.EncodeToString(chartData), "chart")
 				if err != nil {
 					return false, err
 				}
@@ -115,8 +116,8 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				outputs = append(outputs, kubeObject)
 			}
+			outputs = append(outputs, kubeObject)
 		default:
 			outputs = append(outputs, kubeObject)
 		}

@@ -13,3 +13,15 @@ helmCharts:
   templateOptions:
     releaseName: karpenter
     namespace: karpenter
+- chartArgs:
+    name: cert-manager
+    version: v1.12.2
+    repo: https://charts.jetstack.io
+  templateOptions:
+    releaseName: cert-managerrel
+    namespace: cert-managerns
+    values:
+      valuesInline:
+        global:
+          commonLabels:
+            team_name: dev  # kpt-set: ${teamName}

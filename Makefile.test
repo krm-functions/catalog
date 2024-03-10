@@ -23,14 +23,14 @@ test-render-helm-chart:
 	rm -rf rendered-output
 	echo "" | kpt fn eval - --network --fn-config examples/render-helm-chart2/argo-workflows.yaml -i ${BASELINE_RENDER_HELM_CHART} | kpt fn sink rendered-output
 	# Source step, fetch chart from upstream, but do not render
-	rm -rf rendered-output2
-	kpt fn source examples/render-helm-chart2 | kpt fn eval - --exec ${HELM_RENDER_BIN} --results-dir results2 | kpt fn sink rendered-output2
+	rm -rf sourced-output
+	kpt fn source examples/render-helm-chart2 | kpt fn eval - --exec ${HELM_RENDER_BIN} --results-dir results2 | kpt fn sink sourced-output
 	grep -e 'message: sourcing with render-helm-chart is deprecated' results2/results.yaml
 	# Render from previously sourced chart
-	rm -rf rendered-output3
-	kpt fn source rendered-output2 | kpt fn eval - --exec ${HELM_RENDER_BIN} | kpt fn sink rendered-output3
-	diff -q rendered-output rendered-output3
-	rm -rf rendered-output rendered-output2 rendered-output3 results2
+	rm -rf rendered-output2
+	kpt fn source sourced-output | kpt fn eval - --exec ${HELM_RENDER_BIN} | kpt fn sink rendered-output2
+	diff -q rendered-output rendered-output2
+	rm -rf rendered-output sourced-output rendered-output2 results2
 
 # Example usage from docs/render-helm-chart.md
 .PHONY: render-helm-chart-example
@@ -49,8 +49,9 @@ render-helm-chart-example2:
 .PHONY: test-source-helm-chart
 test-source-helm-chart:
 	kpt fn source examples/render-helm-chart3 | kpt fn eval - --truncate-output=false --exec $(HELM_SOURCE_BIN) > test-out.yaml
-	grep -e 'experimental.helm.sh/chart-sum' test-out.yaml
-	#rm test-out.yaml
+	grep -e 'experimental.helm.sh/chart-sum/karpenter' test-out.yaml
+	grep -e 'experimental.helm.sh/chart-sum/cert-manager' test-out.yaml
+	rm test-out.yaml
 
 .PHONY: test-apply-setters
 test-apply-setters:
