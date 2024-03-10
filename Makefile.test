@@ -35,7 +35,7 @@ test-render-helm-chart:
 # Example usage from docs/render-helm-chart.md
 .PHONY: render-helm-chart-example
 render-helm-chart-example:
-	kpt fn source examples/render-helm-chart | kpt fn eval - --exec ${HELM_RENDER_BIN} | kpt fn sink my-cert-manager-package
+	kpt fn source examples/render-helm-chart | kpt fn eval - --exec ${HELM_SOURCE_BIN} | kpt fn sink my-cert-manager-package
 	grep -q 'apiVersion: experimental.helm.sh/v1alpha1' my-cert-manager-package/cert-manager-chart.yaml
 	cp examples/render-helm-chart/Kptfile my-cert-manager-package/
 	kpt fn render my-cert-manager-package -o stdout | grep -q 'team_name: blue-team'

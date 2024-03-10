@@ -26,8 +26,8 @@ import (
 
 const (
 	annotationURL    = apiGroup
-	annotationShaSum = annotationURL + "chart-sum"
-	apiGroup         = "experimental.helm.sh/"
+	annotationShaSum = annotationURL + "/chart-sum"
+	apiGroup         = "experimental.helm.sh"
 )
 
 func Run(rl *fn.ResourceList) (bool, error) {
