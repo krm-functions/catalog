@@ -122,6 +122,7 @@ func SearchRepo(chart t.HelmChartArgs, username, password *string) ([]RepoSearch
 	return versionsNormalized, nil
 }
 
+// PullChart runs 'helm pull' and returns normalized tarball filename and tarball sha256sum
 func PullChart(chart t.HelmChartArgs, destinationPath string, username, password *string) (tarballName, chartSha256Sum string, err error) {
 	helmCtxt := NewRunContext()
 	defer helmCtxt.DiscardContext()
@@ -171,6 +172,25 @@ func PullChart(chart t.HelmChartArgs, destinationPath string, username, password
 	}
 	chartShaSum := ChartFileSha256(filepath.Join(dest, tarball)) // TODO: Compare with .prov file content
 	return tarball, chartShaSum, nil
+}
+
+// SourceChart runs PullChart to retrieve chart and reads and returns raw tarball bytes
+func SourceChart(chart *t.HelmChart, username, password *string) (chartData []byte, chartSha256Sum string, err error) {
+	tmpDir, err := os.MkdirTemp("", "chart-")
+	if err != nil {
+		return nil, "", err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	tarball, chartSum, err := PullChart(chart.Args, tmpDir, username, password)
+	if err != nil {
+		return nil, "", err
+	}
+	buf, err := os.ReadFile(filepath.Join(tmpDir, tarball))
+	if err != nil {
+		return nil, "", err
+	}
+	return buf, chartSum, err
 }
 
 func isOciRepo(chart t.HelmChartArgs) bool {
