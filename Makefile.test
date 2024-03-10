@@ -1,9 +1,10 @@
 HELM_UPGRADER_BIN := bin/linux_amd64/krm-helm-upgrader
 HELM_RENDER_BIN := bin/linux_amd64/krm-render-helm-chart
+HELM_SOURCE_BIN := bin/linux_amd64/krm-source-helm-chart
 BASELINE_RENDER_HELM_CHART := gcr.io/kpt-fn/render-helm-chart:v0.2.2
 APPLY_SETTERS_BIN := bin/linux_amd64/krm-apply-setters
 
-e2e-tests: test-render-helm-chart render-helm-chart-example render-helm-chart-example2 test-helm-upgrader test-apply-setters
+e2e-tests: test-render-helm-chart render-helm-chart-example render-helm-chart-example2 test-source-helm-chart test-helm-upgrader test-apply-setters
 
 # BEWARE: These tests are fragile - we want to test upgrades, but without upgrade-constraints tests might fail when charts are updated
 .PHONY: test-helm-upgrader
@@ -23,17 +24,18 @@ test-render-helm-chart:
 	echo "" | kpt fn eval - --network --fn-config examples/render-helm-chart2/argo-workflows.yaml -i ${BASELINE_RENDER_HELM_CHART} | kpt fn sink rendered-output
 	# Source step, fetch chart from upstream, but do not render
 	rm -rf rendered-output2
-	kpt fn source examples/render-helm-chart2 | kpt fn eval - --exec ${HELM_RENDER_BIN} | kpt fn sink rendered-output2
+	kpt fn source examples/render-helm-chart2 | kpt fn eval - --exec ${HELM_RENDER_BIN} --results-dir results2 | kpt fn sink rendered-output2
+	grep -e 'message: sourcing with render-helm-chart is deprecated' results2/results.yaml
 	# Render from previously sourced chart
 	rm -rf rendered-output3
 	kpt fn source rendered-output2 | kpt fn eval - --exec ${HELM_RENDER_BIN} | kpt fn sink rendered-output3
 	diff -q rendered-output rendered-output3
-	rm -rf rendered-output rendered-output2 rendered-output3
+	rm -rf rendered-output rendered-output2 rendered-output3 results2
 
 # Example usage from docs/render-helm-chart.md
 .PHONY: render-helm-chart-example
 render-helm-chart-example:
-	kpt fn source examples/render-helm-chart | kpt fn eval - --exec ${HELM_RENDER_BIN} | kpt fn sink my-cert-manager-package
+	kpt fn source examples/render-helm-chart | kpt fn eval - --exec ${HELM_SOURCE_BIN} | kpt fn sink my-cert-manager-package
 	grep -q 'apiVersion: experimental.helm.sh/v1alpha1' my-cert-manager-package/cert-manager-chart.yaml
 	cp examples/render-helm-chart/Kptfile my-cert-manager-package/
 	kpt fn render my-cert-manager-package -o stdout | grep -q 'team_name: blue-team'
@@ -43,6 +45,12 @@ render-helm-chart-example:
 render-helm-chart-example2:
 	kpt fn source examples/render-helm-chart/non-stardard-tar-filename | kpt fn eval - --exec ${HELM_RENDER_BIN} | kpt fn sink my-non-stardard-tar-filename
 	rm -rf my-non-stardard-tar-filename
+
+.PHONY: test-source-helm-chart
+test-source-helm-chart:
+	kpt fn source examples/render-helm-chart3 | kpt fn eval - --truncate-output=false --exec $(HELM_SOURCE_BIN) > test-out.yaml
+	grep -e 'experimental.helm.sh/chart-sum' test-out.yaml
+	#rm test-out.yaml
 
 .PHONY: test-apply-setters
 test-apply-setters:
