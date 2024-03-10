@@ -10,7 +10,14 @@ This repository contain [KRM functions](https://medium.com/@michael.vittrup.lars
   `render-helm-chart`](https://catalog.kpt.dev/render-helm-chart/v0.2/)
   function, which can be used in [declarative
   pipelines](https://kpt.dev/book/04-using-functions/01-declarative-function-execution)
-  through Kptfiles.
+  through Kptfiles. :warning: note, this function is dual purpose, it
+  can both source and render charts. The sourcing feature is
+  deprecated - use the [source-helm-chart](docs/source-helm-chart.md)
+  for this instead.
+- [source-helm-chart](docs/source-helm-chart.md) A function that
+  implements sourcing of helm charts to support rendering using
+  declarative pipelines. This function augments
+  [render-helm-chart](docs/render-helm-chart.md).
 - [apply-setters](docs/apply-setters.md) A re-implementation and
   improvement of the [baseline
   `apply-setters`](https://catalog.kpt.dev/apply-setters/v0.2/)

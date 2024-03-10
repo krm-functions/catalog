@@ -1,4 +1,4 @@
-// Copyright 2023 Michael Vittrup Larsen
+// Copyright 2024 Michael Vittrup Larsen
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,59 +25,16 @@ import (
 )
 
 const (
-	annotationURL    = "experimental.helm.sh/"
+	annotationURL    = apiGroup
 	annotationShaSum = annotationURL + "chart-sum"
+	apiGroup         = "experimental.helm.sh/"
 )
 
 func Run(rl *fn.ResourceList) (bool, error) {
 	var outputs fn.KubeObjects
-	var results fn.Results
-
-	results = append(results, &fn.Result{
-		Message:  "render-helm-chart",
-		Severity: fn.Info,
-	})
 
 	for _, kubeObject := range rl.Items {
-		switch {
-		case kubeObject.IsGVK("experimental.helm.sh", "", "RenderHelmChart"):
-			y := kubeObject.String()
-			spec, err := t.ParseKptSpec([]byte(y))
-			if err != nil {
-				return false, err
-			}
-			for idx := range spec.Charts {
-				if spec.Charts[idx].Options.ReleaseName == "" {
-					return false, fmt.Errorf("invalid chart spec %s: ReleaseName required, index %d", kubeObject.GetName(), idx)
-				}
-			}
-			for idx := range spec.Charts {
-				chartTarball, err := base64.StdEncoding.DecodeString(spec.Charts[idx].Chart)
-				if err != nil {
-					return false, err
-				}
-				newobjs, err := helm.Template(&spec.Charts[idx], chartTarball)
-				if err != nil {
-					return false, err
-				}
-				outputs = append(outputs, newobjs...)
-			}
-		// Sourcing based on `fn.kpt.dev` is deprecated. Use the `source-helm-chart` function instead
-		case kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart"):
-			results = append(results, &fn.Result{
-				Message:  "sourcing with render-helm-chart is deprecated. Use source-helm-chart instead",
-				Severity: fn.Info,
-				ResourceRef: &fn.ResourceRef{
-					APIVersion: kubeObject.GetAPIVersion(),
-					Kind:       kubeObject.GetKind(),
-					Name:       kubeObject.GetName(),
-				},
-				File: &fn.File{
-					Path:  kubeObject.PathAnnotation(),
-					Index: kubeObject.IndexAnnotation(),
-				},
-			})
-
+		if kubeObject.IsGVK(apiGroup, "", "RenderHelmChart") || kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") {
 			y := kubeObject.String()
 			spec, err := t.ParseKptSpec([]byte(y))
 			if err != nil {
@@ -96,7 +53,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				err = kubeObject.SetAPIVersion("experimental.helm.sh/v1alpha1")
+				err = kubeObject.SetAPIVersion(apiGroup + "/v1alpha1")
 				if err != nil {
 					return false, err
 				}
@@ -117,12 +74,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				}
 				outputs = append(outputs, kubeObject)
 			}
-		default:
+		} else {
 			outputs = append(outputs, kubeObject)
 		}
 	}
 
-	rl.Results = results
 	rl.Items = outputs
 	return true, nil
 }

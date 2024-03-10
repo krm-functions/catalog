@@ -5,6 +5,9 @@ rendering in declarative pipelines and thus solves the problem of the
 [baseline version](https://catalog.kpt.dev/render-helm-chart/v0.2/)
 that it can only be executed imperatively.
 
+> [!IMPORTANT]  
+> This function support dual use - both sourcing and rendering. The sourcing with this function is deprecated and the [`source-helm-chart`](source-helm-chart.md) function should be used instead
+
 ## The Problem of the Baseline `render-helm-chart`
 
 The [baseline
