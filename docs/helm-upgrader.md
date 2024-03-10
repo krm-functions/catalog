@@ -73,7 +73,7 @@ cd krm-functions
 Run the `helm-upgrader` function using `kpt`:
 
 ```
-export HELM_UPGRADER_IMG=ghcr.io/michaelvl/krm-helm-upgrader@sha256:79f5c8c2b597e8625152aa6071b73f12d4e23b91069b4f476507f1c72bffdfec
+export HELM_UPGRADER_IMG=ghcr.io/michaelvl/krm-helm-upgrader@sha256:8a5616f7b33c652730c8f790a57ba543f809bbe7466d5e54e9ba302406c20340
 
 kpt fn source examples/helm-upgrader | \
   kpt fn eval - \
