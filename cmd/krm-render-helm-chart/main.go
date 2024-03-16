@@ -52,6 +52,9 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
+				if len(chartTarball) == 0 {
+					return false, fmt.Errorf("no embedded chart found")
+				}
 				newobjs, err := helm.Template(&spec.Charts[idx], chartTarball)
 				if err != nil {
 					return false, err
