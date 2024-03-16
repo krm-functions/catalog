@@ -20,18 +20,13 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/michaelvl/krm-functions/pkg/api"
 	"github.com/michaelvl/krm-functions/pkg/helm"
 	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
 	"github.com/michaelvl/krm-functions/pkg/semver"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )
-
-const annotationURL string = "experimental.helm.sh/"
-const annotationUpgradeConstraint string = annotationURL + "upgrade-constraint"
-const annotationUpgradeAvailable string = annotationURL + "upgrade-available"
-const annotationShaSum string = annotationURL + "chart-sum"
-const annotationUpgradeShaSum string = annotationURL + "upgrade-chart-sum"
 
 var upgradesEvaluated, upgradesDone, upgradesAvailable int
 
@@ -73,12 +68,12 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 		anno := curr.Repo + "/" + curr.Name + ":" + newChart.Version
 		if Config.AnnotateOnUpgradeAvailable {
 			if idx >= 0 {
-				err := kubeObject.SetAnnotation(annotationUpgradeAvailable+"."+strconv.FormatInt(int64(idx), 10), anno)
+				err := kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeAvailable+"."+strconv.FormatInt(int64(idx), 10), anno)
 				if err != nil {
 					return nil, "", err
 				}
 			} else {
-				err := kubeObject.SetAnnotation(annotationUpgradeAvailable, anno)
+				err := kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeAvailable, anno)
 				if err != nil {
 					return nil, "", err
 				}
@@ -94,12 +89,12 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 				return nil, "", err
 			}
 			if idx >= 0 {
-				err = kubeObject.SetAnnotation(annotationUpgradeShaSum+"."+strconv.FormatInt(int64(idx), 10), "sha256:"+chartSum)
+				err = kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeShaSum+"."+strconv.FormatInt(int64(idx), 10), "sha256:"+chartSum)
 				if err != nil {
 					return nil, "", err
 				}
 			} else {
-				err = kubeObject.SetAnnotation(annotationUpgradeShaSum, "sha256:"+chartSum)
+				err = kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeShaSum, "sha256:"+chartSum)
 				if err != nil {
 					return nil, "", err
 				}
@@ -112,12 +107,12 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 			return nil, "", err
 		}
 		info = fmt.Sprintf("{\"current\": %s, \"upgraded\": %s, \"constraint\": %q, \"semverDistance\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint, distance)
-	} else if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(annotationShaSum) == "" {
+	} else if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(api.HelmResourceAnnotationShaSum) == "" {
 		_, chartSum, err := helm.PullChart(curr, tmpDir, nil, nil)
 		if err != nil {
 			return nil, "", err
 		}
-		err = kubeObject.SetAnnotation(annotationShaSum, "sha256:"+chartSum)
+		err = kubeObject.SetAnnotation(api.HelmResourceAnnotationShaSum, "sha256:"+chartSum)
 		if err != nil {
 			return nil, "", err
 		}
@@ -131,8 +126,8 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	results := &rl.Results
 
 	for _, kubeObject := range rl.Items {
-		if kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") || kubeObject.IsGVK("experimental.helm.sh", "", "RenderHelmChart") {
-			upgradeConstraint := kubeObject.GetAnnotation(annotationUpgradeConstraint)
+		if kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") || kubeObject.IsGVK(api.HelmResourceAPI, "", "RenderHelmChart") {
+			upgradeConstraint := kubeObject.GetAnnotation(api.HelmResourceAnnotationUpgradeConstraint)
 
 			y := kubeObject.String()
 			spec, err := t.ParseKptSpec([]byte(y))
@@ -166,7 +161,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				return false, err
 			}
 		} else if kubeObject.IsGVK("argoproj.io", "", "Application") {
-			upgradeConstraint := kubeObject.GetAnnotation(annotationUpgradeConstraint)
+			upgradeConstraint := kubeObject.GetAnnotation(api.HelmResourceAnnotationUpgradeConstraint)
 
 			y := kubeObject.String()
 			app, err := t.ParseArgoCDSpec([]byte(y))

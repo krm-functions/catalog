@@ -20,22 +20,16 @@ import (
 	"os"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
+	"github.com/michaelvl/krm-functions/pkg/api"
 	"github.com/michaelvl/krm-functions/pkg/helm"
 	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
-)
-
-const (
-	annotationURL    = apiGroup
-	annotationShaSum = annotationURL + "/chart-sum"
-	apiGroup         = "experimental.helm.sh"
-	apiVersion       = apiGroup + "/v1alpha1"
 )
 
 func Run(rl *fn.ResourceList) (bool, error) {
 	var outputs fn.KubeObjects
 
 	for _, kubeObject := range rl.Items {
-		if kubeObject.IsGVK(apiGroup, "", "RenderHelmChart") || kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") {
+		if kubeObject.IsGVK(api.HelmResourceAPI, "", "RenderHelmChart") || kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart") {
 			y := kubeObject.String()
 			spec, err := t.ParseKptSpec([]byte(y))
 			if err != nil {
@@ -54,7 +48,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				err = kubeObject.SetAPIVersion(apiVersion)
+				err = kubeObject.SetAPIVersion(api.HelmResourceAPIVersion)
 				if err != nil {
 					return false, err
 				}
@@ -69,7 +63,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				err = kubeObject.SetAnnotation(annotationShaSum+"/"+chart.Args.Name, "sha256:"+chartSum)
+				err = kubeObject.SetAnnotation(api.HelmResourceAnnotationShaSum+"/"+chart.Args.Name, "sha256:"+chartSum)
 				if err != nil {
 					return false, err
 				}
