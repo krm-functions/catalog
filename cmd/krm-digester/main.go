@@ -62,12 +62,18 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				imageFilter := &ImageFilter{}
+				imageFilter := NewImageFilter()
 				_, err = imageFilter.Filter(objs)
 				if err != nil {
 					return false, err
 				}
-				fmt.Fprintf(os.Stderr, "** images %v\n", imageFilter.Images)
+				imageFilter.LookupDigests()
+				for _, image := range imageFilter.Images {
+					results = append(results, &fn.Result{
+						Message:  fmt.Sprintf("image: %v\n", image+"@"+imageFilter.Digests[image]),
+						Severity: fn.Info,
+					})
+				}
 			}
 		}
 		outputs = append(outputs, kubeObject)

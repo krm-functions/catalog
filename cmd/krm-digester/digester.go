@@ -16,7 +16,9 @@ package main
 
 import (
 	"regexp"
+	"strings"
 
+	"github.com/google/go-containerregistry/pkg/crane"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
@@ -29,12 +31,21 @@ type ImageFilter struct {
 	// List of images found walking resources
 	Images []string
 
+	// Map from image (key) to digest (value)
+	Digests map[string]string
+
+	// Regular expressions used to identify images
 	PathFilters []*regexp.Regexp
 }
 
-func (i *ImageFilter) Filter(nodes []*yaml.RNode) ([]*yaml.RNode, error) { //nolint:unparam // return value is unused, but we want the common filter prototype
+func NewImageFilter() *ImageFilter {
+	i := &ImageFilter{}
 	i.PathFilters = append(i.PathFilters, regexp.MustCompile(containerImagePathFilter), regexp.MustCompile(initContainerImagePathFilter))
+	i.Digests = make(map[string]string)
+	return i
+}
 
+func (i *ImageFilter) Filter(nodes []*yaml.RNode) ([]*yaml.RNode, error) { //nolint:unparam // return value is unused, but we want the common filter prototype
 	for idx := range nodes {
 		err := Walk(i, nodes[idx], "")
 		if err != nil {
@@ -52,4 +63,17 @@ func (i *ImageFilter) VisitScalar(node *yaml.RNode, path string) error {
 		}
 	}
 	return nil
+}
+
+func (i *ImageFilter) LookupDigests() {
+	for _, image := range i.Images {
+		if strings.Contains(image, "@") {
+			continue
+		}
+		digest, err := crane.Digest(image)
+		// We dont fail here if we cannot locate a digest, only if the digest is needed for a patch-back target
+		if err == nil {
+			i.Digests[image] = digest
+		}
+	}
 }

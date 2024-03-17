@@ -197,7 +197,7 @@ spec:
 			if err != nil {
 				t.Fatal(err)
 			}
-			imageFilter := &ImageFilter{}
+			imageFilter := NewImageFilter()
 			_, err = imageFilter.Filter(objs)
 			if err != nil {
 				t.Fatal()
