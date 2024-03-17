@@ -15,26 +15,25 @@
 package main
 
 import (
-	"fmt"
-	"os"
 	"regexp"
 
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 const (
-	ImagePathFilter = `.*containers\[\d+\].image$`
+	containerImagePathFilter     = `.*containers\[\d+\].image$`
+	initContainerImagePathFilter = `.*initContainers\[\d+\].image$`
 )
 
 type ImageFilter struct {
 	// List of images found walking resources
 	Images []string
 
-	PathFilter *regexp.Regexp
+	PathFilters []*regexp.Regexp
 }
 
-func (i *ImageFilter) Filter(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
-	i.PathFilter = regexp.MustCompile(ImagePathFilter)
+func (i *ImageFilter) Filter(nodes []*yaml.RNode) ([]*yaml.RNode, error) { //nolint:unparam // return value is unused, but we want the common filter prototype
+	i.PathFilters = append(i.PathFilters, regexp.MustCompile(containerImagePathFilter), regexp.MustCompile(initContainerImagePathFilter))
 
 	for idx := range nodes {
 		err := Walk(i, nodes[idx], "")
@@ -46,9 +45,11 @@ func (i *ImageFilter) Filter(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
 }
 
 func (i *ImageFilter) VisitScalar(node *yaml.RNode, path string) error {
-	if i.PathFilter.MatchString(path) {
-		fmt.Fprintf(os.Stderr, "## ScalarNode %v -> %v\n", path, node.YNode().Value)
-		i.Images = append(i.Images, node.YNode().Value)
+	for idx := range i.PathFilters {
+		if i.PathFilters[idx].MatchString(path) {
+			i.Images = append(i.Images, node.YNode().Value)
+			break
+		}
 	}
 	return nil
 }

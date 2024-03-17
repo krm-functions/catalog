@@ -167,6 +167,25 @@ spec:
           env:
             - name: TARGET
               value: "Go Sample v1"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app.kubernetes.io/name: MyApp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox:1.29
+    command: ['sh']
+  initContainers:
+  - name: init-myservice
+    image: busybox:1.30
+    command: ['sh']
+  - name: init-mydb
+    image: busybox:1.31
+    command: ['sh']
 `,
 			ExpectedOutput: ``,
 		},
@@ -183,7 +202,7 @@ spec:
 			if err != nil {
 				t.Fatal()
 			}
-			assert.Equal(t, 7, len(imageFilter.Images))
+			assert.Equal(t, 10, len(imageFilter.Images))
 			assert.Equal(t, "nginx:1.14.2", imageFilter.Images[0])
 			assert.Equal(t, "quay.io/fluentd_elasticsearch/fluentd:v2.5.2", imageFilter.Images[1])
 			assert.Equal(t, "perl:5.34.0", imageFilter.Images[2])
@@ -191,6 +210,9 @@ spec:
 			assert.Equal(t, "us-docker.pkg.dev/google-samples/containers/gke/gb-frontend:v5", imageFilter.Images[4])
 			assert.Equal(t, "registry.k8s.io/nginx-slim:0.8", imageFilter.Images[5])
 			assert.Equal(t, "ghcr.io/knative/helloworld-go:latest", imageFilter.Images[6])
+			assert.Equal(t, "busybox:1.29", imageFilter.Images[7])
+			assert.Equal(t, "busybox:1.30", imageFilter.Images[8])
+			assert.Equal(t, "busybox:1.31", imageFilter.Images[9])
 		})
 	}
 }

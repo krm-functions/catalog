@@ -29,6 +29,8 @@ func Walk(v Visitor, object *yaml.RNode, path string) error {
 	switch object.YNode().Kind {
 	case yaml.DocumentNode:
 		return fmt.Errorf("did not expect DocumentNode")
+	case yaml.AliasNode:
+		return fmt.Errorf("did not expect AliasNode")
 	case yaml.MappingNode:
 		return object.VisitFields(func(node *yaml.MapNode) error {
 			return Walk(v, node.Value, path+"."+node.Key.YNode().Value)

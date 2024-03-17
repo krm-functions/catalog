@@ -69,7 +69,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 		case kubeObject.IsGVK("fn.kpt.dev", "", "RenderHelmChart"):
 			results = append(results, &fn.Result{
 				Message:  "sourcing with render-helm-chart is deprecated. Use source-helm-chart instead",
-				Severity: fn.Info,
+				Severity: fn.Warning,
 				ResourceRef: &fn.ResourceRef{
 					APIVersion: kubeObject.GetAPIVersion(),
 					Kind:       kubeObject.GetKind(),
