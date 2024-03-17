@@ -23,60 +23,7 @@ import (
 	"github.com/michaelvl/krm-functions/pkg/api"
 	"github.com/michaelvl/krm-functions/pkg/helm"
 	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
-
-func digester(items fn.KubeObjects) error {
-	imageFilter := &ImageFilter{}
-	var err error
-	for idx, obj := range items {
-		objRN, err := yaml.Parse(obj.String())
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(os.Stderr, "** Obj %v %v/%v\n", idx, objRN.GetKind(), objRN.GetName())
-		if objRN.GetKind() == "CronJob" {
-			_, err = objRN.Pipe(
-				yaml.Lookup("spec", "jobTemplate", "spec", "template", "spec"),
-				yaml.Tee(yaml.Lookup("containers"), imageFilter),
-				yaml.Tee(yaml.Lookup("initContainers"), imageFilter),
-			)
-		}
-		_, err = objRN.Pipe(
-			yaml.Lookup("spec"),
-			yaml.Tee(yaml.Lookup("containers"), imageFilter),
-			yaml.Tee(yaml.Lookup("initContainers"), imageFilter),
-			yaml.Lookup("template", "spec"),
-			yaml.Tee(yaml.Lookup("containers"), imageFilter),
-			yaml.Tee(yaml.Lookup("initContainers"), imageFilter),
-		)
-	}
-	fmt.Fprintf(os.Stderr, "** images %v\n", imageFilter.Images)
-	return err
-}
-
-type ImageFilter struct {
-	// List of images found traversing resources
-	Images []string
-}
-
-func (f *ImageFilter) Filter(n *yaml.RNode) (*yaml.RNode, error) {
-	if err := n.VisitElements(f.filterImage); err != nil {
-		return nil, err
-	}
-	return n, nil
-}
-
-func (f *ImageFilter) filterImage(n *yaml.RNode) error {
-	imageNode, err := n.Pipe(yaml.Lookup("image"))
-	if err != nil {
-		s, _ := n.String()
-		return fmt.Errorf("could not lookup image in node %v: %w", s, err)
-	}
-	image := yaml.GetValue(imageNode)
-	f.Images = append(f.Images, image)
-	return nil
-}
 
 func Run(rl *fn.ResourceList) (bool, error) {
 	var outputs fn.KubeObjects
@@ -107,14 +54,20 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if len(chartTarball) == 0 {
 					return false, fmt.Errorf("no embedded chart found")
 				}
-				newobjs, err := helm.Template(&spec.Charts[idx], chartTarball)
+				rendered, err := helm.Template(&spec.Charts[idx], chartTarball)
 				if err != nil {
 					return false, err
 				}
-				err = digester(newobjs)
+				objs, err := helm.ParseAsRNodes(rendered)
 				if err != nil {
 					return false, err
 				}
+				imageFilter := &ImageFilter{}
+				_, err = imageFilter.Filter(objs)
+				if err != nil {
+					return false, err
+				}
+				fmt.Fprintf(os.Stderr, "** images %v\n", imageFilter.Images)
 			}
 		}
 		outputs = append(outputs, kubeObject)

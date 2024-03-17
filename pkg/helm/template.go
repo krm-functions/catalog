@@ -40,8 +40,8 @@ const (
 // Template extracts a chart tarball and renders the chart using given
 // values and `helm template`. The raw chart tarball data is given in
 // `chartTarball` (note, not base64 encoded). Returns the rendered
-// objects
-func Template(chart *t.HelmChart, chartTarball []byte) (fn.KubeObjects, error) {
+// text
+func Template(chart *t.HelmChart, chartTarball []byte) ([]byte, error) {
 	tmpDir, err := os.MkdirTemp("", "chart-")
 	if err != nil {
 		return nil, err
@@ -104,7 +104,11 @@ func Template(chart *t.HelmChart, chartTarball []byte) (fn.KubeObjects, error) {
 		return nil, err
 	}
 
-	r := &kio.ByteReader{Reader: bytes.NewBufferString(string(stdout)), OmitReaderAnnotations: true}
+	return stdout, nil
+}
+
+func ParseAsKubeObjects(rendered []byte) (fn.KubeObjects, error) {
+	r := &kio.ByteReader{Reader: bytes.NewBufferString(string(rendered)), OmitReaderAnnotations: true}
 	nodes, err := r.Read()
 	if err != nil {
 		return nil, err
@@ -127,6 +131,15 @@ func Template(chart *t.HelmChart, chartTarball []byte) (fn.KubeObjects, error) {
 	}
 
 	return objects, nil
+}
+
+func ParseAsRNodes(rendered []byte) ([]*kyaml.RNode, error) {
+	r := &kio.ByteReader{Reader: bytes.NewBufferString(string(rendered)), OmitReaderAnnotations: true}
+	nodes, err := r.Read()
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
 }
 
 // writeValuesFile writes chart values to a file for passing to Helm
