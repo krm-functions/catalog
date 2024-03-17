@@ -67,7 +67,7 @@ test-apply-setters:
 .PHONY: test-digester-step1
 test-digester-step1:
 	rm -rf digester-tmp0
-	kpt fn source examples/source-helm-chart | kpt fn eval - --truncate-output=false --exec $(HELM_SOURCE_BIN) | kpt fn sink digester-tmp0
+	kpt fn source examples/digester | kpt fn eval - --truncate-output=false --exec $(HELM_SOURCE_BIN) | kpt fn sink digester-tmp0
 
 .PHONY: test-digester-step2
 test-digester-step2:
