@@ -73,3 +73,4 @@ test-digester-step1:
 test-digester-step2:
 	#kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false --exec $(DIGESTER_BIN) | kpt fn sink digester-tmp1
 	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false --exec $(DIGESTER_BIN) > test-out.yaml
+	head -n 39 test-out.yaml

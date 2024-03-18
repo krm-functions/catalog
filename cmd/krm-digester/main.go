@@ -15,77 +15,18 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 
-	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
-	"github.com/michaelvl/krm-functions/pkg/api"
-	"github.com/michaelvl/krm-functions/pkg/helm"
-	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
+	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
 )
 
-func Run(rl *fn.ResourceList) (bool, error) {
-	var outputs fn.KubeObjects
-	var results fn.Results
-
-	results = append(results, &fn.Result{
-		Message:  "digester",
-		Severity: fn.Info,
-	})
-
-	for _, kubeObject := range rl.Items {
-		if kubeObject.IsGVK(api.HelmResourceAPI, "", "RenderHelmChart") {
-			y := kubeObject.String()
-			spec, err := t.ParseKptSpec([]byte(y))
-			if err != nil {
-				return false, err
-			}
-			for idx := range spec.Charts {
-				if spec.Charts[idx].Options.ReleaseName == "" {
-					return false, fmt.Errorf("invalid chart spec %s: ReleaseName required, index %d", kubeObject.GetName(), idx)
-				}
-			}
-			for idx := range spec.Charts {
-				chartTarball, err := base64.StdEncoding.DecodeString(spec.Charts[idx].Chart)
-				if err != nil {
-					return false, err
-				}
-				if len(chartTarball) == 0 {
-					return false, fmt.Errorf("no embedded chart found")
-				}
-				rendered, err := helm.Template(&spec.Charts[idx], chartTarball)
-				if err != nil {
-					return false, err
-				}
-				objs, err := helm.ParseAsRNodes(rendered)
-				if err != nil {
-					return false, err
-				}
-				imageFilter := NewImageFilter()
-				_, err = imageFilter.Filter(objs)
-				if err != nil {
-					return false, err
-				}
-				imageFilter.LookupDigests()
-				for _, image := range imageFilter.Images {
-					results = append(results, &fn.Result{
-						Message:  fmt.Sprintf("image: %v\n", image+"@"+imageFilter.Digests[image]),
-						Severity: fn.Info,
-					})
-				}
-			}
-		}
-		outputs = append(outputs, kubeObject)
-	}
-
-	rl.Results = results
-	rl.Items = outputs
-	return true, nil
-}
-
 func main() {
-	if err := fn.AsMain(fn.ResourceListProcessorFunc(Run)); err != nil {
+	i := NewImageFilter()
+	cmd := command.Build(i, command.StandaloneEnabled, false)
+
+	if err := cmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

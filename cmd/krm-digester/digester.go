@@ -15,16 +15,23 @@
 package main
 
 import (
+	"encoding/base64"
+	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/michaelvl/krm-functions/pkg/api"
+	"github.com/michaelvl/krm-functions/pkg/helm"
+	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
+	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 const (
 	containerImagePathFilter     = `.*containers\[\d+\].image$`
 	initContainerImagePathFilter = `.*initContainers\[\d+\].image$`
+	digesterRegexpPrefix         = `# digester: `
 )
 
 type ImageFilter struct {
@@ -43,6 +50,63 @@ func NewImageFilter() *ImageFilter {
 	i.PathFilters = append(i.PathFilters, regexp.MustCompile(containerImagePathFilter), regexp.MustCompile(initContainerImagePathFilter))
 	i.Digests = make(map[string]string)
 	return i
+}
+
+func (i *ImageFilter) Process(resourceList *framework.ResourceList) error {
+	results := []*framework.Result{}
+	results = append(results, &framework.Result{
+		Message: "digester",
+	})
+	for _, iobj := range resourceList.Items {
+		if iobj.GetApiVersion() != api.HelmResourceAPIVersion || iobj.GetKind() != "RenderHelmChart" {
+			continue
+		}
+		y := iobj.MustString()
+		spec, err := t.ParseKptSpec([]byte(y))
+		if err != nil {
+			return err
+		}
+		for idx := range spec.Charts {
+			if spec.Charts[idx].Options.ReleaseName == "" {
+				return fmt.Errorf("invalid chart spec %s: ReleaseName required, index %d", iobj.GetName(), idx)
+			}
+		}
+		for idx := range spec.Charts {
+			chartTarball, err := base64.StdEncoding.DecodeString(spec.Charts[idx].Chart)
+			if err != nil {
+				return err
+			}
+			if len(chartTarball) == 0 {
+				return fmt.Errorf("no embedded chart found")
+			}
+			rendered, err := helm.Template(&spec.Charts[idx], chartTarball)
+			if err != nil {
+				return err
+			}
+			objs, err := helm.ParseAsRNodes(rendered)
+			if err != nil {
+				return err
+			}
+			imageFilter := NewImageFilter()
+			_, err = imageFilter.Filter(objs)
+			if err != nil {
+				return err
+			}
+			imageFilter.LookupDigests()
+			for _, image := range imageFilter.Images {
+				results = append(results, &framework.Result{
+					Message:  fmt.Sprintf("image: %v\n", image+"@"+imageFilter.Digests[image]),
+					Severity: framework.Info,
+				})
+			}
+			_, err = imageFilter.SetDigests(iobj)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	resourceList.Results = results
+	return nil
 }
 
 func (i *ImageFilter) Filter(nodes []*yaml.RNode) ([]*yaml.RNode, error) { //nolint:unparam // return value is unused, but we want the common filter prototype
@@ -76,4 +140,39 @@ func (i *ImageFilter) LookupDigests() {
 			i.Digests[image] = digest
 		}
 	}
+}
+
+type ImageDigestSetter struct {
+	Digests map[string]string
+}
+
+func (i *ImageDigestSetter) VisitScalar(node *yaml.RNode, _ string) error {
+	comment := node.YNode().LineComment
+	if strings.HasPrefix(comment, digesterRegexpPrefix) {
+		re := strings.TrimSpace(strings.TrimPrefix(comment, digesterRegexpPrefix))
+		pattern, err := regexp.Compile(re)
+		if err != nil {
+			return fmt.Errorf("cannot parse regexp: %v: %w", re, err)
+		}
+		var match string
+		for k, v := range i.Digests {
+			if pattern.MatchString(k) {
+				if match != "" {
+					return fmt.Errorf("regexp does not identify a unique image: %v", re)
+				}
+				match = v
+			}
+		}
+		node.YNode().Value = match
+	}
+	return nil
+}
+
+func (i *ImageFilter) SetDigests(node *yaml.RNode) (*yaml.RNode, error) {
+	setter := &ImageDigestSetter{Digests: i.Digests}
+	err := Walk(setter, node, "")
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
 }
