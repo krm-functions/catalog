@@ -27,10 +27,6 @@ type Visitor interface {
 // Walk visits all nodes in the RNode through recursive traversal
 func Walk(v Visitor, object *yaml.RNode, path string) error {
 	switch object.YNode().Kind {
-	case yaml.DocumentNode:
-		return fmt.Errorf("did not expect DocumentNode")
-	case yaml.AliasNode:
-		return fmt.Errorf("did not expect AliasNode")
 	case yaml.MappingNode:
 		return object.VisitFields(func(node *yaml.MapNode) error {
 			return Walk(v, node.Value, path+"."+node.Key.YNode().Value)
@@ -50,6 +46,12 @@ func Walk(v Visitor, object *yaml.RNode, path string) error {
 		if err != nil {
 			return fmt.Errorf("visiting scalar: %w", err)
 		}
+	case yaml.DocumentNode:
+		return fmt.Errorf("did not expect DocumentNode")
+	case yaml.AliasNode:
+		return fmt.Errorf("did not expect AliasNode")
+	default:
+		return fmt.Errorf("unexpected unknown node type %v", object.YNode().Kind)
 	}
 	return nil
 }

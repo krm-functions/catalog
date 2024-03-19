@@ -122,7 +122,7 @@ func (i *ImageFilter) Filter(nodes []*yaml.RNode) ([]*yaml.RNode, error) { //nol
 func (i *ImageFilter) VisitScalar(node *yaml.RNode, path string) error {
 	for idx := range i.PathFilters {
 		if i.PathFilters[idx].MatchString(path) {
-			i.Images = append(i.Images, node.YNode().Value)
+			i.Images = append(i.Images, yaml.GetValue(node))
 			break
 		}
 	}
@@ -168,7 +168,7 @@ func (i *ImageDigestSetter) VisitScalar(node *yaml.RNode, _ string) error {
 	return nil
 }
 
-func (i *ImageFilter) SetDigests(node *yaml.RNode) (*yaml.RNode, error) {
+func (i *ImageFilter) SetDigests(node *yaml.RNode) (*yaml.RNode, error) { //nolint:unparam // return value is unused, but we want the common filter prototype
 	setter := &ImageDigestSetter{Digests: i.Digests}
 	err := Walk(setter, node, "")
 	if err != nil {

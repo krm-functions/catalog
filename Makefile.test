@@ -72,7 +72,7 @@ test-digester-step1:
 .PHONY: test-digester-step2
 test-digester-step2:
 	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false --exec $(DIGESTER_BIN) > test-out.yaml
-	head -n 39 test-out.yaml
+	head -n 60 test-out.yaml
 
 .PHONY: test-digester-step3
 test-digester-step3:

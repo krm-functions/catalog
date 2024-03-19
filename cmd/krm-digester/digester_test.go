@@ -5,20 +5,11 @@ import (
 
 	"github.com/michaelvl/krm-functions/pkg/helm"
 	"github.com/stretchr/testify/assert"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-func TestDigester(t *testing.T) {
-	testCases := []struct {
-		TestName       string
-		FunctionConfig string
-		Input          string
-		ExpectedOutput string
-	}{
-		{
-			TestName: "locate images",
-			FunctionConfig: `
-`,
-			Input: `
+func TestLookupImages(t *testing.T) {
+	input := `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -186,33 +177,93 @@ spec:
   - name: init-mydb
     image: busybox:1.31
     command: ['sh']
-`,
-			ExpectedOutput: ``,
-		},
-	}
+`
 
-	for _, tc := range testCases {
-		t.Run(tc.TestName, func(t *testing.T) {
-			objs, err := helm.ParseAsRNodes([]byte(tc.Input))
-			if err != nil {
-				t.Fatal(err)
-			}
-			imageFilter := NewImageFilter()
-			_, err = imageFilter.Filter(objs)
-			if err != nil {
-				t.Fatal()
-			}
-			assert.Equal(t, 10, len(imageFilter.Images))
-			assert.Equal(t, "nginx:1.14.2", imageFilter.Images[0])
-			assert.Equal(t, "quay.io/fluentd_elasticsearch/fluentd:v2.5.2", imageFilter.Images[1])
-			assert.Equal(t, "perl:5.34.0", imageFilter.Images[2])
-			assert.Equal(t, "busybox:1.28", imageFilter.Images[3])
-			assert.Equal(t, "us-docker.pkg.dev/google-samples/containers/gke/gb-frontend:v5", imageFilter.Images[4])
-			assert.Equal(t, "registry.k8s.io/nginx-slim:0.8", imageFilter.Images[5])
-			assert.Equal(t, "ghcr.io/knative/helloworld-go:latest", imageFilter.Images[6])
-			assert.Equal(t, "busybox:1.29", imageFilter.Images[7])
-			assert.Equal(t, "busybox:1.30", imageFilter.Images[8])
-			assert.Equal(t, "busybox:1.31", imageFilter.Images[9])
-		})
+	objs, err := helm.ParseAsRNodes([]byte(input))
+	if err != nil {
+		t.Fatal(err)
 	}
+	imageFilter := NewImageFilter()
+	_, err = imageFilter.Filter(objs)
+	if err != nil {
+		t.Fatal()
+	}
+	assert.Equal(t, 10, len(imageFilter.Images))
+	assert.Equal(t, "nginx:1.14.2", imageFilter.Images[0])
+	assert.Equal(t, "quay.io/fluentd_elasticsearch/fluentd:v2.5.2", imageFilter.Images[1])
+	assert.Equal(t, "perl:5.34.0", imageFilter.Images[2])
+	assert.Equal(t, "busybox:1.28", imageFilter.Images[3])
+	assert.Equal(t, "us-docker.pkg.dev/google-samples/containers/gke/gb-frontend:v5", imageFilter.Images[4])
+	assert.Equal(t, "registry.k8s.io/nginx-slim:0.8", imageFilter.Images[5])
+	assert.Equal(t, "ghcr.io/knative/helloworld-go:latest", imageFilter.Images[6])
+	assert.Equal(t, "busybox:1.29", imageFilter.Images[7])
+	assert.Equal(t, "busybox:1.30", imageFilter.Images[8])
+	assert.Equal(t, "busybox:1.31", imageFilter.Images[9])
+}
+
+func TestSetDigests(t *testing.T) {
+	input := `
+apiVersion: fn.kpt.dev/v1alpha1
+kind: RenderHelmChart
+metadata:
+  name: render-chart
+  annotations:
+    config.kubernetes.io/local-config: "true"
+helmCharts:
+- chartArgs:
+    name: cert-manager
+    version: v1.12.2
+    repo: https://charts.jetstack.io
+  templateOptions:
+    releaseName: cert-managerrel
+    namespace: cert-managerns
+    values:
+      valuesInline:
+        global:
+          commonLabels:
+            team_name: dev  # kpt-set: ${teamName}
+        image:
+          digest: ""   # digester: quay.io/jetstack/cert-manager-controller:.*
+        webhook:
+          image:
+            digest: "" # digester: quay.io/jetstack/cert-manager-webhook:.*
+        cainjector:
+          image:
+            digest: "" # digester: quay.io/jetstack/cert-manager-cainjector:.*
+        startupapicheck:
+          image:
+            digest: "" # digester: quay.io/jetstack/cert-manager-ctl:.*
+`
+	objs, err := helm.ParseAsRNodes([]byte(input))
+	if err != nil {
+		t.Fatal()
+	}
+	assert.Equal(t, 1, len(objs))
+
+	imageFilter := NewImageFilter()
+	imageFilter.Digests["quay.io/jetstack/cert-manager-controller:1.2.3"] = "quay.io/jetstack/cert-manager-controller:1.2.3@sha256:abc"
+	imageFilter.Digests["quay.io/jetstack/cert-manager-webhook:2.3.4"] = "quay.io/jetstack/cert-manager-webhook:2.3.4@sha256:bcd"
+	imageFilter.Digests["quay.io/jetstack/cert-manager-cainjector:3.4.5"] = "quay.io/jetstack/cert-manager-cainjector:3.4.5@sha256:cde"
+	imageFilter.Digests["quay.io/jetstack/cert-manager-ctl:4.5.6"] = "quay.io/jetstack/cert-manager-ctl:4.5.6@sha256:def"
+	_, err = imageFilter.SetDigests(objs[0])
+	if err != nil {
+		t.Fatal()
+	}
+	assertDigest(t, objs[0], imageFilter.Digests["quay.io/jetstack/cert-manager-controller:1.2.3"],
+		"helmCharts", "0", "templateOptions", "values", "valuesInline", "image", "digest")
+	assertDigest(t, objs[0], imageFilter.Digests["quay.io/jetstack/cert-manager-webhook:2.3.4"],
+		"helmCharts", "0", "templateOptions", "values", "valuesInline", "webhook", "image", "digest")
+	assertDigest(t, objs[0], imageFilter.Digests["quay.io/jetstack/cert-manager-cainjector:3.4.5"],
+		"helmCharts", "0", "templateOptions", "values", "valuesInline", "cainjector", "image", "digest")
+	assertDigest(t, objs[0], imageFilter.Digests["quay.io/jetstack/cert-manager-ctl:4.5.6"],
+		"helmCharts", "0", "templateOptions", "values", "valuesInline", "startupapicheck", "image", "digest")
+}
+
+func assertDigest(t *testing.T, node *yaml.RNode, want string, path ...string) {
+	t.Helper()
+	found, err := node.Pipe(yaml.Lookup(path...))
+	if err != nil {
+		t.Fatal()
+	}
+	assert.Equal(t, want, yaml.GetValue(found))
 }
