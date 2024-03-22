@@ -24,4 +24,4 @@ helmCharts:
       valuesInline:
         global:
           commonLabels:
-            team_name: dev  # kpt-set: ${teamName}
+            team-name: dev  # kpt-set: ${teamName}

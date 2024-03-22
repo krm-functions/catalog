@@ -33,3 +33,6 @@ This repository contain [KRM functions](https://medium.com/@michael.vittrup.lars
   [gatekeeper-library](https://github.com/open-policy-agent/gatekeeper-library))
   and which support gatekeeper
   [expansions](https://open-policy-agent.github.io/gatekeeper/website/docs/expansion)
+- [digester](docs/digester.md) a function that can lookup container
+  image digests for Helm charts and write-back digests into chart
+  values.

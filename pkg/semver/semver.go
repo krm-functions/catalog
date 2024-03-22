@@ -32,7 +32,7 @@ func Sort(versionsRaw []string) []*version.Version {
 	versions := make([]*version.Version, 0, len(versionsRaw))
 	for _, raw := range versionsRaw {
 		rawOrig := raw
-		if len(raw) > 0 && raw[0] == 'v' {
+		if raw != "" && raw[0] == 'v' {
 			raw = raw[1:]
 		}
 		_, err := version.StrictNewVersion(raw) // Only accept semver-2

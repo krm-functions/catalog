@@ -17,3 +17,14 @@ helmCharts:
         global:
           commonLabels:
             team-name: dev  # kpt-set: ${teamName}
+        image:
+          digest: ""   # digester: quay.io/jetstack/cert-manager-controller:.*
+        webhook:
+          image:
+            digest: "" # digester: quay.io/jetstack/cert-manager-webhook:.*
+        cainjector:
+          image:
+            digest: "" # digester: quay.io/jetstack/cert-manager-cainjector:.*
+        startupapicheck:
+          image:
+            digest: "" # digester: quay.io/jetstack/cert-manager-ctl:.*

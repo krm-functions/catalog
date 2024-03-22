@@ -89,12 +89,12 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 				return nil, "", err
 			}
 			if idx >= 0 {
-				err = kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeShaSum+"."+strconv.FormatInt(int64(idx), 10), "sha256:"+chartSum)
+				err = kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeShaSum+"."+strconv.FormatInt(int64(idx), 10), formatShaSum(chartSum))
 				if err != nil {
 					return nil, "", err
 				}
 			} else {
-				err = kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeShaSum, "sha256:"+chartSum)
+				err = kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeShaSum, formatShaSum(chartSum))
 				if err != nil {
 					return nil, "", err
 				}
@@ -112,7 +112,7 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 		if err != nil {
 			return nil, "", err
 		}
-		err = kubeObject.SetAnnotation(api.HelmResourceAnnotationShaSum, "sha256:"+chartSum)
+		err = kubeObject.SetAnnotation(api.HelmResourceAnnotationShaSum, formatShaSum(chartSum))
 		if err != nil {
 			return nil, "", err
 		}
@@ -187,6 +187,10 @@ func Run(rl *fn.ResourceList) (bool, error) {
 
 	*results = append(*results, fn.GeneralResult(fmt.Sprintf("{\"upgradesEvaluated\": %d, \"upgradesDone\": %d, \"upgradesAvailable\": %d, \"upgradesSkipped\": %d}\n", upgradesEvaluated, upgradesDone, upgradesAvailable, upgradesAvailable-upgradesDone), fn.Info))
 	return true, nil
+}
+
+func formatShaSum(sum string) string {
+	return "sha256:" + sum
 }
 
 func main() {

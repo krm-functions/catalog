@@ -1,6 +1,11 @@
 name: Run tests
 
-on: [ pull_request ]
+on:
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+      - 'scripts/**'
+      - 'docs/**'
 
 jobs:
   test:
@@ -10,7 +15,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: build local binaries for test
-      run: make build
+      run: make build lint test
 
     - name: install kpt
       run: |

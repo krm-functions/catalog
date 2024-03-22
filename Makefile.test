@@ -1,10 +1,11 @@
-HELM_UPGRADER_BIN := bin/linux_amd64/krm-helm-upgrader
+APPLY_SETTERS_BIN := bin/linux_amd64/krm-apply-setters
+DIGESTER_BIN := bin/linux_amd64/krm-digester
 HELM_RENDER_BIN := bin/linux_amd64/krm-render-helm-chart
 HELM_SOURCE_BIN := bin/linux_amd64/krm-source-helm-chart
+HELM_UPGRADER_BIN := bin/linux_amd64/krm-helm-upgrader
 BASELINE_RENDER_HELM_CHART := gcr.io/kpt-fn/render-helm-chart:v0.2.2
-APPLY_SETTERS_BIN := bin/linux_amd64/krm-apply-setters
 
-e2e-tests: test-render-helm-chart render-helm-chart-example render-helm-chart-example2 test-source-helm-chart test-helm-upgrader test-apply-setters
+e2e-tests: test-render-helm-chart render-helm-chart-example render-helm-chart-example2 test-source-helm-chart test-helm-upgrader test-apply-setters test-digester
 
 # BEWARE: These tests are fragile - we want to test upgrades, but without upgrade-constraints tests might fail when charts are updated
 .PHONY: test-helm-upgrader
@@ -38,7 +39,7 @@ render-helm-chart-example:
 	kpt fn source examples/render-helm-chart | kpt fn eval - --exec ${HELM_SOURCE_BIN} | kpt fn sink my-cert-manager-package
 	grep -q 'apiVersion: experimental.helm.sh/v1alpha1' my-cert-manager-package/cert-manager-chart.yaml
 	cp examples/render-helm-chart/Kptfile my-cert-manager-package/
-	kpt fn render my-cert-manager-package -o stdout | grep -q 'team_name: blue-team'
+	kpt fn render my-cert-manager-package -o stdout | grep -q 'team-name: blue-team'
 	rm -rf my-cert-manager-package
 
 .PHONY: render-helm-chart-example2
@@ -62,3 +63,23 @@ test-apply-setters:
 	grep -e 'replicas: "4"' test-out.yaml
 	grep -e 'app.kubernetes.io/version: "a1b2c3d4e5e6"' test-out.yaml
 	rm test-out.yaml
+
+.PHONY: test-digester
+test-digester: test-digester-step1 test-digester-step3
+
+.PHONY: test-digester-step1
+test-digester-step1:
+	rm -rf digester-tmp0
+	kpt fn source examples/digester | kpt fn eval - --truncate-output=false --exec $(HELM_SOURCE_BIN) | kpt fn sink digester-tmp0
+
+.PHONY: test-digester-step2
+test-digester-step2:
+	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false --exec $(DIGESTER_BIN) > test-out.yaml
+	head -n 60 test-out.yaml
+
+.PHONY: test-digester-step3
+test-digester-step3:
+	rm -rf digester-tmp1
+	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false --exec $(DIGESTER_BIN) | kpt fn sink digester-tmp1
+	kpt fn render digester-tmp1 -o unwrap > test-out.yaml
+	grep 'image:' test-out.yaml

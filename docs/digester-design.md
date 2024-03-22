@@ -154,18 +154,24 @@ Simultaneously we want to work on the 'Helm chart values' abstraction
 level, i.e. we do not want to render the chart and then post-process
 it. We want to keep the chart in its un-rendered form such that we at
 a later point can render it with a partially changed configuration,
-e.g. changing the `resources.request.cpu` in the example above.
+e.g. changing the `resources.request.cpu` or `team_name` in the
+example above.
 
 The following sections describe options for implementing image digest
 resolution.
 
-### Option 1 - 
+### Option 1
 
-Copy the image URI template from Helm templates and define the path
-where the resolved digest should be stored in the values:
+As part of defining the `RenderHelmChart` specification we can
+manually copy the image URI template from the relevant Helm templates
+and define the `values` path where the resolved digest should be
+stored:
 
 ```yaml
+# Verbatim copy from template
 imageTemplate: "{{- if .Values.image.registry -}}{{ .Values.image.registry }}/{{- end -}}{{ .Values.image.repository }}{{- if (.Values.image.digest) -}} @{{ .Values.image.digest }}{{- else -}}:{{ default .Chart.AppVersion .tag }} {{- end -}}"
+
+# Where to write the resolved digest
 digestPath: image.digest
 ```
 
@@ -173,7 +179,7 @@ With a definition as above the URI in `imageTempalte` is rendered
 using chart values, the digest resolved and added to the chart values
 at location `image.digest`.
 
-### Option 2 - 
+### Option 2
 
 Render templates with given values, search for image URIs in
 well-known resources types (similar to what `k8s-digester` does) and
@@ -185,9 +191,53 @@ imageRegexp: "quay.io/jetstack/cert-manager-controller:.*"
 digestPath: image.digest
 ```
 
+### Option 3
+
+Same as option 2, but export the resolved digests as 'setters'
+variables. This would remove the need for specifying a `digestPath`,
+however, the values section needs to be extended with digest
+information and a 'setter' comment, i.e. basically an identical
+specification, however, the value update feels less 'magic'.
+
+```yaml
+```yaml
+apiVersion: experimental.helm.sh/v1alpha1
+kind: RenderHelmChart
+...
+helmCharts:
+- chartArgs:
+  ...
+  templateOptions:
+    ...
+      valuesInline:
+        global:
+          commonLabels:
+            team_name: dev  # kpt-set: ${teamName}
+        image:
+          digest: "" # kpt-set: ${digest}  ### <-- Setter for digest
+```
+
+### Option 4
+
+Same as option 3, but instead of using setters variables, the comment
+contain a regular expression that is checked against resolved images:
+
+```yaml
+        image:
+          digest: "" # digester: ".*/cert-manager-controller:.*"  ### <-- RegExp for image
+```
+
+I.e.:
+
+1. Rendered templates used image `quay.io/jetstack/cert-manager-controller:v1.12.2`
+2. Image quay.io/jetstack/cert-manager-controller:v1.12.2` resolved to digest `sha256:abc123...def`
+3. When evaluating the `digester` comment, the regexp is used to
+   locate digest `sha256:abc123...def`, which is inserted into the
+   values.
+
 ## Evaluation
 
 - Option 1 is dependent on the chart templates because the image URI templates is copied from the chart templates. Small chart updates might break the lookup.
-- Option 1 will work if the image is moved to another URI (e.g. for caching), option 2 will break unless the hardcoded image URI is updated as well.
-- Neither method will work if post configuration changes image URI. E.g. a `kpt-set` of the image tag.
-- With option 2 we can easily detect if there are image URI not covered by a `imageRegexp`. This is not possible with option 1.
+- Option 1 will work if the image is moved to another URI (e.g. for caching), option 2+3 will break unless the hardcoded image URI is updated as well. Option 4 can work if the regexp is constructed properly.
+- No method will work if post configuration changes image URI. E.g. a `kpt-set` of the image tag.
+- With option 2+3+4 we can easily detect if there are image URIs not covered by a `imageRegexp`. This is not possible with option 1. Generally it might be a good idea to include a [GateKeeper 'check image digests' check](https://open-policy-agent.github.io/gatekeeper-library/website/validation/imagedigests/).

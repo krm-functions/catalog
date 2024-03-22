@@ -18,6 +18,8 @@ linters-settings:
   nolintlint:
     require-explanation: true
     require-specific: true
+  exhaustive:
+    default-signifies-exhaustive: true
 
 linters:
   disable-all: true
