@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/michaelvl/krm-functions/pkg/api"
 	"github.com/michaelvl/krm-functions/pkg/helm"
+	"github.com/michaelvl/krm-functions/pkg/version"
 	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
@@ -134,7 +135,7 @@ func (i *ImageFilter) LookupDigests() {
 		if strings.Contains(image, "@") {
 			continue
 		}
-		digest, err := crane.Digest(image)
+		digest, err := crane.Digest(image, crane.WithUserAgent(fmt.Sprintf("digester/%s", version.Version)))
 		// We dont fail here if we cannot locate a digest, only if the digest is needed for a patch-back target
 		if err == nil {
 			i.Digests[image] = digest

@@ -162,3 +162,7 @@ helmCharts:
             digest: "sha256:74023f3ad71915c3d4d249c5a20c7384e377558a030055215e8aeff5112aab4b" # digester: quay.io/jetstack/cert-manager-ctl:.*
   chart: H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxtAOz9...OY8SOAB6CAA=
 ```
+
+## Notes
+
+:roadwork: This function does not yet support private registries.
