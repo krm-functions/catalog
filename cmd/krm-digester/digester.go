@@ -157,10 +157,11 @@ func (i *ImageDigestSetter) VisitScalar(node *yaml.RNode, _ string) error {
 		var match string
 		for k, v := range i.Digests {
 			if pattern.MatchString(k) {
-				if match != "" {
+				if match != "" { // We already found a match, so the regexp does not uniquely identify a digest
 					return fmt.Errorf("regexp does not identify a unique image: %v", re)
 				}
 				match = v
+				// We dont break such that we can check for unique match
 			}
 		}
 		node.YNode().Value = match

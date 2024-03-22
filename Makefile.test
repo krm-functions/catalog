@@ -39,7 +39,7 @@ render-helm-chart-example:
 	kpt fn source examples/render-helm-chart | kpt fn eval - --exec ${HELM_SOURCE_BIN} | kpt fn sink my-cert-manager-package
 	grep -q 'apiVersion: experimental.helm.sh/v1alpha1' my-cert-manager-package/cert-manager-chart.yaml
 	cp examples/render-helm-chart/Kptfile my-cert-manager-package/
-	kpt fn render my-cert-manager-package -o stdout | grep -q 'team_name: blue-team'
+	kpt fn render my-cert-manager-package -o stdout | grep -q 'team-name: blue-team'
 	rm -rf my-cert-manager-package
 
 .PHONY: render-helm-chart-example2
@@ -63,6 +63,9 @@ test-apply-setters:
 	grep -e 'replicas: "4"' test-out.yaml
 	grep -e 'app.kubernetes.io/version: "a1b2c3d4e5e6"' test-out.yaml
 	rm test-out.yaml
+
+.PHONY: test-digester
+test-digester: test-digester-step1 test-digester-step3
 
 .PHONY: test-digester-step1
 test-digester-step1:
