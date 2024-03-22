@@ -16,7 +16,7 @@ helmCharts:
       valuesInline:
         global:
           commonLabels:
-            team_name: dev  # kpt-set: ${teamName}
+            team-name: dev  # kpt-set: ${teamName}
         image:
           digest: ""   # digester: quay.io/jetstack/cert-manager-controller:.*
         webhook:

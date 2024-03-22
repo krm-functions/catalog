@@ -17,4 +17,4 @@ helmCharts:
       valuesInline:
         global:
           commonLabels:
-            team_name: dev
+            team-name: dev

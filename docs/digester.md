@@ -1,38 +1,40 @@
 # Digester
 
-Using digests instead of tags for container images is a good [best
+Using digests instead of tags to reference container images is a good
+[best
 practice](https://medium.com/@michael.vittrup.larsen/why-we-should-use-latest-tag-on-container-images-fc0266877ab5). This
 `digester` KRM function implement 'trust on first use' for container
-images. This is through:
+images used in Helm charts. This is done through the following
+process:
 
-1. Inspection of Helm chart resources for container images
-2. Lookup of container image digests
-3. **Update values-settings with container image digests**
+1. Inspection of Helm chart resources for container images.
+2. Lookup of container image digests for container images referenced by tag.
+3. **Update chart values with container image digests** by creating values for missing container image digests.
 
-This procedure keep the Helm chart configurable and renderable and
-this is where this function differs from other 'last mile' tools that
-operate on the final resources and thus do not keep Helm charts
-rendeable.
+This procedure **keeps the Helm chart configurable and renderable** and
+this is **where this function differs from other 'last mile' tools that
+operate on the final resources** and thus do not keep Helm charts
+renderable.
 
 This `digester` function particularly support a process where
 third-party Helm charts are in-sourced into an organisation and
-configured with organisation specific settings, thereby producing
+configured with organisation-specific settings, thereby producing
 curated Helm-based components:
 
-1. In-source Helm chart using [`source-helm-chart`](source-helm-chart.md)
-2. Lookup digests and update Helm values. Store the result as a 'curated component'
-3. As needed, post-configure and render Helm chart
+1. In-source Helm chart using [`source-helm-chart`](source-helm-chart.md).
+2. Lookup digests and update Helm image references using this `digester` function. Store the result as a 'curated component'.
+3. As needed, post-configure and render Helm chart using [`render-helm-chart`](render-helm-chart.md).
 
 With this process, both the Helm chart and container images are kept
 immutable.
 
-The consideration during the design of `digester` can be found in the
-[digester-design](digester-design.md) document.
+The consideration made during the design of `digester` can be found in
+the [digester-design document](digester-design.md).
 
 ## Example
 
 Imagine the following Helm chart configuration using a
-`RenderHelmChart` resource. Notice how the `valuesInline` section in
+`RenderHelmChart` resource. Notice how the `valuesInline` section at
 the end provide simple pre-configuration of the chart beyond its
 defaults. A real-world use-case typically will have much more
 pre-configuration:
@@ -87,10 +89,13 @@ The `digester` function can automate this process when used after the
 [`source-helm-chart`](source-helm-chart.md) function and implements
 [option 4 in the design document](digester-design.md). This means that
 we only need to manually specify which values settings should be
-updated and the `digester` thus operattes much like an `apply-setters`
-KRM function. Instead of `apply-setters` variables, `digester`
-substitutes container image digests based on a regular expression
-match against tag-based images:
+updated and the `digester` thus operates much like an `apply-setters`
+KRM function. However, instead of `apply-setters` variables,
+`digester` substitutes container image digests based on a regular
+expression matches against tag-based images. The following illustrates
+how we specify, through `apply-setter` style comments, the regexp that
+should be used to lookup a given digest based on the images the chart
+references.
 
 ```yaml
       valuesInline:
@@ -115,10 +120,10 @@ The process for using `digester` could be:
 1. Source Helm chart using [`source-helm-chart`](source-helm-chart.md)
 2. Pass the `RenderHelmChart` resource through `digester`, which will:
   a. Render Helm chart with given values (`team-name` only in our example).
-  b. Inspect all resources for fields ending with `containers[].image` or `initContainers[].images`
+  b. Inspect all rendered resources for fields ending with `containers[].image` or `initContainers[].images`
   c. For all container images not already using digests, lookup the digest value. This implements 'trust on first use'.
   d. Re-visit the `RenderHelmChart` resource and re-write values in `apply-setter` style, using the regular expression given in comments for lookup of digests identified in step c)
-  e. Output of `digester` function input resources with `RenderHelmChart` resource(s) updated. Rendered resources are only used to implement image lookup and discarded.
+  e. Output of `digester` function is the input resources with `RenderHelmChart` resource(s) updated accordingly. Rendered resources are only used to implement image digest lookup and discarded.
 
 The output of the process above may result in a `RenderHelmChart`
 resource that looks like (abbreviated slightly for clarity):
