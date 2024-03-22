@@ -165,4 +165,4 @@ helmCharts:
 
 ## Notes
 
-:roadwork: This function does not yet support private registries.
+:construction: This function does not yet support private registries.
