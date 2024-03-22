@@ -23,8 +23,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/michaelvl/krm-functions/pkg/api"
 	"github.com/michaelvl/krm-functions/pkg/helm"
-	"github.com/michaelvl/krm-functions/pkg/version"
 	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
+	"github.com/michaelvl/krm-functions/pkg/version"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
