@@ -94,7 +94,7 @@ test-digester-w-containers:
 	rm -rf cert-manager-package
 	kpt fn source examples/digester \
 	  | kpt fn eval - --network -i $(SOURCE_HELM_CHART_IMAGE) \
-	  | kpt fn eval - --network -truncate-output=false -i $(DIGESTER_IMAGE) \
+	  | kpt fn eval - --network --truncate-output=false -i $(DIGESTER_IMAGE) \
 	  | kpt fn sink cert-manager-package
 	echo "** rendering using pipeline in Ktfile"
 

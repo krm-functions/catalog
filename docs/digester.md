@@ -172,7 +172,7 @@ export DIGESTER_IMAGE=ghcr.io/krm-functions/digester@sha256:e8f3ea2ebcf662d8e70e
 echo "### Sourcing step - fetches chart and resolves digests, stores immutable package in 'cert-manager-package'"
 kpt fn source examples/digester \
   | kpt fn eval - --network -i $SOURCE_HELM_CHART_IMAGE \
-  | kpt fn eval - --network -truncate-output=false -i $DIGESTER_IMAGE \
+  | kpt fn eval - --network --truncate-output=false -i $DIGESTER_IMAGE \
   | kpt fn sink cert-manager-package
 
 echo "### Rendering step - using pipeline in Ktfile which applies gatekeeper policy to check for missing image digests"
