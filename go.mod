@@ -1,4 +1,4 @@
-module github.com/michaelvl/krm-functions
+module github.com/krm-functions/catalog
 
 go 1.21
 

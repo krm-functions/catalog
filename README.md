@@ -25,7 +25,7 @@ This repository contain [KRM functions](https://medium.com/@michael.vittrup.lars
   configuration and accepts configuration through both function-config
   and primary resource list. Also supports reading setter values from
   other resources.
-- [gatekeeper](https://github.com/michaelvl/krm-gatekeeper) A
+- [gatekeeper](https://github.com/krm-functions/gatekeeper) A
   re-implementation of the [baseline
   `gatekeeper`](https://catalog.kpt.dev/gatekeeper/v0.2/) function,
   which suppors newer variants of the Rego language (e.g. as used in

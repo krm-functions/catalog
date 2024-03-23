@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/michaelvl/krm-functions/pkg/helm"
+	"github.com/krm-functions/catalog/pkg/helm"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )

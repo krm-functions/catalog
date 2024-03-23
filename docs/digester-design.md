@@ -99,7 +99,7 @@ image: "{{- if .registry -}}{{ .registry }}/{{- end -}}{{ .repository }}{{- if (
 ```
 
 The
-[`render-helm-chart`](https://github.com/michaelvl/krm-functions/blob/main/docs/render-helm-chart.md)
+[`render-helm-chart`](https://github.com/krm-functions/catalog/blob/main/docs/render-helm-chart.md)
 function provides declarative Helm chart rendering from a
 [`Kptfile`](https://kpt.dev/book/04-using-functions/01-declarative-function-execution). This
 is made possible through separation of Helm chart sourcing and chart

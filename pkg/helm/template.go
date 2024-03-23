@@ -28,7 +28,7 @@ import (
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 	securejoin "github.com/cyphar/filepath-securejoin"
-	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
+	t "github.com/krm-functions/catalog/pkg/helmspecs"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )

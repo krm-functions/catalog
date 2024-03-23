@@ -13,22 +13,22 @@ if [ -z "$TAG" ]; then
     echo "No image tag specified, using HEAD: $TAG"
 fi
 
-IMAGE=ghcr.io/michaelvl/krm-helm-upgrader
+IMAGE=ghcr.io/krm-functions/helm-upgrader
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
 echo "Using digest: $DIGEST"
-sed -i -E "s#(.*?ghcr.io/michaelvl/krm-helm-upgrader.*@).*#\1$DIGEST#" docs/*.md
+sed -i -E "s#(.*?ghcr.io/krm-functions/helm-upgrader.*@).*#\1$DIGEST#" docs/*.md
 
-IMAGE=ghcr.io/michaelvl/krm-render-helm-chart
+IMAGE=ghcr.io/krm-functions/render-helm-chart
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
 echo "Using digest: $DIGEST"
-sed -i -E "s#(.*?ghcr.io/michaelvl/krm-render-helm-chart.*@).*#\1$DIGEST#" docs/*.md
+sed -i -E "s#(.*?ghcr.io/krm-functions/render-helm-chart.*@).*#\1$DIGEST#" docs/*.md
 
-IMAGE=ghcr.io/michaelvl/krm-source-helm-chart
+IMAGE=ghcr.io/krm-functions/source-helm-chart
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
 echo "Using digest: $DIGEST"
-sed -i -E "s#(.*?ghcr.io/michaelvl/krm-source-helm-chart.*@).*#\1$DIGEST#" docs/*.md
+sed -i -E "s#(.*?ghcr.io/krm-functions/source-helm-chart.*@).*#\1$DIGEST#" docs/*.md
 
-IMAGE=ghcr.io/michaelvl/krm-apply-setters
+IMAGE=ghcr.io/krm-functions/apply-setters
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
 echo "Using digest: $DIGEST"
-sed -i -E "s#(.*?ghcr.io/michaelvl/krm-apply-setters.*@).*#\1$DIGEST#" docs/*.md
+sed -i -E "s#(.*?ghcr.io/krm-functions/apply-setters.*@).*#\1$DIGEST#" docs/*.md

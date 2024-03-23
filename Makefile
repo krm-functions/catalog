@@ -25,7 +25,7 @@ else
 endif
 
 # The binaries to build (just the basenames)
-BINS ?= krm-apply-setters krm-digester krm-helm-upgrader krm-render-helm-chart krm-source-helm-chart #template-kyaml
+BINS ?= apply-setters digester helm-upgrader render-helm-chart source-helm-chart
 
 # The platforms we support
 #ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64 linux/ppc64le linux/s390x
@@ -38,7 +38,7 @@ BUILDER_IMAGE ?= alpine:3.18
 BASE_IMAGE ?= alpine:3.18
 #BASE_IMAGE ?= gcr.io/distroless/static
 
-REGISTRY ?= ghcr.io/michaelvl
+REGISTRY ?= ghcr.io/krm-functions
 
 # This version-strategy uses git tags to set the version string
 VERSION ?= $(shell git describe --tags --always --dirty)

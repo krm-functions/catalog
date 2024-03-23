@@ -20,9 +20,9 @@ import (
 	"os"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
-	"github.com/michaelvl/krm-functions/pkg/api"
-	"github.com/michaelvl/krm-functions/pkg/helm"
-	t "github.com/michaelvl/krm-functions/pkg/helmspecs"
+	"github.com/krm-functions/catalog/pkg/api"
+	"github.com/krm-functions/catalog/pkg/helm"
+	t "github.com/krm-functions/catalog/pkg/helmspecs"
 )
 
 func Run(rl *fn.ResourceList) (bool, error) {

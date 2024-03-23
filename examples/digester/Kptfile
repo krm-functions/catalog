@@ -11,6 +11,6 @@ pipeline:
   - image: gcr.io/kpt-fn/apply-setters:v0.2.0
     configMap:
       teamName: blue-team
-  - image: ghcr.io/michaelvl/krm-render-helm-chart@sha256:888920bb09020f1a8a35a4c449405e71c63d115dfddfb9e583f2802895b06217
-  - image: ghcr.io/michaelvl/krm-gatekeeper@sha256:c0c3c6b528d76a465b61de1550a61c5b7d0dcf5735d739c6aea754723912459c
+  - image: ghcr.io/krm-functions/render-helm-chart@sha256:888920bb09020f1a8a35a4c449405e71c63d115dfddfb9e583f2802895b06217
+  - image: ghcr.io/krm-functions/gatekeeper@sha256:6290029e18c2e8a5f1065f9ec90f6e79e1d83b60c260256b17655ab5b57b8f5f
   - image: gcr.io/kpt-fn/remove-local-config-resources:v0.1.0

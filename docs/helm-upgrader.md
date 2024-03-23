@@ -66,14 +66,14 @@ TL;DR:
 Start by cloning this repository with example files:
 
 ```shell
-git clone https://github.com/michaelvl/krm-functions.git
+git clone https://github.com/krm-functions/catalog.git
 cd krm-functions
 ```
 
 Run the `helm-upgrader` function using `kpt`:
 
 ```
-export HELM_UPGRADER_IMG=ghcr.io/michaelvl/krm-helm-upgrader@sha256:8a5616f7b33c652730c8f790a57ba543f809bbe7466d5e54e9ba302406c20340
+export HELM_UPGRADER_IMG=ghcr.io/krm-functions/helm-upgrader@sha256:8a5616f7b33c652730c8f790a57ba543f809bbe7466d5e54e9ba302406c20340
 
 kpt fn source examples/helm-upgrader | \
   kpt fn eval - \
