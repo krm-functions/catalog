@@ -83,3 +83,22 @@ test-digester-step3:
 	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false --exec $(DIGESTER_BIN) | kpt fn sink digester-tmp1
 	kpt fn render digester-tmp1 -o unwrap > test-out.yaml
 	grep 'image:' test-out.yaml
+
+
+SOURCE_HELM_CHART_IMAGE ?= ghcr.io/krm-functions/source-helm-chart@sha256:abdbfee8c27175925ace219e945c03fab170733ed1b9a84577cd92a634c3668d
+DIGESTER_IMAGE ?= ghcr.io/krm-functions/digester@sha256:e8f3ea2ebcf662d8e70eed477d5d9b9e99be0a6773582fe8cd6b2e79fa74242d
+
+.PHONY: test-digester-w-containers
+test-digester-w-containers:
+	echo "** sourcing step"
+	rm -rf cert-manager-package
+	kpt fn source examples/digester \
+	  | kpt fn eval - --network -i $(SOURCE_HELM_CHART_IMAGE) \
+	  | kpt fn eval - --network -truncate-output=false -i $(DIGESTER_IMAGE) \
+	  | kpt fn sink cert-manager-package
+	echo "** rendering using pipeline in Ktfile"
+
+.PHONY: test-digester-w-containers2
+test-digester-w-containers2:
+	rm -rf cert-manager-rendered
+	kpt fn render cert-manager-package -o stdout | kpt fn sink cert-manager-rendered
