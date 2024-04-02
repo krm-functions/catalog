@@ -64,8 +64,8 @@ func Template(chart *t.HelmChart, chartTarball []byte) ([]byte, error) {
 			return nil, xtErr
 		}
 		fname := hdr.Name
-		if path.IsAbs(fname) {
-			return nil, errors.New("chart contains file with absolute path")
+		if path.IsAbs(fname) || strings.Contains(fname, "..") {
+			return nil, errors.New("chart contains file with illegal path")
 		}
 		fileWithPath, fnerr := securejoin.SecureJoin(tmpDir, fname)
 		if fnerr != nil {
