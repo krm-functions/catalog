@@ -5,8 +5,10 @@ on:
     branches: [ "main" ]
     paths-ignore:
       - 'README.md'
+      - 'Makefile.test'
       - 'scripts/**'
       - 'docs/**'
+      - 'examples/**'
 jobs:
   build:
     runs-on: ubuntu-latest
