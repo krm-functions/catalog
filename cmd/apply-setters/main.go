@@ -177,7 +177,17 @@ func getSetters(rl *framework.ResourceList) applysetters.ApplySetters {
 	var setters applysetters.ApplySetters
 
 	// Standard setters from function-config, ConfigMap-style
-	applysetters.Decode(rl.FunctionConfig, &setters)
+	fnCfg := rl.FunctionConfig
+	if fnCfg.GetKind() == "ConfigMap" {
+		applysetters.Decode(fnCfg, &setters)
+	} else if fnCfg.GetKind() == configKind && fnCfg.GetApiVersion() == configAPIVersion {
+		for k, v := range getDataMap(fnCfg) {
+			setters.Setters = append(setters.Setters, applysetters.Setter{Name: k, Value: v})
+		}
+		for k, v := range getReferenceSetters(fnCfg, rl.Items) {
+			setters.Setters = append(setters.Setters, applysetters.Setter{Name: k, Value: v})
+		}
+	}
 
 	for _, rn := range rl.Items {
 		if rn.GetKind() == configKind && rn.GetApiVersion() == configAPIVersion {

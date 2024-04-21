@@ -5,9 +5,9 @@ the [baseline
 apply-setters](https://catalog.kpt.dev/apply-setters/v0.2/) function:
 
 - It accepts one or more `ApplySetters` resource(s) through the main
-  resource input. This means setters values can be manipulated by a
-  pipeline of KRM functions and that setters from multiple sources can
-  be integrated.
+  resource input or as function-config. This means setters values can
+  be manipulated by a pipeline of KRM functions and that setters from
+  multiple sources can be integrated.
 - Setters can take values from other resources through a field-path.
 
 The example `ApplySetters` resource below illustrates this:

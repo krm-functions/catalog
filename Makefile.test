@@ -15,7 +15,7 @@ test-helm-upgrader:
 	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.yaml
 	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.yaml
 	grep -e '.*upgrade-available.0: .*karpenter:0.35.0' test-out.yaml
-	grep -e '.*upgrade-available.1: .*/external-secrets:0.9.14' test-out.yaml
+	grep -e '.*upgrade-available.1: .*/external-secrets:0.9.16' test-out.yaml
 	rm test-out.yaml
 
 .PHONY: test-render-helm-chart
@@ -55,12 +55,27 @@ test-source-helm-chart:
 	rm test-out.yaml
 
 .PHONY: test-apply-setters
-test-apply-setters:
+test-apply-setters: test-apply-setters1 test-apply-setters2
+
+.PHONY: test-apply-setters1
+test-apply-setters1:
 	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false --exec $(APPLY_SETTERS_BIN) --fn-config example-function-configs/apply-setters/cm-setters.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.yaml
 	grep -e 'foo: "valueFoo"' test-out.yaml
 	grep -e 'bar: "valueBar"' test-out.yaml
 	grep -e 'baz: "valueBaz"' test-out.yaml
 	grep -e 'replicas: "4"' test-out.yaml
+	grep -e 'combined: ""' test-out.yaml
+	grep -e 'app.kubernetes.io/version: "a1b2c3d4e5e6"' test-out.yaml
+	rm test-out.yaml
+
+.PHONY: test-apply-setters2
+test-apply-setters2:
+	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false --exec $(APPLY_SETTERS_BIN) --fn-config example-function-configs/apply-setters/apply-setters-fn-config.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.yaml
+	grep -e 'foo: ""' test-out.yaml
+	grep -e 'bar: "valueBar2"' test-out.yaml
+	grep -e 'baz: "valueBaz2"' test-out.yaml
+	grep -e 'replicas: "4"' test-out.yaml
+	grep -e 'combined: "4-a1b2c3d4e5e6"' test-out.yaml
 	grep -e 'app.kubernetes.io/version: "a1b2c3d4e5e6"' test-out.yaml
 	rm test-out.yaml
 

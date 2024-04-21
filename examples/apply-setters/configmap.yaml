@@ -7,3 +7,4 @@ data:
   bar: "" # kpt-set: ${bar}
   baz: "" # kpt-set: ${baz}
   replicas: "" # kpt-set: ${deployReplicas}
+  combined: "" # kpt-set: ${setter1}-${setter2}
