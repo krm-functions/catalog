@@ -119,10 +119,10 @@ The process for using `digester` could be:
 
 1. Source Helm chart using [`source-helm-chart`](source-helm-chart.md)
 2. Pass the `RenderHelmChart` resource through `digester`, which will:
-  a. Render Helm chart with given values (`team-name` only in our example).
-  b. Inspect all rendered resources for fields ending with `containers[].image` or `initContainers[].images`
-  c. For all container images not already using digests, lookup the digest value. This implements 'trust on first use'.
-  d. Re-visit the `RenderHelmChart` resource and re-write values in `apply-setter` style, using the regular expression given in comments for lookup of digests identified in step c)
+   - Render Helm chart with given values (`team-name` only in our example).
+   - Inspect all rendered resources for fields ending with `containers[].image` or `initContainers[].images`
+   - For all container images not already using digests, resolve tags to digests. This implements 'trust on first use'.
+   - Re-visit the `RenderHelmChart` resource and update values in `apply-setter` style, using the regular expression given in comments for lookup of digests identified above.
   e. Output of `digester` function is the input resources with `RenderHelmChart` resource(s) updated accordingly. Rendered resources are only used to implement image digest lookup and discarded.
 
 The output of the process above may result in a `RenderHelmChart`
