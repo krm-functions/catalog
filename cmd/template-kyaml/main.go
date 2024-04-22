@@ -1,4 +1,4 @@
-// Copyright 2023 Michael Vittrup Larsen
+// Copyright 2024 Michael Vittrup Larsen
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Template does not implement any functionality - it is merely a
+// template for a KRM filter function using the kustomize yaml
+// framework
 package main
 
 import (
@@ -19,8 +22,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/michaelvl/krm-functions/pkg/version"
+	"github.com/krm-functions/catalog/pkg/version"
 
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
@@ -31,19 +35,26 @@ type FunctionConfig struct {
 }
 
 type FilterState struct {
-	Results   framework.Results
+	fnConfig *FunctionConfig
+	Results  framework.Results
 }
 
-func (v *FunctionConfig) Default() error {
-	v.SomeConfig = "SomeString"
-	return nil
-}
-
-func (v *FunctionConfig) Validate() error {
-	if len(v.SomeConfig)==0 {
-		return fmt.Errorf("String length is zero")
+// LoadFunctionConfig parse the provided input, which can be a
+// ConfigMap or other custom types
+func (fnCfg *FunctionConfig) LoadFunctionConfig(o *yaml.RNode) error {
+	if o.GetKind()=="ConfigMap" && o.GetApiVersion()=="v1" {
+		var cm corev1.ConfigMap
+		if err := yaml.Unmarshal([]byte(o.MustString()), &cm); err != nil {
+			return err
+		}
+		// More mappings here ...
+		fnCfg.SomeConfig = cm.Data["someConfig"]
+		return nil
 	}
-	return nil
+
+	// Other function-config types here ...
+
+	return fmt.Errorf("unknown function config")
 }
 
 func (f *FilterState) Each(items []*yaml.RNode) ([]*yaml.RNode, error) {
@@ -54,6 +65,7 @@ func (f *FilterState) Each(items []*yaml.RNode) ([]*yaml.RNode, error) {
 	return items, err
 }
 
+// The main functionality goes here...
 func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 	f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
 	return object, nil
@@ -62,11 +74,14 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 func Processor() framework.ResourceListProcessor {
 	return framework.ResourceListProcessorFunc(func(rl *framework.ResourceList) error {
 		config := &FunctionConfig{}
-		if err := framework.LoadFunctionConfig(rl.FunctionConfig, config); err != nil {
-			return fmt.Errorf("read function config: %w", err)
+		if err := config.LoadFunctionConfig(rl.FunctionConfig); err != nil {
+			return fmt.Errorf("reading function-config: %w", err)
 		}
+		fmt.Fprintf(os.Stderr, "function-config: %+v\n", config)
 
-		filter := FilterState{}
+		filter := FilterState{
+			fnConfig: config,
+		}
 
 		_, err := filter.Each(rl.Items)
 		rl.Results = append(rl.Results, filter.Results...)
@@ -79,9 +94,9 @@ func main() {
 	cmd := command.Build(Processor(), command.StandaloneEnabled, false)
 
 	cmd.Version = version.Version
-	//cmd.Short = generated.cmdhort
-	//cmd.Long = generated.cmdLong
-	//cmd.Example = generated.cmdExamples
+	// cmd.Short = generated.cmdhort
+	// cmd.Long = generated.cmdLong
+	// cmd.Example = generated.cmdExamples
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
