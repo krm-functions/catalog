@@ -42,7 +42,7 @@ type FilterState struct {
 // LoadFunctionConfig parse the provided input, which can be a
 // ConfigMap or other custom types
 func (fnCfg *FunctionConfig) LoadFunctionConfig(o *yaml.RNode) error {
-	if o.GetKind()=="ConfigMap" && o.GetApiVersion()=="v1" {
+	if o.GetKind() == "ConfigMap" && o.GetApiVersion() == "v1" {
 		var cm corev1.ConfigMap
 		if err := yaml.Unmarshal([]byte(o.MustString()), &cm); err != nil {
 			return err
@@ -94,9 +94,6 @@ func main() {
 	cmd := command.Build(Processor(), command.StandaloneEnabled, false)
 
 	cmd.Version = version.Version
-	// cmd.Short = generated.cmdhort
-	// cmd.Long = generated.cmdLong
-	// cmd.Example = generated.cmdExamples
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
