@@ -1,6 +1,6 @@
 FROM {ARG_BUILDER_IMAGE} AS build
 
-ARG HELM_VERSION=v3.12.1
+ARG HELM_VERSION=v3.14.4
 RUN apk update && apk add curl && curl -fsSL -o /helm-${HELM_VERSION}-{ARG_OS}-{ARG_ARCH}.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-{ARG_OS}-{ARG_ARCH}.tar.gz && \
      tar -zxvf /helm-${HELM_VERSION}-{ARG_OS}-{ARG_ARCH}.tar.gz && \
      mv ./{ARG_OS}-{ARG_ARCH}/helm /usr/local/bin/helm

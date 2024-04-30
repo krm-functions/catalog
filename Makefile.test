@@ -1,9 +1,20 @@
-APPLY_SETTERS_BIN := bin/linux_amd64/apply-setters
-DIGESTER_BIN := bin/linux_amd64/digester
-HELM_RENDER_BIN := bin/linux_amd64/render-helm-chart
-HELM_SOURCE_BIN := bin/linux_amd64/source-helm-chart
-HELM_UPGRADER_BIN := bin/linux_amd64/helm-upgrader
-TEMPLATE_BIN := bin/linux_amd64/template-kyaml
+FN_MODE ?= exec
+
+ifeq ($(FN_MODE),exec)
+APPLY_SETTERS := --exec bin/linux_amd64/apply-setters
+DIGESTER := --exec bin/linux_amd64/digester
+HELM_RENDER := --exec bin/linux_amd64/render-helm-chart
+HELM_SOURCE := --exec bin/linux_amd64/source-helm-chart
+HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
+TEMPLATE_KYAML := --exec bin/linux_amd64/template-kyaml
+else
+APPLY_SETTERS := --image ghcr.io/krm-functions/apply-setters@sha256:762cf5de8387df14a4002c325e4c0f80c35e348a865ab25e8012d39b34f0ef7a
+DIGESTER := --network --image ghcr.io/krm-functions/digester@sha256:e8f3ea2ebcf662d8e70eed477d5d9b9e99be0a6773582fe8cd6b2e79fa74242d
+HELM_RENDER := --network --image ghcr.io/krm-functions/render-helm-chart@sha256:93833a21b291796b7b5a23ebe84f09727244cf7e6a75d42e70e3e3bbc46fee68
+HELM_SOURCE := --network --image ghcr.io/krm-functions/source-helm-chart@sha256:879a73164ce5487ee9321e83f61dc73e734f910af3b9b09edaf92b1416fd8fd6
+HELM_UPGRADER := --network --image ghcr.io/krm-functions/helm-upgrader@sha256:acb161d1f6b54ff114079e2eb55f75da0d75d00b434b72ea5968f7423ed57b2e
+endif
+
 BASELINE_RENDER_HELM_CHART := gcr.io/kpt-fn/render-helm-chart:v0.2.2
 
 e2e-tests: test-render-helm-chart render-helm-chart-example render-helm-chart-example2 test-source-helm-chart test-helm-upgrader test-apply-setters test-digester
@@ -11,7 +22,7 @@ e2e-tests: test-render-helm-chart render-helm-chart-example render-helm-chart-ex
 # BEWARE: These tests are fragile - we want to test upgrades, but without upgrade-constraints tests might fail when charts are updated
 .PHONY: test-helm-upgrader
 test-helm-upgrader:
-	kpt fn source examples/helm-upgrader --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | $(HELM_UPGRADER_BIN) > test-out.yaml
+	kpt fn source examples/helm-upgrader | kpt fn eval - --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml --truncate-output=false $(HELM_UPGRADER) > test-out.yaml
 	grep -e '.*upgrade-available: .*cert-manager:v1.8.2' test-out.yaml
 	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.yaml
 	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.yaml
@@ -26,18 +37,18 @@ test-render-helm-chart:
 	echo "" | kpt fn eval - --network --fn-config examples/render-helm-chart2/argo-workflows.yaml -i ${BASELINE_RENDER_HELM_CHART} | kpt fn sink rendered-output
 	# Source step, fetch chart from upstream, but do not render
 	rm -rf sourced-output
-	kpt fn source examples/render-helm-chart2 | kpt fn eval - --exec ${HELM_RENDER_BIN} --results-dir results2 | kpt fn sink sourced-output
+	kpt fn source examples/render-helm-chart2 | kpt fn eval - ${HELM_RENDER} --results-dir results2 | kpt fn sink sourced-output
 	grep -e 'message: sourcing with render-helm-chart is deprecated' results2/results.yaml
 	# Render from previously sourced chart
 	rm -rf rendered-output2
-	kpt fn source sourced-output | kpt fn eval - --exec ${HELM_RENDER_BIN} | kpt fn sink rendered-output2
+	kpt fn source sourced-output | kpt fn eval - ${HELM_RENDER} | kpt fn sink rendered-output2
 	diff -q rendered-output rendered-output2
 	rm -rf rendered-output sourced-output rendered-output2 results2
 
 # Example usage from docs/render-helm-chart.md
 .PHONY: render-helm-chart-example
 render-helm-chart-example:
-	kpt fn source examples/render-helm-chart | kpt fn eval - --exec ${HELM_SOURCE_BIN} | kpt fn sink my-cert-manager-package
+	kpt fn source examples/render-helm-chart | kpt fn eval - ${HELM_SOURCE} | kpt fn sink my-cert-manager-package
 	grep -q 'apiVersion: experimental.helm.sh/v1alpha1' my-cert-manager-package/cert-manager-chart.yaml
 	cp examples/render-helm-chart/Kptfile my-cert-manager-package/
 	kpt fn render my-cert-manager-package -o stdout | grep -q 'team-name: blue-team'
@@ -45,12 +56,12 @@ render-helm-chart-example:
 
 .PHONY: render-helm-chart-example2
 render-helm-chart-example2:
-	kpt fn source examples/render-helm-chart/non-stardard-tar-filename | kpt fn eval - --exec ${HELM_RENDER_BIN} | kpt fn sink my-non-stardard-tar-filename
+	kpt fn source examples/render-helm-chart/non-stardard-tar-filename | kpt fn eval - ${HELM_RENDER} | kpt fn sink my-non-stardard-tar-filename
 	rm -rf my-non-stardard-tar-filename
 
 .PHONY: test-source-helm-chart
 test-source-helm-chart:
-	kpt fn source examples/render-helm-chart3 | kpt fn eval - --truncate-output=false --exec $(HELM_SOURCE_BIN) > test-out.yaml
+	kpt fn source examples/render-helm-chart3 | kpt fn eval - --truncate-output=false $(HELM_SOURCE) > test-out.yaml
 	grep -e 'experimental.helm.sh/chart-sum/karpenter' test-out.yaml
 	grep -e 'experimental.helm.sh/chart-sum/cert-manager' test-out.yaml
 	rm test-out.yaml
@@ -60,7 +71,7 @@ test-apply-setters: test-apply-setters1 test-apply-setters2
 
 .PHONY: test-apply-setters1
 test-apply-setters1:
-	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false --exec $(APPLY_SETTERS_BIN) --fn-config example-function-configs/apply-setters/cm-setters.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.yaml
+	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/cm-setters.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.yaml
 	grep -e 'foo: "valueFoo"' test-out.yaml
 	grep -e 'bar: "valueBar"' test-out.yaml
 	grep -e 'baz: "valueBaz"' test-out.yaml
@@ -71,7 +82,7 @@ test-apply-setters1:
 
 .PHONY: test-apply-setters2
 test-apply-setters2:
-	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false --exec $(APPLY_SETTERS_BIN) --fn-config example-function-configs/apply-setters/apply-setters-fn-config.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.yaml
+	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/apply-setters-fn-config.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.yaml
 	grep -e 'foo: ""' test-out.yaml
 	grep -e 'bar: "valueBar2"' test-out.yaml
 	grep -e 'baz: "valueBaz2"' test-out.yaml
@@ -86,17 +97,17 @@ test-digester: test-digester-step1 test-digester-step3
 .PHONY: test-digester-step1
 test-digester-step1:
 	rm -rf digester-tmp0
-	kpt fn source examples/digester | kpt fn eval - --truncate-output=false --exec $(HELM_SOURCE_BIN) | kpt fn sink digester-tmp0
+	kpt fn source examples/digester | kpt fn eval - --truncate-output=false $(HELM_SOURCE) | kpt fn sink digester-tmp0
 
 .PHONY: test-digester-step2
 test-digester-step2:
-	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false --exec $(DIGESTER_BIN) > test-out.yaml
+	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false $(DIGESTER) > test-out.yaml
 	head -n 60 test-out.yaml
 
 .PHONY: test-digester-step3
 test-digester-step3:
 	rm -rf digester-tmp1
-	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false --exec $(DIGESTER_BIN) | kpt fn sink digester-tmp1
+	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false $(DIGESTER) | kpt fn sink digester-tmp1
 	kpt fn render digester-tmp1 -o unwrap > test-out.yaml
 	grep 'image:' test-out.yaml
 
@@ -119,7 +130,7 @@ test-digester-w-containers2:
 	rm -rf cert-manager-rendered
 	kpt fn render cert-manager-package -o stdout | kpt fn sink cert-manager-rendered
 
-.PHONY: test-template
-test-template:
-	kpt fn source examples/template | kpt fn eval - --truncate-output=false --exec $(TEMPLATE_BIN) -- someConfig=aTestConfigString > test-out.yaml
-	kpt fn source examples/template | kpt fn eval - --truncate-output=false --exec $(TEMPLATE_BIN) > test-out.yaml
+.PHONY: test-template-kyaml
+test-template-kyaml:
+	kpt fn source examples/template | kpt fn eval - --truncate-output=false $(TEMPLATE_KYAML) -- someConfig=aTestConfigString > test-out.yaml
+	kpt fn source examples/template | kpt fn eval - --truncate-output=false $(TEMPLATE_KYAML) > test-out.yaml
