@@ -15,12 +15,12 @@ fi
 
 IMAGE=ghcr.io/krm-functions/helm-upgrader
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
-echo "Using digest: $DIGEST"
+echo "helm-upgrader digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/helm-upgrader.*@).*#\1$DIGEST#" docs/*.md
 
 IMAGE=ghcr.io/krm-functions/render-helm-chart
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
-echo "Using digest: $DIGEST"
+echo "render-helm-chart digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/render-helm-chart.*@).*#\1$DIGEST#" docs/*.md
 sed -i -E "s#(.*?ghcr.io/krm-functions/render-helm-chart.*@).*#\1$DIGEST#" examples/render-helm-chart/Kptfile
 sed -i -E "s#(.*?ghcr.io/krm-functions/render-helm-chart.*@).*#\1$DIGEST#" examples/digester/Kptfile
@@ -28,12 +28,18 @@ sed -i -E "s#(.*?ghcr.io/krm-functions/render-helm-chart.*@).*#\1$DIGEST#" Makef
 
 IMAGE=ghcr.io/krm-functions/source-helm-chart
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
-echo "Using digest: $DIGEST"
+echo "source-helm-chart digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/source-helm-chart.*@).*#\1$DIGEST#" docs/*.md
 sed -i -E "s#(.*?ghcr.io/krm-functions/source-helm-chart.*@).*#\1$DIGEST#" Makefile.test
 
 IMAGE=ghcr.io/krm-functions/apply-setters
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
-echo "Using digest: $DIGEST"
+echo "apply-setters digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/apply-setters.*@).*#\1$DIGEST#" docs/*.md
 sed -i -E "s#(.*?ghcr.io/krm-functions/apply-setters.*@).*#\1$DIGEST#" Makefile.test
+
+IMAGE=ghcr.io/krm-functions/digester
+DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
+echo "digester digest: $DIGEST"
+sed -i -E "s#(.*?ghcr.io/krm-functions/digester.*@).*#\1$DIGEST#" docs/*.md
+sed -i -E "s#(.*?ghcr.io/krm-functions/digester.*@).*#\1$DIGEST#" Makefile.test
