@@ -8,7 +8,7 @@ require (
 	github.com/GoogleContainerTools/kpt-functions-catalog/functions/go/apply-setters v0.2.0
 	github.com/GoogleContainerTools/kpt-functions-sdk/go/fn v0.0.0-20230427202446-3255accc518d
 	github.com/Masterminds/semver/v3 v3.2.1
-	github.com/cyphar/filepath-securejoin v0.2.4
+	github.com/cyphar/filepath-securejoin v0.2.5
 	github.com/google/go-containerregistry v0.19.1
 	github.com/stretchr/testify v1.9.0
 	k8s.io/api v0.30.0
