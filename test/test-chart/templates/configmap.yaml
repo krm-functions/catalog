@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: foo
+data:
+  kubeVersion: {{ .Capabilities.KubeVersion.Version | quote }}
+  kubeVersionMajor: {{ .Capabilities.KubeVersion.Major | quote }}
+  kubeVersionMinor: {{ .Capabilities.KubeVersion.Minor | quote }}
