@@ -8,10 +8,10 @@ HELM_SOURCE := --exec bin/linux_amd64/source-helm-chart
 HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
 TEMPLATE_KYAML := --exec bin/linux_amd64/template-kyaml
 else
-APPLY_SETTERS := --image ghcr.io/krm-functions/apply-setters@sha256:a2fb43f33174647780bbf3933f7d11f44120a1b57abb52c26051a27d2548c640
-DIGESTER := --network --image ghcr.io/krm-functions/digester@sha256:bddb598d77ca452a4a949035b4824f0b7bfda8c30106d2d19eb18240b7bd634d
-HELM_RENDER := --network --image ghcr.io/krm-functions/render-helm-chart@sha256:a0702d40ebe6671f869248d71f5d2df6471dba6fb968d95cf4fec31a46ffd883
-HELM_SOURCE := --network --image ghcr.io/krm-functions/source-helm-chart@sha256:bae1f86418fef4fc7dd081e6ff87ac6130583fd4a4579de905a8c0282c8f54f9
+APPLY_SETTERS := --image ghcr.io/krm-functions/apply-setters@sha256:296d9efabe16fcb42f50008739b60f717d6eedb1667ef2f8b09b77b8f0297301
+DIGESTER := --network --image ghcr.io/krm-functions/digester@sha256:cd054d26605358470ee9fdc1de8c4360b89212f26432f23843cb7b0df8fca8f9
+HELM_RENDER := --network --image ghcr.io/krm-functions/render-helm-chart@sha256:3a1072cc6c449539990042694f12f1e386e4232accf067075240262e60191b0d
+HELM_SOURCE := --network --image ghcr.io/krm-functions/source-helm-chart@sha256:914860634f066ae120c828760e1f31489c72cc405ece2a58faccefe178afb584
 HELM_UPGRADER := --network --image ghcr.io/krm-functions/helm-upgrader@sha256:acb161d1f6b54ff114079e2eb55f75da0d75d00b434b72ea5968f7423ed57b2e
 endif
 
@@ -130,8 +130,8 @@ test-digester-step3:
 	grep 'image:' test-out.yaml
 
 
-SOURCE_HELM_CHART_IMAGE ?= ghcr.io/krm-functions/source-helm-chart@sha256:bae1f86418fef4fc7dd081e6ff87ac6130583fd4a4579de905a8c0282c8f54f9
-DIGESTER_IMAGE ?= ghcr.io/krm-functions/digester@sha256:bddb598d77ca452a4a949035b4824f0b7bfda8c30106d2d19eb18240b7bd634d
+SOURCE_HELM_CHART_IMAGE ?= ghcr.io/krm-functions/source-helm-chart@sha256:914860634f066ae120c828760e1f31489c72cc405ece2a58faccefe178afb584
+DIGESTER_IMAGE ?= ghcr.io/krm-functions/digester@sha256:cd054d26605358470ee9fdc1de8c4360b89212f26432f23843cb7b0df8fca8f9
 
 .PHONY: test-digester-w-containers
 test-digester-w-containers:
