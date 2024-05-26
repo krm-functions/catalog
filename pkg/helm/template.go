@@ -168,6 +168,9 @@ func buildHelmTemplateArgs(chart *t.HelmChart) []string {
 	for _, apiVer := range opts.APIVersions {
 		args = append(args, "--api-versions", apiVer)
 	}
+	if opts.KubeVersion != "" {
+		args = append(args, "--kube-version", opts.KubeVersion)
+	}
 	if opts.Description != "" {
 		args = append(args, "--description", opts.Description)
 	}

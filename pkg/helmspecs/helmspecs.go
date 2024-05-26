@@ -36,6 +36,7 @@ type HelmChartArgs struct {
 }
 type HelmTemplateOptions struct {
 	APIVersions  []string   `json:"apiVersions,omitempty" yaml:"apiVersions,omitempty"`
+	KubeVersion  string     `json:"kubeVersion,omitempty" yaml:"kubeVersion,omitempty"`
 	ReleaseName  string     `json:"releaseName,omitempty" yaml:"releaseName,omitempty"`
 	Namespace    string     `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Description  string     `json:"description,omitempty" yaml:"description,omitempty"`
