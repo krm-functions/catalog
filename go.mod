@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	k8s.io/api v0.30.1
 	sigs.k8s.io/kustomize/api v0.17.1
-	sigs.k8s.io/kustomize/kyaml v0.17.0
+	sigs.k8s.io/kustomize/kyaml v0.17.1
 )
 
 require (
