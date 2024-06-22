@@ -28,6 +28,6 @@ jobs:
         git checkout -b feature/automated-doc-update
         git add .
         git commit -m "Automated container image digests documentation update"
-        git push origin main
+        git push origin HEAD
         gh pr create --fill --label "documenation" --label "github_actions"
         gh pr merge --auto --squash --delete-branch feature/automated-doc-update
