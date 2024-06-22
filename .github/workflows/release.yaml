@@ -20,6 +20,8 @@ jobs:
         scripts/update-image-digest-in-docs.sh
 
     - name: Create doc update PR
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         git config user.name "GitHub Actions Bot"
         git config user.email "<>"
