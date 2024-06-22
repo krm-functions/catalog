@@ -8,10 +8,10 @@ HELM_SOURCE := --exec bin/linux_amd64/source-helm-chart
 HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
 TEMPLATE_KYAML := --exec bin/linux_amd64/template-kyaml
 else
-APPLY_SETTERS := --image ghcr.io/krm-functions/apply-setters@sha256:c60750aab3f86813fac22b99964348d2ab03eb0443f0087b6ddd050ef9dc97d7
-DIGESTER := --network --image ghcr.io/krm-functions/digester@sha256:892906e9340aa1aa83aaa3dcc2b0ebf23233cbe8aac76230baffe99657ac71e1
-HELM_RENDER := --network --image ghcr.io/krm-functions/render-helm-chart@sha256:a96ec3443ae67f06a9635b377ad9ae72ced86bc6e949f7ff07984384ef625f31
-HELM_SOURCE := --network --image ghcr.io/krm-functions/source-helm-chart@sha256:8e452725be84e5c415750c7e6bb50c7eaa842917d19d5ebb394543a81f1aeb76
+APPLY_SETTERS := --image ghcr.io/krm-functions/apply-setters@sha256:d08138af8b24030f8ed93985774392d69831ee0c9fb7c3e9a45a1a90fa14e00d
+DIGESTER := --network --image ghcr.io/krm-functions/digester@sha256:0c917cfed59b63bede642c13e1fbf609224eb0a44ada23a2de6198cf94597f9f
+HELM_RENDER := --network --image ghcr.io/krm-functions/render-helm-chart@sha256:93b0de0c6a1c75298b106c91e50a053db47f6050f5b7477570a2f0f9872b4f11
+HELM_SOURCE := --network --image ghcr.io/krm-functions/source-helm-chart@sha256:e68c720fe21cf84e6ddd088a92bd57e2484ab9de1f9f9bc4cbf39a0829f91998
 HELM_UPGRADER := --network --image ghcr.io/krm-functions/helm-upgrader@sha256:acb161d1f6b54ff114079e2eb55f75da0d75d00b434b72ea5968f7423ed57b2e
 endif
 
@@ -130,8 +130,8 @@ test-digester-step3:
 	grep 'image:' test-out.yaml
 
 
-SOURCE_HELM_CHART_IMAGE ?= ghcr.io/krm-functions/source-helm-chart@sha256:8e452725be84e5c415750c7e6bb50c7eaa842917d19d5ebb394543a81f1aeb76
-DIGESTER_IMAGE ?= ghcr.io/krm-functions/digester@sha256:892906e9340aa1aa83aaa3dcc2b0ebf23233cbe8aac76230baffe99657ac71e1
+SOURCE_HELM_CHART_IMAGE ?= ghcr.io/krm-functions/source-helm-chart@sha256:e68c720fe21cf84e6ddd088a92bd57e2484ab9de1f9f9bc4cbf39a0829f91998
+DIGESTER_IMAGE ?= ghcr.io/krm-functions/digester@sha256:0c917cfed59b63bede642c13e1fbf609224eb0a44ada23a2de6198cf94597f9f
 
 .PHONY: test-digester-w-containers
 test-digester-w-containers:
