@@ -1,0 +1,31 @@
+name: Release new version of functions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+      id-token: none
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+    - name: Update image SHAs in documentation
+      run: |
+        scripts/update-image-digest-in-docs.sh
+
+    - name: Create doc update PR
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "<>"
+        git checkout -b feature/automated-doc-update
+        git add .
+        git commit -m "Automated container image digests documentation update"
+        git push origin main
+        gh pr create --fill --label "documenation" --label "github_actions"
+        gh pr merge --auto --squash --delete-branch feature/automated-doc-update
