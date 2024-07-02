@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: valid
+data:
+  foo: bar
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: invalid1
+data:
+  foo:
+    bar: baz
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: invalid2
+data:
+  foo: 42

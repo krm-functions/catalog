@@ -23,11 +23,13 @@ import (
 	"os"
 
 	"github.com/krm-functions/catalog/pkg/version"
+	"github.com/yannh/kubeconform/pkg/resource"
 	"github.com/yannh/kubeconform/pkg/validator"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
+	"sigs.k8s.io/kustomize/kyaml/kio/kioutil"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
@@ -70,7 +72,14 @@ func (f *FilterState) Each(items []*yaml.RNode) ([]*yaml.RNode, error) {
 // The main functionality goes here...
 func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 	f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
-	fmt.Fprintf(os.Stderr, "xxx\n%s\n", object.MustString())
+	res := resource.Resource{
+		Path: object.GetAnnotations()[kioutil.PathAnnotation],
+		Bytes: []byte(object.MustString()),
+	}
+	r := f.validator.ValidateResource(res)
+	if r.Err != nil {
+		fmt.Fprintf(os.Stderr, "INVALID(%s/%s): %v\n", object.GetKind(), object.GetName(), r.ValidationErrors)
+	}
 	return object, nil
 }
 

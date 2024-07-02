@@ -6,6 +6,7 @@ DIGESTER := --exec bin/linux_amd64/digester
 HELM_RENDER := --exec bin/linux_amd64/render-helm-chart
 HELM_SOURCE := --exec bin/linux_amd64/source-helm-chart
 HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
+KUBECONFORM := --exec bin/linux_amd64/kubeconform
 TEMPLATE_KYAML := --exec bin/linux_amd64/template-kyaml
 else
   ifeq ($(CONTAINER_TAG),)
@@ -21,7 +22,6 @@ else
   HELM_SOURCE := --network --image ghcr.io/krm-functions/source-helm-chart:$(CONTAINERS_TAG)
   HELM_UPGRADER := --network --image ghcr.io/krm-functions/helm-upgrader:$(CONTAINERS_TAG)
   endif
-endif
 
 BASELINE_RENDER_HELM_CHART := gcr.io/kpt-fn/render-helm-chart:v0.2.2
 
@@ -158,8 +158,11 @@ test-digester-w-containers2:
 	rm -rf cert-manager-rendered
 	kpt fn render cert-manager-package -o stdout | kpt fn sink cert-manager-rendered
 
+.PHONY: test-kubeconform
+test-kubeconform:
+	kpt fn source examples/kubeconform | kpt fn eval - --truncate-output=false $(KUBECONFORM) > test-out.yaml
+
 .PHONY: test-template-kyaml
 test-template-kyaml:
 	kpt fn source examples/template | kpt fn eval - --truncate-output=false $(TEMPLATE_KYAML) -- someConfig=aTestConfigString > test-out.yaml
 	kpt fn source examples/template | kpt fn eval - --truncate-output=false $(TEMPLATE_KYAML) > test-out.yaml
-
