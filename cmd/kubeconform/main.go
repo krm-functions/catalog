@@ -72,13 +72,17 @@ func (f *FilterState) Each(items []*yaml.RNode) ([]*yaml.RNode, error) {
 // The main functionality goes here...
 func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 	f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
+	objPath := object.GetAnnotations()[kioutil.PathAnnotation]
 	res := resource.Resource{
-		Path: object.GetAnnotations()[kioutil.PathAnnotation],
+		Path: objPath,
 		Bytes: []byte(object.MustString()),
 	}
 	r := f.validator.ValidateResource(res)
-	if r.Err != nil {
-		fmt.Fprintf(os.Stderr, "INVALID(%s/%s): %v\n", object.GetKind(), object.GetName(), r.ValidationErrors)
+	if r.Err != nil && r.Status == validator.Invalid {
+		for _, ve := range r.ValidationErrors {
+			fmt.Fprintf(os.Stderr, "INVALID: %s: %s/%s @ %s: %s\n", objPath, object.GetKind(), object.GetName(), ve.Path, ve.Msg)
+			//f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
+		}
 	}
 	return object, nil
 }
