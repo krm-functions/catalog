@@ -80,8 +80,21 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 	r := f.validator.ValidateResource(res)
 	if r.Err != nil && r.Status == validator.Invalid {
 		for _, ve := range r.ValidationErrors {
-			fmt.Fprintf(os.Stderr, "INVALID: %s: %s/%s @ %s: %s\n", objPath, object.GetKind(), object.GetName(), ve.Path, ve.Msg)
-			//f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
+			msg := fmt.Sprintf("%s: %s/%s @ %s: %s\n", objPath, object.GetKind(), object.GetName(), ve.Path, ve.Msg)
+			f.Results = append(f.Results, &framework.Result{
+				Severity: framework.Error,
+				Message: msg,
+				ResourceRef: &yaml.ResourceIdentifier{
+					TypeMeta: yaml.TypeMeta{
+						APIVersion: object.GetApiVersion(),
+						Kind: object.GetKind(),
+					},
+					NameMeta: yaml.NameMeta{
+						Name: object.GetName(),
+						Namespace: object.GetNamespace(),
+					},
+				},
+				Field: &framework.Field{Path: objPath}})
 		}
 	}
 	return object, nil
