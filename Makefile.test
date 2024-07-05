@@ -160,7 +160,8 @@ test-digester-w-containers2:
 
 .PHONY: test-kubeconform
 test-kubeconform:
-	kpt fn source examples/kubeconform | kpt fn eval - --truncate-output=false $(KUBECONFORM) -- kubernetesVersion=1.29.1 > test-out.yaml
+	kpt fn source examples/kubeconform | kpt fn eval - --truncate-output=false $(KUBECONFORM) -- kubernetes_version=1.29.1 > test-out.yaml
+	kpt fn source examples/kubeconform | kpt fn eval - --truncate-output=false $(KUBECONFORM) -- strict=true > test-out.yaml
 
 .PHONY: test-template-kyaml
 test-template-kyaml:

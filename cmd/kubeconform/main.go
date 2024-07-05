@@ -33,7 +33,9 @@ import (
 )
 
 type Data struct {
-	KubernetesVersion string `yaml:"kubernetesVersion,omitempty" json:"kubernetesVersion,omitempty"`
+	KubernetesVersion    string `yaml:"kubernetes_version,omitempty" json:"kubernetes_version,omitempty"`
+	IgnoreMissingSchemas string `yaml:"ignore_missing_schemas,omitempty" json:"ignore_missing_schemas,omitempty"`
+	Strict               string `yaml:"strict,omitempty" json:"strict,omitempty"`
 }
 
 type FunctionConfig struct {
@@ -49,6 +51,22 @@ type FilterState struct {
 func (fnCfg *FunctionConfig) Default() error {
 	if fnCfg.Data.KubernetesVersion == "" {
 		fnCfg.Data.KubernetesVersion = "master"
+	}
+	if fnCfg.Data.IgnoreMissingSchemas == "" {
+		fnCfg.Data.IgnoreMissingSchemas = "false"
+	}
+	if fnCfg.Data.Strict == "" {
+		fnCfg.Data.Strict = "false"
+	}
+	return nil
+}
+
+func (fnCfg *FunctionConfig) Validate() error {
+	if fnCfg.Data.IgnoreMissingSchemas != "true" && fnCfg.Data.IgnoreMissingSchemas != "false" {
+		return fmt.Errorf("illegal 'ignore_missing_schemas' argument: %s", fnCfg.Data.IgnoreMissingSchemas)
+	}
+	if fnCfg.Data.Strict != "true" && fnCfg.Data.Strict != "false" {
+		return fmt.Errorf("illegal 'strict' argument: %s", fnCfg.Data.Strict)
 	}
 	return nil
 }
@@ -121,8 +139,8 @@ func Processor() framework.ResourceListProcessor {
 		fmt.Fprintf(os.Stderr, "function-config: %+v\n", config)
 		opts := validator.Opts{
 			KubernetesVersion: config.Data.KubernetesVersion,
-			Strict: true,
-			IgnoreMissingSchemas: true,
+			Strict: config.Data.Strict=="true",
+			IgnoreMissingSchemas: config.Data.IgnoreMissingSchemas=="true",
 		}
 		v, err := validator.New(nil, opts)
 		if err != nil {
