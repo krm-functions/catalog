@@ -26,15 +26,18 @@ import (
 	"github.com/yannh/kubeconform/pkg/resource"
 	"github.com/yannh/kubeconform/pkg/validator"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
 	"sigs.k8s.io/kustomize/kyaml/kio/kioutil"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
+type Data struct {
+	KubernetesVersion string `yaml:"kubernetesVersion,omitempty" json:"kubernetesVersion,omitempty"`
+}
+
 type FunctionConfig struct {
-	SomeConfig string `yaml:"someConfig,omitempty" json:"someConfig,omitempty"`
+	Data Data `yaml:"data,omitempty" json:"data,omitempty"`
 }
 
 type FilterState struct {
@@ -43,22 +46,11 @@ type FilterState struct {
 	Results   framework.Results
 }
 
-// LoadFunctionConfig parse the provided input, which can be a
-// ConfigMap or other custom types
-func (fnCfg *FunctionConfig) LoadFunctionConfig(o *yaml.RNode) error {
-	if o.GetKind() == "ConfigMap" && o.GetApiVersion() == "v1" {
-		var cm corev1.ConfigMap
-		if err := yaml.Unmarshal([]byte(o.MustString()), &cm); err != nil {
-			return err
-		}
-		// More mappings here ...
-		fnCfg.SomeConfig = cm.Data["someConfig"]
-		return nil
+func (fnCfg *FunctionConfig) Default() error {
+	if fnCfg.Data.KubernetesVersion == "" {
+		fnCfg.Data.KubernetesVersion = "master"
 	}
-
-	// Other function-config types here ...
-
-	return fmt.Errorf("unknown function config")
+	return nil
 }
 
 func (f *FilterState) Each(items []*yaml.RNode) ([]*yaml.RNode, error) {
@@ -69,18 +61,22 @@ func (f *FilterState) Each(items []*yaml.RNode) ([]*yaml.RNode, error) {
 	return items, err
 }
 
-// The main functionality goes here...
 func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
-	f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
 	objPath := object.GetAnnotations()[kioutil.PathAnnotation]
 	res := resource.Resource{
 		Path: objPath,
 		Bytes: []byte(object.MustString()),
 	}
 	r := f.validator.ValidateResource(res)
-	if r.Err != nil && r.Status == validator.Invalid {
+	//if r.Err != nil {
+	//	return object, r.Err
+	//}
+	switch r.Status {
+	case validator.Valid, validator.Skipped:
+		f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
+	case validator.Invalid:
 		for _, ve := range r.ValidationErrors {
-			msg := fmt.Sprintf("%s: %s/%s @ %s: %s\n", objPath, object.GetKind(), object.GetName(), ve.Path, ve.Msg)
+			msg := fmt.Sprintf("%s: %s\n", ve.Path, ve.Msg)
 			f.Results = append(f.Results, &framework.Result{
 				Severity: framework.Error,
 				Message: msg,
@@ -96,6 +92,22 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 				},
 				Field: &framework.Field{Path: objPath}})
 		}
+	case validator.Error:  // FIXME, combine with above
+		msg := fmt.Sprintf("%s\n", r.Err)
+		f.Results = append(f.Results, &framework.Result{
+			Severity: framework.Error,
+			Message: msg,
+			ResourceRef: &yaml.ResourceIdentifier{
+				TypeMeta: yaml.TypeMeta{
+					APIVersion: object.GetApiVersion(),
+					Kind: object.GetKind(),
+				},
+				NameMeta: yaml.NameMeta{
+					Name: object.GetName(),
+					Namespace: object.GetNamespace(),
+				},
+			},
+			Field: &framework.Field{Path: objPath}})
 	}
 	return object, nil
 }
@@ -103,12 +115,16 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 func Processor() framework.ResourceListProcessor {
 	return framework.ResourceListProcessorFunc(func(rl *framework.ResourceList) error {
 		config := &FunctionConfig{}
-		if err := config.LoadFunctionConfig(rl.FunctionConfig); err != nil {
+		if err := framework.LoadFunctionConfig(rl.FunctionConfig, config); err != nil {
 			return fmt.Errorf("reading function-config: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "function-config: %+v\n", config)
-
-		v, err := validator.New(nil, validator.Opts{Strict: true})
+		opts := validator.Opts{
+			KubernetesVersion: config.Data.KubernetesVersion,
+			Strict: true,
+			IgnoreMissingSchemas: true,
+		}
+		v, err := validator.New(nil, opts)
 		if err != nil {
 			return fmt.Errorf("initializing validator: %s", err)
 		}
