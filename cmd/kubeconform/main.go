@@ -37,6 +37,7 @@ type Data struct {
 	KubernetesVersion    string `yaml:"kubernetes_version,omitempty" json:"kubernetes_version,omitempty"`
 	IgnoreMissingSchemas string `yaml:"ignore_missing_schemas,omitempty" json:"ignore_missing_schemas,omitempty"`
 	Strict               string `yaml:"strict,omitempty" json:"strict,omitempty"`
+	SchemaLocation       string `yaml:"schema_location,omitempty" json:"schema_location,omitempty"`
 }
 
 type FunctionConfig struct {
@@ -57,7 +58,11 @@ func (fnCfg *FunctionConfig) Default() error {
 		fnCfg.Data.IgnoreMissingSchemas = "false"
 	}
 	if fnCfg.Data.Strict == "" {
-		fnCfg.Data.Strict = "false"
+		fnCfg.Data.Strict = "true"
+	}
+	schemaLoc := os.Getenv("KUBECONFORM_SCHEMA_LOCATION")
+	if fnCfg.Data.SchemaLocation == "" && schemaLoc != "" {
+		fnCfg.Data.SchemaLocation = schemaLoc
 	}
 	return nil
 }
@@ -149,7 +154,11 @@ func Processor() framework.ResourceListProcessor {
 			Strict: config.Data.Strict=="true",
 			IgnoreMissingSchemas: config.Data.IgnoreMissingSchemas=="true",
 		}
-		v, err := validator.New(nil, opts)
+		var schemas []string
+		if config.Data.SchemaLocation != "" {
+			schemas = append(schemas, config.Data.SchemaLocation)
+		}
+		v, err := validator.New(schemas, opts)
 		if err != nil {
 			return fmt.Errorf("initializing validator: %s", err)
 		}
