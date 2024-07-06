@@ -1,5 +1,9 @@
 FN_MODE ?= exec
 
+SOURCE_HELM_CHART_IMAGE ?= ghcr.io/krm-functions/source-helm-chart@sha256:33bf8323384c2a61a0673451af23e1bd3759df1ee21404e6d0034dc886c6ad5b
+DIGESTER_IMAGE ?= ghcr.io/krm-functions/digester@sha256:49a25a93e2083ee46df8fe32fe6642113b288d12d4d685827ab2a2223edb2cf1
+KUBECONFORM_IMAGE ?= ghcr.io/krm-functions/kubeconform@sha256:abc
+
 ifeq ($(FN_MODE),exec)
 APPLY_SETTERS := --exec bin/linux_amd64/apply-setters
 DIGESTER := --exec bin/linux_amd64/digester
@@ -22,6 +26,7 @@ else
   HELM_SOURCE := --network --image ghcr.io/krm-functions/source-helm-chart:$(CONTAINERS_TAG)
   HELM_UPGRADER := --network --image ghcr.io/krm-functions/helm-upgrader:$(CONTAINERS_TAG)
   endif
+endif
 
 BASELINE_RENDER_HELM_CHART := gcr.io/kpt-fn/render-helm-chart:v0.2.2
 
@@ -160,8 +165,12 @@ test-digester-w-containers2:
 
 .PHONY: test-kubeconform
 test-kubeconform:
-	kpt fn source examples/kubeconform | kpt fn eval - --truncate-output=false $(KUBECONFORM) -- ignore_missing_schemas=true > test-out.yaml || true
+	kpt fn source examples/kubeconform | kpt fn eval - --truncate-output=false $(KUBECONFORM) -- ignore_missing_schemas=true kubernetes_version=1.29.1 > test-out.yaml || true
 	kpt fn source examples/kubeconform | kpt fn eval - --truncate-output=false $(KUBECONFORM) -- > test-out.yaml || true
+
+.PHONY: test-kubeconform-w-container
+test-kubeconform-w-container:
+	kpt fn source examples/kubeconform | kpt fn eval - --truncate-output=false -i $(KUBECONFORM_IMAGE) -- ignore_missing_schemas=true > test-out.yaml || true
 
 .PHONY: test-template-kyaml
 test-template-kyaml:

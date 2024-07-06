@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/krm-functions/catalog/pkg/version"
 	"github.com/yannh/kubeconform/pkg/resource"
@@ -37,17 +38,24 @@ type Data struct {
 	KubernetesVersion    string `yaml:"kubernetes_version,omitempty" json:"kubernetes_version,omitempty"`
 	IgnoreMissingSchemas string `yaml:"ignore_missing_schemas,omitempty" json:"ignore_missing_schemas,omitempty"`
 	Strict               string `yaml:"strict,omitempty" json:"strict,omitempty"`
-	SchemaLocation       string `yaml:"schema_location,omitempty" json:"schema_location,omitempty"`
+	SchemaLocations      string `yaml:"schema_locations,omitempty" json:"schema_locations,omitempty"`
 }
 
 type FunctionConfig struct {
 	Data Data `yaml:"data,omitempty" json:"data,omitempty"`
 }
 
+type Stats struct {
+	Resources int
+	Invalid   int
+	Errors    int
+}
+
 type FilterState struct {
 	fnConfig  *FunctionConfig
 	validator validator.Validator
 	Results   framework.Results
+	Stats
 }
 
 func (fnCfg *FunctionConfig) Default() error {
@@ -60,9 +68,8 @@ func (fnCfg *FunctionConfig) Default() error {
 	if fnCfg.Data.Strict == "" {
 		fnCfg.Data.Strict = "true"
 	}
-	schemaLoc := os.Getenv("KUBECONFORM_SCHEMA_LOCATION")
-	if fnCfg.Data.SchemaLocation == "" && schemaLoc != "" {
-		fnCfg.Data.SchemaLocation = schemaLoc
+	if fnCfg.Data.SchemaLocations == "" {
+		fnCfg.Data.SchemaLocations = os.Getenv("KUBECONFORM_SCHEMA_LOCATIONS")
 	}
 	return nil
 }
@@ -92,6 +99,7 @@ func (f *FilterState) Each(items []*yaml.RNode) ([]*yaml.RNode, error) {
 }
 
 func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
+	f.Stats.Resources++
 	objPath := object.GetAnnotations()[kioutil.PathAnnotation]
 	res := resource.Resource{
 		Path: objPath,
@@ -103,6 +111,7 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 	case validator.Valid, validator.Skipped:
 		f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
 	case validator.Invalid:
+		f.Stats.Invalid++
 		for _, ve := range r.ValidationErrors {
 			msg := fmt.Sprintf("%s: %s\n", ve.Path, ve.Msg)
 			f.Results = append(f.Results, &framework.Result{
@@ -122,6 +131,7 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 		}
 		err = fmt.Errorf("invalid %s/%s", object.GetKind(), object.GetName())
 	case validator.Error:  // FIXME, combine with above
+		f.Stats.Errors++
 		msg := fmt.Sprintf("%s\n", r.Err)
 		f.Results = append(f.Results, &framework.Result{
 			Severity: framework.Error,
@@ -155,8 +165,8 @@ func Processor() framework.ResourceListProcessor {
 			IgnoreMissingSchemas: config.Data.IgnoreMissingSchemas=="true",
 		}
 		var schemas []string
-		if config.Data.SchemaLocation != "" {
-			schemas = append(schemas, config.Data.SchemaLocation)
+		if config.Data.SchemaLocations != "" {
+			schemas = append(schemas, strings.Split(config.Data.SchemaLocations, ",")...)
 		}
 		v, err := validator.New(schemas, opts)
 		if err != nil {
@@ -169,6 +179,7 @@ func Processor() framework.ResourceListProcessor {
 
 		_, err = filter.Each(rl.Items)
 		rl.Results = append(rl.Results, filter.Results...)
+		rl.Results = append(rl.Results, &framework.Result{Message: fmt.Sprintf("Stats: %+v", filter.Stats)})
 
 		return err
 	})
