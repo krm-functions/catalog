@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/krm-functions/catalog/pkg/version"
 	"github.com/yannh/kubeconform/pkg/resource"
@@ -62,6 +63,12 @@ func (fnCfg *FunctionConfig) Default() error {
 }
 
 func (fnCfg *FunctionConfig) Validate() error {
+	if fnCfg.Data.KubernetesVersion != "master" {
+		match, err := regexp.MatchString("^[0-9]+\\.[0-9]+\\.[0-9]+$", fnCfg.Data.KubernetesVersion)
+		if err !=nil || !match {
+			return fmt.Errorf("illegal 'ignore_missing_schemas' argument: %s", fnCfg.Data.KubernetesVersion)
+		}
+	}
 	if fnCfg.Data.IgnoreMissingSchemas != "true" && fnCfg.Data.IgnoreMissingSchemas != "false" {
 		return fmt.Errorf("illegal 'ignore_missing_schemas' argument: %s", fnCfg.Data.IgnoreMissingSchemas)
 	}
@@ -86,9 +93,7 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 		Bytes: []byte(object.MustString()),
 	}
 	r := f.validator.ValidateResource(res)
-	//if r.Err != nil {
-	//	return object, r.Err
-	//}
+	var err error
 	switch r.Status {
 	case validator.Valid, validator.Skipped:
 		f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
@@ -110,6 +115,7 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 				},
 				Field: &framework.Field{Path: objPath}})
 		}
+		err = fmt.Errorf("invalid %s/%s", object.GetKind(), object.GetName())
 	case validator.Error:  // FIXME, combine with above
 		msg := fmt.Sprintf("%s\n", r.Err)
 		f.Results = append(f.Results, &framework.Result{
@@ -126,8 +132,9 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 				},
 			},
 			Field: &framework.Field{Path: objPath}})
+		err = fmt.Errorf("unable to validate %s/%s", object.GetKind(), object.GetName())
 	}
-	return object, nil
+	return object, err
 }
 
 func Processor() framework.ResourceListProcessor {
