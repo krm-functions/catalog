@@ -17,6 +17,7 @@ IMAGE=ghcr.io/krm-functions/helm-upgrader
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
 echo "helm-upgrader digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/helm-upgrader.*@).*#\1$DIGEST#" docs/*.md
+sed -i -E "s#(.*?ghcr.io/krm-functions/helm-upgrader.*@).*#\1$DIGEST#" Makefile.test
 
 IMAGE=ghcr.io/krm-functions/render-helm-chart
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)

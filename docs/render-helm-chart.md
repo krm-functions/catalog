@@ -159,7 +159,7 @@ helmCharts:
 First we source the Helm chart using the `source-helm-chart` function using an imperative execution:
 
 ```
-export SOURCE_HELM_CHART_IMAGE=ghcr.io/krm-functions/source-helm-chart@sha256:33bf8323384c2a61a0673451af23e1bd3759df1ee21404e6d0034dc886c6ad5b
+export SOURCE_HELM_CHART_IMAGE=ghcr.io/krm-functions/source-helm-chart@sha256:2059bbd99199a5039980451c92dc0311e4e65d2dbf2a8d92d4c0495739327e6e
 
 kpt fn source examples/render-helm-chart \
  | kpt fn eval - --network -i $SOURCE_HELM_CHART_IMAGE \
@@ -219,7 +219,7 @@ pipeline:
   - image: gcr.io/kpt-fn/apply-setters:v0.2.0
     configMap:
       teamName: blue-team
-  - image: ghcr.io/krm-functions/render-helm-chart@sha256:4c58836893db1b9231a5a61972c83d888ed7a330af35b0dc603d37189b5b1bc7
+  - image: ghcr.io/krm-functions/render-helm-chart@sha256:bc6143dffb405696bc900f1b0013d478414bb46a01ae8b5da423a95d39b630d4
   - image: gcr.io/kpt-fn/remove-local-config-resources:v0.1.0
 ```
 

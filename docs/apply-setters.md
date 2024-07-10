@@ -87,7 +87,7 @@ a render pipeline, but it still suffers from the disadvantages of the
 ## Example Usage
 
 ```shell
-export APPLY_SETTERS_IMAGE=ghcr.io/krm-functions/apply-setters@sha256:ccaa9eb7f83f60704a59fb69231015ef86264d03aa2683f4e4102af3cf13fe77
+export APPLY_SETTERS_IMAGE=ghcr.io/krm-functions/apply-setters@sha256:4701b6fbf834a5929d35ff6b559aea7c02fff0ac326ec352f852dbe8c7ec3d03
 
 kpt fn source examples/apply-setters \
  | kpt fn eval - --truncate-output=false -i $APPLY_SETTERS_IMAGE --fn-config example-function-configs/apply-setters/cm-setters.yaml \
