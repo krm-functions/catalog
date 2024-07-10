@@ -168,6 +168,9 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			if err != nil {
 				return false, err
 			}
+			if !app.IsHelmSpec() {
+				continue
+			}
 			chartArgs := app.Spec.Source.ToKptSpec()
 			newVersion, err := evaluateChartVersion(chartArgs, upgradeConstraint, nil, nil) // FIXME private repo not supported with Argo apps
 			if err != nil {
