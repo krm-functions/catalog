@@ -116,9 +116,10 @@ func ParseArgoCDSpec(b []byte) (*ArgoCDHelmApp, error) {
 }
 
 func (app *ArgoCDHelmApp) IsValidSpec() bool {
-	if app.Kind != "Application" {
-		return false
-	}
+	return app.Kind == "Application"
+}
+
+func (app *ArgoCDHelmApp) IsHelmSpec() bool {
 	if app.Spec.Source.Name == "" || app.Spec.Source.Version == "" || app.Spec.Source.Repo == "" {
 		return false
 	}
