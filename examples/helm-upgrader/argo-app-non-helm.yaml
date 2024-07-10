@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    experimental.helm.sh/upgrade-constraint: "1.8.*"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/example/example.git
+    targetRevision: v1.2.3
+    path: foo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
