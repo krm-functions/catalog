@@ -36,7 +36,10 @@ ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64
 # supports all of the platforms listed in ALL_PLATFORMS.
 BUILDER_IMAGE ?= alpine:3.19.1
 BASE_IMAGE ?= alpine:3.19.1
-#BASE_IMAGE ?= gcr.io/distroless/static
+BASE_IMAGE_DISTROLESS ?= gcr.io/distroless/static
+
+# For functions building on top of Helm
+HELM_VERSION=v3.14.4
 
 REGISTRY ?= ghcr.io/krm-functions
 
@@ -282,13 +285,17 @@ $(foreach bin,$(BINS),$(eval                                         \
 # These are used to track build state in hidden files.
 $(CONTAINER_DOTFILES): .buildx-initialized
 	echo
+	DOCKERFILE="Dockerfile.in"; \
+	[[ -f "cmd/$(BIN)/Dockerfile.in" ]] && DOCKERFILE="cmd/$(BIN)/Dockerfile.in"; \
 	sed                                            \
 	    -e 's|{ARG_BIN}|$(BIN)$(BIN_EXTENSION)|g'  \
 	    -e 's|{ARG_ARCH}|$(ARCH)|g'                \
 	    -e 's|{ARG_OS}|$(OS)|g'                    \
 	    -e 's|{ARG_BUILDER_IMAGE}|$(BUILDER_IMAGE)|g' \
 	    -e 's|{ARG_FROM}|$(BASE_IMAGE)|g'          \
-	    Dockerfile.in > .dockerfile-$(BIN)-$(OS)_$(ARCH)
+	    -e 's|{ARG_FROM_DISTROLESS}|$(BASE_IMAGE_DISTROLESS)|g'          \
+	    -e 's|{ARG_HELM_VERSION}|$(HELM_VERSION)|g'          \
+	    $$DOCKERFILE > .dockerfile-$(BIN)-$(OS)_$(ARCH)
 	HASH_LICENSES=$$(find $(LICENSES) -type f                       \
 		    | xargs md5sum | md5sum | cut -f1 -d' ');           \
 	HASH_BINARY=$$(md5sum bin/$(OS)_$(ARCH)/$(BIN)$(BIN_EXTENSION)  \
