@@ -243,30 +243,30 @@ func LookupAuthSecret(secretName, namespace string, rl *fn.ResourceList) (userna
 		if namespace == oNamespace {
 			uname, found, err := k.NestedString("data", "username")
 			if !found {
-				return nil, nil, fmt.Errorf("key 'username' not found in Secret '%s'", secretName)
+				return nil, nil, fmt.Errorf("key 'username' not found in Secret %s/%s", namespace, secretName)
 			}
 			if err != nil {
 				return nil, nil, err
 			}
 			pword, found, err := k.NestedString("data", "password")
 			if !found {
-				return nil, nil, fmt.Errorf("key 'password' not found in Secret '%s'", secretName)
+				return nil, nil, fmt.Errorf("key 'password' not found in Secret %s/%s", namespace, secretName)
 			}
 			if err != nil {
 				return nil, nil, err
 			}
 			u, err := base64.StdEncoding.DecodeString(uname)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("decoding 'username' in Secret %s/%s: %w", namespace, secretName, err)
 			}
 			uname = string(u)
 			p, err := base64.StdEncoding.DecodeString(pword)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("decoding 'password' in Secret %s/%s: %w", namespace, secretName, err)
 			}
 			pword = string(p)
 			return &uname, &pword, nil
 		}
 	}
-	return nil, nil, fmt.Errorf("auth secret '%s' not found", secretName)
+	return nil, nil, fmt.Errorf("auth Secret %s/%s not found", namespace, secretName)
 }
