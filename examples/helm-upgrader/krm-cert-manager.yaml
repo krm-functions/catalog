@@ -10,6 +10,10 @@ helmCharts:
     name: cert-manager
     version: v1.9.0
     repo: https://charts.jetstack.io
+    auth:
+      apiVersion: v1
+      kind: Secret
+      name: bar
   templateOptions:
     releaseName: cert-manager
     namespace: cert-manager
@@ -18,3 +22,11 @@ helmCharts:
         global:
           commonLabels:
             team-name: dev
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bar
+data:
+  username: Zm9vCg==
+  password: Zm9vCg==

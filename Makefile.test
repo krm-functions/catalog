@@ -30,13 +30,15 @@ e2e-tests: test-render-helm-chart render-helm-chart-example render-helm-chart-ex
 # BEWARE: These tests are fragile - we want to test upgrades, but without upgrade-constraints tests might fail when charts are updated
 .PHONY: test-helm-upgrader
 test-helm-upgrader:
-	kpt fn source examples/helm-upgrader | kpt fn eval - --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml --truncate-output=false $(HELM_UPGRADER) > test-out.yaml
+	rm -rf tmp-results
+	kpt fn source examples/helm-upgrader | kpt fn eval - --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml --truncate-output=false --results-dir tmp-results $(HELM_UPGRADER) > test-out.yaml
 	grep -e '.*upgrade-available: .*cert-manager:v1.8.2' test-out.yaml
 	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.yaml
 	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.yaml
 	grep -e '.*upgrade-available.0: .*karpenter:0.35.0' test-out.yaml
 	grep -e '.*upgrade-available.1: .*/external-secrets:0.9.20' test-out.yaml
 	rm test-out.yaml
+	rm -rf tmp-results
 
 .PHONY: test-render-helm-chart
 test-render-helm-chart:

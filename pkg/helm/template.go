@@ -48,9 +48,34 @@ func Template(chart *t.HelmChart, chartTarball []byte) ([]byte, error) {
 	}
 	defer os.RemoveAll(tmpDir)
 
+	err = ExtractChart(chartTarball, tmpDir)
+	if err != nil {
+		return nil, fmt.Errorf("extracting chart: %w", err)
+	}
+
+	valuesFile := filepath.Join(tmpDir, "values.yaml")
+	err = writeValuesFile(chart, valuesFile)
+	if err != nil {
+		return nil, fmt.Errorf("writing values file: %w", err)
+	}
+	args := buildHelmTemplateArgs(chart)
+	args = append(args, "--values", valuesFile, filepath.Join(tmpDir, chart.Args.Name))
+
+	helmCtxt := NewRunContext()
+	defer helmCtxt.DiscardContext()
+	stdout, err := helmCtxt.Run(args...)
+	if err != nil {
+		return nil, fmt.Errorf("running helm template: %w", err)
+	}
+
+	return stdout, nil
+}
+
+// ExtractChart extracts a chart tarball into destDir
+func ExtractChart(chartTarball []byte, destDir string) error {
 	gzr, err := gzip.NewReader(bytes.NewReader(chartTarball))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer gzr.Close()
 	tr := tar.NewReader(gzr)
@@ -61,50 +86,34 @@ func Template(chart *t.HelmChart, chartTarball []byte) ([]byte, error) {
 		if xtErr == io.EOF {
 			break // End of archive
 		} else if xtErr != nil {
-			return nil, xtErr
+			return xtErr
 		}
 		fname := hdr.Name
 		if path.IsAbs(fname) || strings.Contains(fname, "..") {
-			return nil, errors.New("chart contains file with illegal path")
+			return errors.New("chart contains file with illegal path")
 		}
-		fileWithPath, fnerr := securejoin.SecureJoin(tmpDir, fname)
+		fileWithPath, fnerr := securejoin.SecureJoin(destDir, fname)
 		if fnerr != nil {
-			return nil, fnerr
+			return fnerr
 		}
 		if hdr.Typeflag == tar.TypeReg {
 			fdir := filepath.Dir(fileWithPath)
 			if mkdErr := os.MkdirAll(fdir, 0o755); mkdErr != nil {
-				return nil, mkdErr
+				return mkdErr
 			}
 
 			file, fErr := os.OpenFile(fileWithPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(hdr.Mode))
 			if fErr != nil {
-				return nil, fErr
+				return fErr
 			}
 			_, fErr = io.CopyN(file, tr, maxChartTemplateFileLength)
 			file.Close()
 			if fErr != nil && fErr != io.EOF {
-				return nil, fErr
+				return fErr
 			}
 		}
 	}
-
-	valuesFile := filepath.Join(tmpDir, "values.yaml")
-	err = writeValuesFile(chart, valuesFile)
-	if err != nil {
-		return nil, err
-	}
-	args := buildHelmTemplateArgs(chart)
-	args = append(args, "--values", valuesFile, filepath.Join(tmpDir, chart.Args.Name))
-
-	helmCtxt := NewRunContext()
-	defer helmCtxt.DiscardContext()
-	stdout, err := helmCtxt.Run(args...)
-	if err != nil {
-		return nil, err
-	}
-
-	return stdout, nil
+	return nil
 }
 
 func ParseAsKubeObjects(rendered []byte) (fn.KubeObjects, error) {

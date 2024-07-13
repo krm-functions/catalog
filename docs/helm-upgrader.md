@@ -153,15 +153,18 @@ This function returns a JSON result, which may look like:
   "current": {
     "name": "cert-manager",
     "version": "v1.9.0",
-    "repo": "https://charts.jetstack.io"
+    "repo": "https://charts.jetstack.io",
+    "appVersion": "v1.9.0"
   },
   "upgraded": {
     "name": "cert-manager",
-    "version": "v1.13.2",
+    "version": "v1.15.1",
     "repo": "https://charts.jetstack.io"
+    "appVersion": "v1.15.1",
+	"chartSum":"sha256:b0c179e643bf90d6f74d1c4a8c3e8bede1944ef7828b71419f6384c0157cf8cb"
   },
   "constraint": "",
-  "semverDistance": "0.4.0"
+  "semverDistance": "0.6.0"
 }
 ```
 
