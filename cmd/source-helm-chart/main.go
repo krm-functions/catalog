@@ -44,7 +44,8 @@ func Run(rl *fn.ResourceList) (bool, error) {
 						return false, err
 					}
 				}
-				chartData, chartSum, err := helm.SourceChart(chart, uname, pword)
+
+				chartData, _, chartSum, err := helm.SourceChart(&chart.Args, "", uname, pword)
 				if err != nil {
 					return false, err
 				}

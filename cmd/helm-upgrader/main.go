@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -30,32 +31,47 @@ import (
 
 var upgradesEvaluated, upgradesDone, upgradesAvailable int
 
+type ChartInfo struct {
+	t.HelmChartArgs
+	ChartSum   string `json:"chartSum,omitempty" yaml:"chartSum,omitempty"`
+	AppVersion string `json:"appVersion,omitempty" yaml:"appVersion,omitempty"`
+}
+
+type UpgradeInfo struct {
+	Current    ChartInfo `json:"current,omitempty" yaml:"current,omitempty"`
+	Upgraded   ChartInfo `json:"upgraded,omitempty" yaml:"upgraded,omitempty"`
+	Distance   string    `json:"semverDistance,omitempty" yaml:"semverDistance,omitempty"`
+	Constraint string    `json:"constraint" yaml:"constraint"`
+}
+
 // evaluateChartVersion looks up versions and find a possible upgrade that fulfills upgradeConstraint
-func evaluateChartVersion(chart t.HelmChartArgs, upgradeConstraint string, username, password *string) (*t.HelmChartArgs, error) {
+// Returns repo-search for both existing and new chart
+func evaluateChartVersion(chart *t.HelmChartArgs, upgradeConstraint string, username, password *string) (currChartRepoSearch, newChartRepoSearch *helm.RepoSearch, err error) {
 	upgradesEvaluated++
 	if upgradeConstraint == "" {
 		upgradeConstraint = "*"
 	}
 	search, err := helm.SearchRepo(chart, username, password)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	search = helm.FilterByChartName(search, chart)
 	versions := helm.ToList(search)
 	newVersion, err := semver.Upgrade(versions, upgradeConstraint)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	newChart := chart
-	newChart.Version = newVersion
-	return &newChart, nil
+	currChartRepoSearch = helm.GetSearch(search, chart.Version)
+	newChartRepoSearch = helm.GetSearch(search, newVersion)
+	return currChartRepoSearch, newChartRepoSearch, nil
 }
 
 // handleNewVersion applies new version to chart spec according to upgradeConstraint
-func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string) (*t.HelmChartArgs, string, error) {
-	upgraded := curr
-	var info string
+func handleNewVersion(currSearch, newVersion *helm.RepoSearch, curr *t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string, uname, pword *string) (*t.HelmChartArgs, string, error) {
+	upgraded := *curr
+	var chartSum string
+	infoS := UpgradeInfo{}
 
 	tmpDir, err := os.MkdirTemp("", "chart-")
 	if err != nil {
@@ -63,17 +79,20 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 	}
 	defer os.RemoveAll(tmpDir)
 
+	newChart := *curr
+	newChart.Version = newVersion.Version
+
 	if newChart.Version != curr.Version {
 		upgradesAvailable++
 		anno := curr.Repo + "/" + curr.Name + ":" + newChart.Version
 		if Config.AnnotateOnUpgradeAvailable {
 			if idx >= 0 {
-				err := kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeAvailable+"."+strconv.FormatInt(int64(idx), 10), anno)
+				err = kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeAvailable+"."+strconv.FormatInt(int64(idx), 10), anno)
 				if err != nil {
 					return nil, "", err
 				}
 			} else {
-				err := kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeAvailable, anno)
+				err = kubeObject.SetAnnotation(api.HelmResourceAnnotationUpgradeAvailable, anno)
 				if err != nil {
 					return nil, "", err
 				}
@@ -84,7 +103,7 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 			upgraded.Version = newChart.Version
 		}
 		if Config.AnnotateSumOnUpgradeAvailable {
-			_, chartSum, err := helm.PullChart(newChart, tmpDir, nil, nil)
+			_, chartSum, err = helm.PullChart(&newChart, tmpDir, uname, pword)
 			if err != nil {
 				return nil, "", err
 			}
@@ -99,16 +118,13 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 					return nil, "", err
 				}
 			}
+			infoS.Upgraded.ChartSum = formatShaSum(chartSum)
 		}
-		upgradedJSON, _ := json.Marshal(upgraded)
-		currJSON, _ := json.Marshal(curr)
-		distance, err := semver.Diff(curr.Version, upgraded.Version)
-		if err != nil {
-			return nil, "", err
-		}
-		info = fmt.Sprintf("{\"current\": %s, \"upgraded\": %s, \"constraint\": %q, \"semverDistance\": %q}\n", string(currJSON), string(upgradedJSON), upgradeConstraint, distance)
+		infoS.Upgraded.HelmChartArgs = upgraded
+		infoS.Upgraded.HelmChartArgs.Auth = nil
+		infoS.Upgraded.AppVersion = newVersion.AppVersion
 	} else if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(api.HelmResourceAnnotationShaSum) == "" {
-		_, chartSum, err := helm.PullChart(curr, tmpDir, nil, nil)
+		_, chartSum, err = helm.PullChart(curr, tmpDir, uname, pword)
 		if err != nil {
 			return nil, "", err
 		}
@@ -117,6 +133,27 @@ func handleNewVersion(newChart, curr t.HelmChartArgs, kubeObject *fn.KubeObject,
 			return nil, "", err
 		}
 	}
+
+	// Common data, irrespective of upgrade or not...
+	infoS.Current.HelmChartArgs = *curr
+	infoS.Current.HelmChartArgs.Auth = nil
+	infoS.Current.AppVersion = currSearch.AppVersion
+	infoS.Constraint = upgradeConstraint
+	distance, err := semver.Diff(curr.Version, upgraded.Version)
+	if err != nil {
+		return nil, "", err
+	}
+	infoS.Distance = distance
+
+	var infoJ bytes.Buffer
+	enc := json.NewEncoder(&infoJ)
+	enc.SetEscapeHTML(false) // We do not use Marshal since constraints may have chars that get escaped, e.g. '>'
+	err = enc.Encode(infoS)
+	if err != nil {
+		return nil, "", err
+	}
+	info := infoJ.String()
+
 	return &upgraded, info, nil
 }
 
@@ -136,7 +173,8 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			}
 			for idx := range spec.Charts {
 				helmChart := &spec.Charts[idx]
-				var newVersion, upgraded *t.HelmChartArgs
+				var upgraded *t.HelmChartArgs
+				var currSearch, newVersion *helm.RepoSearch
 				var info string
 				var uname, pword *string
 				if helmChart.Args.Auth != nil {
@@ -145,11 +183,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 						return false, err
 					}
 				}
-				newVersion, err = evaluateChartVersion(helmChart.Args, upgradeConstraint, uname, pword)
+				currSearch, newVersion, err = evaluateChartVersion(&helmChart.Args, upgradeConstraint, uname, pword)
 				if err != nil {
 					return false, err
 				}
-				upgraded, info, err = handleNewVersion(*newVersion, helmChart.Args, kubeObject, idx, upgradeConstraint)
+				upgraded, info, err = handleNewVersion(currSearch, newVersion, &helmChart.Args, kubeObject, idx, upgradeConstraint, uname, pword)
 				if err != nil {
 					return false, err
 				}
@@ -172,11 +210,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				continue
 			}
 			chartArgs := app.Spec.Source.ToKptSpec()
-			newVersion, err := evaluateChartVersion(chartArgs, upgradeConstraint, nil, nil) // FIXME private repo not supported with Argo apps
+			currSearch, newVersion, err := evaluateChartVersion(&chartArgs, upgradeConstraint, nil, nil) // FIXME private repo not supported with Argo apps
 			if err != nil {
 				return false, err
 			}
-			upgraded, info, err := handleNewVersion(*newVersion, chartArgs, kubeObject, -1, upgradeConstraint)
+			upgraded, info, err := handleNewVersion(currSearch, newVersion, &chartArgs, kubeObject, -1, upgradeConstraint, nil, nil)
 			if err != nil {
 				return false, err
 			}
