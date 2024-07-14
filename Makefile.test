@@ -1,4 +1,22 @@
+# This makefile holds "end-to-end" tests, i.e. function usage with kpt and real manifest manipulation
+
 FN_MODE ?= exec
+
+ifeq ($(CONTAINER_TAG),)
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:4701b6fbf834a5929d35ff6b559aea7c02fff0ac326ec352f852dbe8c7ec3d03
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:eb245a562c2fde8f5d310884cb75fa59563566d0eaa2484e8e20aecfcccd6e7a
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:bc6143dffb405696bc900f1b0013d478414bb46a01ae8b5da423a95d39b630d4
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:2059bbd99199a5039980451c92dc0311e4e65d2dbf2a8d92d4c0495739327e6e
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:6f5c620df6566098d7b2c161201c76b8d83a2fe85346cf3b5cc4ab340ad8238b
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:abc
+else
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINERS_TAG)
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINERS_TAG)
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart:$(CONTAINERS_TAG)
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart:$(CONTAINERS_TAG)
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader:$(CONTAINERS_TAG)
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/KUBECONFORM:$(CONTAINERS_TAG)
+endif
 
 ifeq ($(FN_MODE),exec)
 APPLY_SETTERS := --exec bin/linux_amd64/apply-setters
@@ -6,38 +24,40 @@ DIGESTER := --exec bin/linux_amd64/digester
 HELM_RENDER := --exec bin/linux_amd64/render-helm-chart
 HELM_SOURCE := --exec bin/linux_amd64/source-helm-chart
 HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
+KUBECONFORM := --exec bin/linux_amd64/kubeconform
 TEMPLATE_KYAML := --exec bin/linux_amd64/template-kyaml
 else
-  ifeq ($(CONTAINER_TAG),)
-  APPLY_SETTERS := --image ghcr.io/krm-functions/apply-setters@sha256:4701b6fbf834a5929d35ff6b559aea7c02fff0ac326ec352f852dbe8c7ec3d03
-  DIGESTER := --network --image ghcr.io/krm-functions/digester@sha256:eb245a562c2fde8f5d310884cb75fa59563566d0eaa2484e8e20aecfcccd6e7a
-  HELM_RENDER := --network --image ghcr.io/krm-functions/render-helm-chart@sha256:bc6143dffb405696bc900f1b0013d478414bb46a01ae8b5da423a95d39b630d4
-  HELM_SOURCE := --network --image ghcr.io/krm-functions/source-helm-chart@sha256:2059bbd99199a5039980451c92dc0311e4e65d2dbf2a8d92d4c0495739327e6e
-  HELM_UPGRADER := --network --image ghcr.io/krm-functions/helm-upgrader@sha256:6f5c620df6566098d7b2c161201c76b8d83a2fe85346cf3b5cc4ab340ad8238b
-  else
-  APPLY_SETTERS := --image ghcr.io/krm-functions/apply-setters:$(CONTAINERS_TAG)
-  DIGESTER := --network --image ghcr.io/krm-functions/digester:$(CONTAINERS_TAG)
-  HELM_RENDER := --network --image ghcr.io/krm-functions/render-helm-chart:$(CONTAINERS_TAG)
-  HELM_SOURCE := --network --image ghcr.io/krm-functions/source-helm-chart:$(CONTAINERS_TAG)
-  HELM_UPGRADER := --network --image ghcr.io/krm-functions/helm-upgrader:$(CONTAINERS_TAG)
-  endif
+APPLY_SETTERS := --image $(APPLY_SETTERS_IMAGE)
+DIGESTER := --network --image $(DIGESTER_IMAGE)
+HELM_RENDER := --network --image $(HELM_RENDER_IMAGE)
+HELM_SOURCE := --network --image $(HELM_SOURCE_IMAGE)
+HELM_UPGRADER := --network --image $(HELM_UPGRADER_IMAGE)
+KUBECONFORM := --network --image $(KUBECONFORM_IMAGE)
 endif
 
 BASELINE_RENDER_HELM_CHART := gcr.io/kpt-fn/render-helm-chart:v0.2.2
 
-e2e-tests: test-render-helm-chart render-helm-chart-example render-helm-chart-example2 render-with-kube-version test-source-helm-chart test-helm-upgrader test-apply-setters test-digester
+e2e-tests: test-render-helm-chart \
+	   render-helm-chart-example \
+	   render-helm-chart-example2 \
+	   render-with-kube-version \
+	   test-source-helm-chart \
+	   test-helm-upgrader \
+	   test-apply-setters \
+	   test-digester \
+	   test-kubeconform
 
 # BEWARE: These tests are fragile - we want to test upgrades, but without upgrade-constraints tests might fail when charts are updated
 .PHONY: test-helm-upgrader
 test-helm-upgrader:
 	rm -rf tmp-results
-	kpt fn source examples/helm-upgrader | kpt fn eval - --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml --truncate-output=false --results-dir tmp-results $(HELM_UPGRADER) > test-out.yaml
-	grep -e '.*upgrade-available: .*cert-manager:v1.8.2' test-out.yaml
-	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.yaml
-	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.yaml
-	grep -e '.*upgrade-available.0: .*karpenter:0.35.0' test-out.yaml
-	grep -e '.*upgrade-available.1: .*/external-secrets:0.9.20' test-out.yaml
-	rm test-out.yaml
+	kpt fn source examples/helm-upgrader | kpt fn eval - --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml --truncate-output=false --results-dir tmp-results $(HELM_UPGRADER) > test-out.txt
+	grep -e '.*upgrade-available: .*cert-manager:v1.8.2' test-out.txt
+	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.txt
+	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.txt
+	grep -e '.*upgrade-available.0: .*karpenter:0.35.0' test-out.txt
+	grep -e '.*upgrade-available.1: .*/external-secrets:0.9.20' test-out.txt
+	rm test-out.txt
 	rm -rf tmp-results
 
 .PHONY: test-render-helm-chart
@@ -89,38 +109,38 @@ render-with-kube-version:
 
 .PHONY: test-source-helm-chart
 test-source-helm-chart:
-	kpt fn source examples/render-helm-chart3 | kpt fn eval - --truncate-output=false $(HELM_SOURCE) > test-out.yaml
-	grep -e 'experimental.helm.sh/chart-sum/karpenter' test-out.yaml
-	grep -e 'experimental.helm.sh/chart-sum/cert-manager' test-out.yaml
-	rm test-out.yaml
+	kpt fn source examples/render-helm-chart3 | kpt fn eval - --truncate-output=false $(HELM_SOURCE) > test-out.txt
+	grep -e 'experimental.helm.sh/chart-sum/karpenter' test-out.txt
+	grep -e 'experimental.helm.sh/chart-sum/cert-manager' test-out.txt
+	rm test-out.txt
 
 .PHONY: test-apply-setters
 test-apply-setters: test-apply-setters1 test-apply-setters2
 
 .PHONY: test-apply-setters1
 test-apply-setters1:
-	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/cm-setters.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.yaml
-	grep -e 'foo: "valueFoo"' test-out.yaml
-	grep -e 'bar: "valueBar"' test-out.yaml
-	grep -e 'baz: "valueBaz"' test-out.yaml
-	grep -e 'replicas: "4"' test-out.yaml
-	grep -e 'combined: ""' test-out.yaml
-	grep -e 'app.kubernetes.io/version: "a1b2c3d4e5e6"' test-out.yaml
-	rm test-out.yaml
+	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/cm-setters.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.txt
+	grep -e 'foo: "valueFoo"' test-out.txt
+	grep -e 'bar: "valueBar"' test-out.txt
+	grep -e 'baz: "valueBaz"' test-out.txt
+	grep -e 'replicas: "4"' test-out.txt
+	grep -e 'combined: ""' test-out.txt
+	grep -e 'app.kubernetes.io/version: "a1b2c3d4e5e6"' test-out.txt
+	rm test-out.txt
 
 .PHONY: test-apply-setters2
 test-apply-setters2:
-	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/apply-setters-fn-config.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.yaml
-	grep -e 'foo: ""' test-out.yaml
-	grep -e 'bar: "valueBar2"' test-out.yaml
-	grep -e 'baz: "valueBaz2"' test-out.yaml
-	grep -e 'replicas: "4"' test-out.yaml
-	grep -e 'combined: "4-a1b2c3d4e5e6"' test-out.yaml
-	grep -e 'app.kubernetes.io/version: "a1b2c3d4e5e6"' test-out.yaml
-	rm test-out.yaml
+	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/apply-setters-fn-config.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.txt
+	grep -e 'foo: ""' test-out.txt
+	grep -e 'bar: "valueBar2"' test-out.txt
+	grep -e 'baz: "valueBaz2"' test-out.txt
+	grep -e 'replicas: "4"' test-out.txt
+	grep -e 'combined: "4-a1b2c3d4e5e6"' test-out.txt
+	grep -e 'app.kubernetes.io/version: "a1b2c3d4e5e6"' test-out.txt
+	rm test-out.txt
 
 .PHONY: test-digester
-test-digester: test-digester-step1 test-digester-step3
+test-digester: test-digester-step1 test-digester-step3 test-digester-output
 
 .PHONY: test-digester-step1
 test-digester-step1:
@@ -129,37 +149,58 @@ test-digester-step1:
 
 .PHONY: test-digester-step2
 test-digester-step2:
-	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false $(DIGESTER) > test-out.yaml
-	head -n 60 test-out.yaml
+	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false $(DIGESTER) > test-out.txt
+	head -n 60 test-out.txt
 
 .PHONY: test-digester-step3
 test-digester-step3:
 	rm -rf digester-tmp1
 	kpt fn source digester-tmp0 | kpt fn eval - --truncate-output=false $(DIGESTER) | kpt fn sink digester-tmp1
 	kpt fn render digester-tmp1 -o unwrap > test-out.yaml
-	grep 'image:' test-out.yaml
 
-
-SOURCE_HELM_CHART_IMAGE ?= ghcr.io/krm-functions/source-helm-chart@sha256:2059bbd99199a5039980451c92dc0311e4e65d2dbf2a8d92d4c0495739327e6e
-DIGESTER_IMAGE ?= ghcr.io/krm-functions/digester@sha256:eb245a562c2fde8f5d310884cb75fa59563566d0eaa2484e8e20aecfcccd6e7a
+.PHONY: test-digester-output
+test-digester-output:
+	grep 'image: "quay.io/jetstack/cert-manager-controller@sha256:.*' test-out.yaml
+	grep 'image: "quay.io/jetstack/cert-manager-cainjector@sha256:.*' test-out.yaml
+	grep 'image: "quay.io/jetstack/cert-manager-webhook@sha256:.*' test-out.yaml
+	grep 'image: "quay.io/jetstack/cert-manager-ctl@sha256:.*' test-out.yaml
 
 .PHONY: test-digester-w-containers
 test-digester-w-containers:
 	echo "** sourcing step"
 	rm -rf cert-manager-package
 	kpt fn source examples/digester \
-	  | kpt fn eval - --network -i $(SOURCE_HELM_CHART_IMAGE) \
-	  | kpt fn eval - --network --truncate-output=false -i $(DIGESTER_IMAGE) \
+	  | kpt fn eval - $(HELM_SOURCE) \
+	  | kpt fn eval - --truncate-output=false $(DIGESTER) \
 	  | kpt fn sink cert-manager-package
-	echo "** rendering using pipeline in Ktfile"
 
 .PHONY: test-digester-w-containers2
 test-digester-w-containers2:
+	echo "** rendering using pipeline in Ktfile"
 	rm -rf cert-manager-rendered
 	kpt fn render cert-manager-package -o stdout | kpt fn sink cert-manager-rendered
 
+.PHONY: test-kubeconform
+test-kubeconform:
+	rm -rf tmp-results
+	kpt fn source examples/kubeconform | kpt fn eval - --results-dir tmp-results --truncate-output=false $(KUBECONFORM) -- ignore_missing_schemas=true kubernetes_version=1.29.1 > test-out.txt || true
+	#kpt fn source examples/kubeconform | kpt fn eval - --results-dir tmp-results --truncate-output=false $(KUBECONFORM) -- > test-out.txt || true
+	make test-kubeconform-results
+
+.PHONY: test-kubeconform-w-container
+test-kubeconform-w-container:
+	rm -rf tmp-results
+	kpt fn source examples/kubeconform | kpt fn eval - --results-dir tmp-results --truncate-output=false -i $(KUBECONFORM_IMAGE) -- ignore_missing_schemas=true > test-out.txt || true
+	make test-kubeconform-results
+
+.PHONY: test-kubeconform-results
+test-kubeconform-results:
+	grep -e '.* /data/nested: expected string or null, but got object' tmp-results/results.yaml
+	grep -e '.* name: invalid-nested-dict' tmp-results/results.yaml
+	grep -e '.* /data/a-number: expected string or null, but got number' tmp-results/results.yaml
+	grep -e '.* name: invalid-non-string-value' tmp-results/results.yaml
+
 .PHONY: test-template-kyaml
 test-template-kyaml:
-	kpt fn source examples/template | kpt fn eval - --truncate-output=false $(TEMPLATE_KYAML) -- someConfig=aTestConfigString > test-out.yaml
-	kpt fn source examples/template | kpt fn eval - --truncate-output=false $(TEMPLATE_KYAML) > test-out.yaml
-
+	kpt fn source examples/template | kpt fn eval - --truncate-output=false $(TEMPLATE_KYAML) -- someConfig=aTestConfigString > test-out.txt
+	kpt fn source examples/template | kpt fn eval - --truncate-output=false $(TEMPLATE_KYAML) > test-out.txt
