@@ -58,15 +58,20 @@ type FilterState struct {
 	Stats
 }
 
-func (fnCfg *FunctionConfig) Default() error {
+const (
+	StringTrue  = "true"
+	StringFalse = "false"
+)
+
+func (fnCfg *FunctionConfig) Default() error { //nolint:unparam // this return is part of the Defaulter interface
 	if fnCfg.Data.KubernetesVersion == "" {
 		fnCfg.Data.KubernetesVersion = "master"
 	}
 	if fnCfg.Data.IgnoreMissingSchemas == "" {
-		fnCfg.Data.IgnoreMissingSchemas = "false"
+		fnCfg.Data.IgnoreMissingSchemas = StringFalse
 	}
 	if fnCfg.Data.Strict == "" {
-		fnCfg.Data.Strict = "true"
+		fnCfg.Data.Strict = StringTrue
 	}
 	if fnCfg.Data.SchemaLocations == "" {
 		fnCfg.Data.SchemaLocations = os.Getenv("KUBECONFORM_SCHEMA_LOCATIONS")
@@ -77,14 +82,14 @@ func (fnCfg *FunctionConfig) Default() error {
 func (fnCfg *FunctionConfig) Validate() error {
 	if fnCfg.Data.KubernetesVersion != "master" {
 		match, err := regexp.MatchString("^[0-9]+\\.[0-9]+\\.[0-9]+$", fnCfg.Data.KubernetesVersion)
-		if err !=nil || !match {
+		if err != nil || !match {
 			return fmt.Errorf("illegal 'ignore_missing_schemas' argument: %s", fnCfg.Data.KubernetesVersion)
 		}
 	}
-	if fnCfg.Data.IgnoreMissingSchemas != "true" && fnCfg.Data.IgnoreMissingSchemas != "false" {
+	if fnCfg.Data.IgnoreMissingSchemas != StringTrue && fnCfg.Data.IgnoreMissingSchemas != StringFalse {
 		return fmt.Errorf("illegal 'ignore_missing_schemas' argument: %s", fnCfg.Data.IgnoreMissingSchemas)
 	}
-	if fnCfg.Data.Strict != "true" && fnCfg.Data.Strict != "false" {
+	if fnCfg.Data.Strict != StringTrue && fnCfg.Data.Strict != StringFalse {
 		return fmt.Errorf("illegal 'strict' argument: %s", fnCfg.Data.Strict)
 	}
 	return nil
@@ -102,7 +107,7 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 	f.Stats.Resources++
 	objPath := object.GetAnnotations()[kioutil.PathAnnotation]
 	res := resource.Resource{
-		Path: objPath,
+		Path:  objPath,
 		Bytes: []byte(object.MustString()),
 	}
 	r := f.validator.ValidateResource(res)
@@ -116,38 +121,39 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 			msg := fmt.Sprintf("%s: %s\n", ve.Path, ve.Msg)
 			f.Results = append(f.Results, &framework.Result{
 				Severity: framework.Error,
-				Message: msg,
+				Message:  msg,
 				ResourceRef: &yaml.ResourceIdentifier{
 					TypeMeta: yaml.TypeMeta{
 						APIVersion: object.GetApiVersion(),
-						Kind: object.GetKind(),
+						Kind:       object.GetKind(),
 					},
 					NameMeta: yaml.NameMeta{
-						Name: object.GetName(),
+						Name:      object.GetName(),
 						Namespace: object.GetNamespace(),
 					},
 				},
 				Field: &framework.Field{Path: objPath}})
 		}
 		err = fmt.Errorf("invalid %s/%s", object.GetKind(), object.GetName())
-	case validator.Error:  // FIXME, combine with above
+	case validator.Error: // FIXME, combine with above
 		f.Stats.Errors++
 		msg := fmt.Sprintf("%s\n", r.Err)
 		f.Results = append(f.Results, &framework.Result{
 			Severity: framework.Error,
-			Message: msg,
+			Message:  msg,
 			ResourceRef: &yaml.ResourceIdentifier{
 				TypeMeta: yaml.TypeMeta{
 					APIVersion: object.GetApiVersion(),
-					Kind: object.GetKind(),
+					Kind:       object.GetKind(),
 				},
 				NameMeta: yaml.NameMeta{
-					Name: object.GetName(),
+					Name:      object.GetName(),
 					Namespace: object.GetNamespace(),
 				},
 			},
 			Field: &framework.Field{Path: objPath}})
 		err = fmt.Errorf("unable to validate %s/%s", object.GetKind(), object.GetName())
+	case validator.Empty:
 	}
 	return object, err
 }
@@ -160,9 +166,9 @@ func Processor() framework.ResourceListProcessor {
 		}
 		fmt.Fprintf(os.Stderr, "function-config: %+v\n", config)
 		opts := validator.Opts{
-			KubernetesVersion: config.Data.KubernetesVersion,
-			Strict: config.Data.Strict=="true",
-			IgnoreMissingSchemas: config.Data.IgnoreMissingSchemas=="true",
+			KubernetesVersion:    config.Data.KubernetesVersion,
+			Strict:               config.Data.Strict == "true",
+			IgnoreMissingSchemas: config.Data.IgnoreMissingSchemas == "true",
 		}
 		var schemas []string
 		if config.Data.SchemaLocations != "" {
@@ -173,7 +179,7 @@ func Processor() framework.ResourceListProcessor {
 			return fmt.Errorf("initializing validator: %s", err)
 		}
 		filter := FilterState{
-			fnConfig: config,
+			fnConfig:  config,
 			validator: v,
 		}
 
