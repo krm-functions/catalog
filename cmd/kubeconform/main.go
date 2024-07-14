@@ -164,7 +164,6 @@ func Processor() framework.ResourceListProcessor {
 		if err := framework.LoadFunctionConfig(rl.FunctionConfig, config); err != nil {
 			return fmt.Errorf("reading function-config: %w", err)
 		}
-		fmt.Fprintf(os.Stderr, "function-config: %+v\n", config)
 		opts := validator.Opts{
 			KubernetesVersion:    config.Data.KubernetesVersion,
 			Strict:               config.Data.Strict == "true",

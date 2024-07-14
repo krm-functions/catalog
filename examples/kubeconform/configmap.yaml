@@ -8,14 +8,14 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: invalid1
+  name: invalid-nested-dict
 data:
-  foo:
+  nested:
     bar: baz
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: invalid2
+  name: invalid-non-string-value
 data:
-  foo: 42
+  a-number: 42
