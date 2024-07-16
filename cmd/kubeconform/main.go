@@ -49,6 +49,7 @@ type Stats struct {
 	Resources int
 	Invalid   int
 	Errors    int
+	Skipped   int
 }
 
 type FilterState struct {
@@ -115,6 +116,9 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 	switch r.Status {
 	case validator.Valid, validator.Skipped:
 		f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
+		if r.Status == validator.Skipped {
+			f.Stats.Skipped++
+		}
 	case validator.Invalid:
 		f.Stats.Invalid++
 		for _, ve := range r.ValidationErrors {

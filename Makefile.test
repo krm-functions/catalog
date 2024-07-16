@@ -10,12 +10,12 @@ HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:f2ed2cd8cb62
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:075e3f559ddeff82df2a14eeeefde5ad88fc010be13ade13c386e777a5b3f65e
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:abc
 else
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINERS_TAG)
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINERS_TAG)
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart:$(CONTAINERS_TAG)
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart:$(CONTAINERS_TAG)
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader:$(CONTAINERS_TAG)
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/KUBECONFORM:$(CONTAINERS_TAG)
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart:$(CONTAINER_TAG)
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart:$(CONTAINER_TAG)
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader:$(CONTAINER_TAG)
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform:$(CONTAINER_TAG)
 endif
 
 ifeq ($(FN_MODE),exec)
