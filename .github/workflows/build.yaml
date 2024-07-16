@@ -21,6 +21,9 @@ jobs:
     - name: Checkout
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
+    - name: Build schema bundle for kubeconform
+      run: scripts/source-schemas.sh
+
     - name: Build containers
       run: make all-container
 
