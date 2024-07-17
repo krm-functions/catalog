@@ -96,15 +96,18 @@ render-with-kube-version:
 	helm package test/test-chart
 	scripts/source-chart.sh test/render-test-chart.yaml test-chart-0.1.0.tgz > _tmp/render.yaml
 	rm test-chart-0.1.0.tgz
-	sed -i 's/kubeVersion: .*/kubeVersion: 1.29.0/' _tmp/render.yaml
+	# Note, no patch version
+	sed -i 's/kubeVersion: .*/kubeVersion: 1.29/' _tmp/render.yaml
 	kpt fn source _tmp | kpt fn eval - ${HELM_RENDER} | kpt fn sink _tmp-output
 	cat _tmp-output/configmap_foo.yaml
 	grep -q 'kubeVersion: "v1.29.0"' _tmp-output/configmap_foo.yaml
+	grep -q 'kubeVersionMinor: "29"' _tmp-output/configmap_foo.yaml
 	rm -rf _tmp-output
 	sed -i 's/kubeVersion: .*/kubeVersion: 1.30.0/' _tmp/render.yaml
 	kpt fn source _tmp | kpt fn eval - ${HELM_RENDER} | kpt fn sink _tmp-output
 	cat _tmp-output/configmap_foo.yaml
 	grep -q 'kubeVersion: "v1.30.0"' _tmp-output/configmap_foo.yaml
+	grep -q 'kubeVersionMinor: "30"' _tmp-output/configmap_foo.yaml
 	rm -rf _tmp _tmp-output
 
 .PHONY: test-source-helm-chart
@@ -180,7 +183,7 @@ test-digester-w-containers2:
 	rm -rf cert-manager-rendered
 	kpt fn render cert-manager-package -o stdout | kpt fn sink cert-manager-rendered
 
-#KUBECONFORM_SCHEMA_LOCATIONS ?= "default"
+KUBECONFORM_SCHEMA_LOCATIONS ?= "default"
 
 #KUBECONFORM_SCHEMA_LOCATIONS ?= '/home/mvl/workspace/github/krm-functions-org/catalog/tmp-schemas/kubernetes-json-schema/,/home/mvl/workspace/github/krm-functions-org/catalog/tmp-schemas/CRDs-catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 

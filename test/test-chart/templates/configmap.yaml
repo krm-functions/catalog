@@ -7,3 +7,4 @@ data:
   kubeVersion: {{ .Capabilities.KubeVersion.Version | quote }}
   kubeVersionMajor: {{ .Capabilities.KubeVersion.Major | quote }}
   kubeVersionMinor: {{ .Capabilities.KubeVersion.Minor | quote }}
+  kubeVersionGitVersion: {{ .Capabilities.KubeVersion.GitVersion | quote }}
