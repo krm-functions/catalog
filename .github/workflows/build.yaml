@@ -24,7 +24,6 @@ jobs:
     - name: Build schema bundle for kubeconform
       run: |
         scripts/source-schemas.sh
-        rm -rf tmp-schemas
 
     - name: Build containers
       run: make all-container
