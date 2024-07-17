@@ -3,12 +3,12 @@
 FN_MODE ?= exec
 
 ifeq ($(CONTAINER_TAG),)
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:0423d82226d404e631790a5f17591367aa775d28d274811b10fe1cb6263ae91e
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:b1491c8a503c3f41a8305ede6a0c196755bdef6d7fe33926b7cc47d01cefe647
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:2d9e560632d796093e2da1184174f99ea2358c89ce024a411244393c7f006815
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:f0edf85c2b198001e1e9be31317a320238cf7588adb396b924a33d8a771ff69f
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:14e73ca9dbceaf8440830c9e72267b3be3461c2f8aff1dcb6d9c2ea2114e4066
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:b80e8c1c3f7d7d814a46d6b96502199875cd764e69c98a3edad97009a7adf140
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:314d28ed45e9241f3dfbcc262ca17c6f79022bf25021d353ec60182e506e5ecb
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:fea9420a06f90ccb06dce8746662cda810999a47c3bdd5cdbb561322ef4ef311
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:e52cb02d7ee9eb10ee85bf6451269378278a5711ff62269b688fe8aefd128322
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:bfc983b8952da8c9f99388e9a86d0a69dbf5210fc8df959de3a96bcdde6c47cb
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:73b22ac455bb472809c55d49f5b2615013a90649742c2e2100f565da57a44d80
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:0004ae1d875060c7b8747527f0f584878aa46e47d100a3c2a6aa25fee3aa0e28
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
@@ -184,10 +184,7 @@ test-digester-w-containers2:
 	kpt fn render cert-manager-package -o stdout | kpt fn sink cert-manager-rendered
 
 KUBECONFORM_SCHEMA_LOCATIONS ?= "default"
-
-#KUBECONFORM_SCHEMA_LOCATIONS ?= '/home/mvl/workspace/github/krm-functions-org/catalog/tmp-schemas/kubernetes-json-schema/,/home/mvl/workspace/github/krm-functions-org/catalog/tmp-schemas/CRDs-catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
-
-KUBECONFORM_SCHEMA_LOCATIONS ?= '/schema-bundle/,/schema-bundle/CRDs-catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+#KUBECONFORM_SCHEMA_LOCATIONS ?= '/schema-bundle/,/schema-bundle/CRDs-catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 
 .PHONY: test-kubeconform
 test-kubeconform:
