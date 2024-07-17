@@ -140,7 +140,7 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 				Field: &framework.Field{Path: objPath}})
 		}
 		err = fmt.Errorf("invalid %s/%s", object.GetKind(), object.GetName())
-	case validator.Error: // FIXME, combine with above
+	case validator.Error: // FIXME, combine with case above
 		f.Stats.Errors++
 		msg := fmt.Sprintf("%s\n", r.Err)
 		f.Results = append(f.Results, &framework.Result{
