@@ -44,7 +44,7 @@ these will be sufficient. See
 included. The function can only be used declaratively with the
 built-in schemas.
 
-# functon-config
+# function-config
 
 ```yaml
 apiVersion: v1
