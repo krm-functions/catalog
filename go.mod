@@ -14,7 +14,7 @@ require (
 	github.com/yannh/kubeconform v0.6.6
 	k8s.io/api v0.30.2
 	sigs.k8s.io/kustomize/api v0.17.2
-	sigs.k8s.io/kustomize/kyaml v0.17.1
+	sigs.k8s.io/kustomize/kyaml v0.17.2
 )
 
 require (
