@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,16 +17,18 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/krm-functions/catalog/pkg/version"
 
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
+	"sigs.k8s.io/kustomize/kyaml/kio/kioutil"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 type Data struct {
-	Foo    string `yaml:"foo,omitempty" json:"foo,omitempty"`
+	Foo string `yaml:"foo,omitempty" json:"foo,omitempty"`
 }
 
 type FunctionConfig struct {
@@ -34,8 +36,8 @@ type FunctionConfig struct {
 }
 
 type FilterState struct {
-	fnConfig  *FunctionConfig
-	Results   framework.Results
+	fnConfig *FunctionConfig
+	Results  framework.Results
 }
 
 func (fnCfg *FunctionConfig) Default() error { //nolint:unparam // this return is part of the Defaulter interface
@@ -58,19 +60,16 @@ func (f *FilterState) Each(items []*yaml.RNode) ([]*yaml.RNode, error) {
 }
 
 func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
-	//objPath := object.GetAnnotations()[kioutil.PathAnnotation]
 	if object.GetApiVersion() == "foo.bar" {
-		packages, err := ParsePkgSpec(object)
+		objPath := filepath.Join(filepath.Dir(object.GetAnnotations()[kioutil.PathAnnotation]), object.GetName())
+		packages, err := ParsePkgSpec(object, objPath)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Fprintf(os.Stderr, "<%+v>\n", packages)
-		for _, p := range packages.Spec.Packages {
-			fmt.Fprintf(os.Stderr, "[%+v]\n", p)
-		}
+		packages.Spec.Packages.Print(os.Stderr)
 	}
 
-	var err error = nil
+	var err error
 
 	return object, err
 }
@@ -82,7 +81,7 @@ func Processor() framework.ResourceListProcessor {
 			return fmt.Errorf("reading function-config: %w", err)
 		}
 		filter := FilterState{
-			fnConfig:  config,
+			fnConfig: config,
 		}
 
 		_, err := filter.Each(rl.Items)

@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"path/filepath"
 
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
@@ -25,53 +27,73 @@ type Packages struct {
 
 type PackagesSpec struct {
 	Defaults PackageDefaultable `yaml:"defaults,omitempty" json:"defaults,omitempty"`
-	Packages []Package          `yaml:"packages,omitempty" json:"packages,omitempty"`
+	Packages PackageSlice       `yaml:"packages,omitempty" json:"packages,omitempty"`
 }
 
+type PackageSlice []Package
+
 type PackageDefaultable struct {
-	Uri     string `yaml:"uri,omitempty" json:"uri,omitempty"`
+	URI     string `yaml:"uri,omitempty" json:"uri,omitempty"`
 	Version string `yaml:"version,omitempty" json:"version,omitempty"`
 	Enabled *bool  `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 }
 
 type Package struct {
 	PackageDefaultable
-	Name    string `yaml:"name,omitempty" json:"name,omitempty"`
-	Path    string `yaml:"path,omitempty" json:"path,omitempty"`
+	Name     string       `yaml:"name,omitempty" json:"name,omitempty"`
+	Path     string       `yaml:"path,omitempty" json:"path,omitempty"`
+	Packages PackageSlice `yaml:"packages,omitempty" json:"packages,omitempty"`
+	dstPath  string
 }
 
-func (packages *Packages) Validate() error {
-	for idx := range packages.Spec.Packages {
-		p := &packages.Spec.Packages[idx]
+func (packages PackageSlice) Validate() error {
+	for idx := range packages {
+		p := &packages[idx]
 		if p.Name == "" {
 			return fmt.Errorf("Packages must have 'name' (index %v)", idx)
 		}
 		if p.Path == "" {
 			return fmt.Errorf("Package %q needs 'path'", p.Name)
 		}
+		if err := p.Packages.Validate(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func ParsePkgSpec(object *yaml.RNode) (*Packages, error) {
-	packages := &Packages{}
-	if err := yaml.Unmarshal([]byte(object.MustString()), packages); err != nil {
-		return nil, err
-	}
-	for idx := range packages.Spec.Packages {
-		p := &packages.Spec.Packages[idx]
-		if p.Uri == "" {
-			p.Uri = packages.Spec.Defaults.Uri
+func (packages PackageSlice) Default(defaults *PackageDefaultable, basePath string) {
+	for idx := range packages {
+		p := &packages[idx]
+		if p.URI == "" {
+			p.URI = defaults.URI
 		}
 		if p.Version == "" {
-			p.Version = packages.Spec.Defaults.Uri
+			p.Version = defaults.Version
 		}
 		if p.Enabled == nil {
-			p.Enabled = packages.Spec.Defaults.Enabled
+			p.Enabled = defaults.Enabled
 		}
 		if p.Path == "" && p.Name != "" {
 			p.Path = p.Name
 		}
+		p.dstPath = filepath.Join(basePath, p.Name)
+		p.Packages.Default(defaults, p.dstPath)
 	}
-	return packages, packages.Validate()
+}
+
+func (packages PackageSlice) Print(w io.Writer) {
+	for _, p := range packages {
+		fmt.Fprintf(w, "%v: %v -> %v\n", p.Name, p.Path, p.dstPath)
+		p.Packages.Print(w)
+	}
+}
+
+func ParsePkgSpec(object *yaml.RNode, basePath string) (*Packages, error) {
+	packages := &Packages{}
+	if err := yaml.Unmarshal([]byte(object.MustString()), packages); err != nil {
+		return nil, err
+	}
+	packages.Spec.Packages.Default(&packages.Spec.Defaults, basePath)
+	return packages, packages.Spec.Packages.Validate()
 }
