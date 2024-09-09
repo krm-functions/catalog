@@ -9,6 +9,7 @@ HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:e52cb02d7ee9
 HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:bfc983b8952da8c9f99388e9a86d0a69dbf5210fc8df959de3a96bcdde6c47cb
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:73b22ac455bb472809c55d49f5b2615013a90649742c2e2100f565da57a44d80
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:0004ae1d875060c7b8747527f0f584878aa46e47d100a3c2a6aa25fee3aa0e28
+SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/source-packages@sha256:abc
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
@@ -16,6 +17,7 @@ HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart:$(CONTAINER_TAG)
 HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart:$(CONTAINER_TAG)
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader:$(CONTAINER_TAG)
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform:$(CONTAINER_TAG)
+SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/source-packages:$(CONTAINER_TAG)
 endif
 
 ifeq ($(FN_MODE),exec)
@@ -26,6 +28,7 @@ HELM_SOURCE := --exec bin/linux_amd64/source-helm-chart
 HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
 KUBECONFORM := --exec bin/linux_amd64/kubeconform
 TEMPLATE_KYAML := --exec bin/linux_amd64/template-kyaml
+SOURCE_PACKAGES := --exec bin/linux_amd64/source-packages
 else
 APPLY_SETTERS := --image $(APPLY_SETTERS_IMAGE)
 DIGESTER := --network --image $(DIGESTER_IMAGE)
@@ -33,6 +36,7 @@ HELM_RENDER := --network --image $(HELM_RENDER_IMAGE)
 HELM_SOURCE := --network --image $(HELM_SOURCE_IMAGE)
 HELM_UPGRADER := --network --image $(HELM_UPGRADER_IMAGE)
 KUBECONFORM := --network --image $(KUBECONFORM_IMAGE)
+SOURCE_PACKAGES := --network --image $(SOURCE_PACKAGES_IMAGE)
 endif
 
 BASELINE_RENDER_HELM_CHART := gcr.io/kpt-fn/render-helm-chart:v0.2.2
@@ -205,6 +209,11 @@ test-kubeconform-results:
 	grep -e '.* name: invalid-nested-dict' tmp-results/results.yaml
 	grep -e '.* /data/a-number: expected string or null, but got number' tmp-results/results.yaml
 	grep -e '.* name: invalid-non-string-value' tmp-results/results.yaml
+
+.PHONY: test-source-packages
+test-source-packages:
+	rm -rf tmp-results
+	kpt fn source examples/source-packages/specs | kpt fn eval - --results-dir tmp-results --truncate-output=false $(SOURCE_PACKAGES) > test-out.txt
 
 .PHONY: test-template-kyaml
 test-template-kyaml:

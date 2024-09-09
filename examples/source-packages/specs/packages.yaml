@@ -1,0 +1,20 @@
+apiVersion: foo.bar
+kind: Packages
+metadata:
+  name: example-fleet
+spec:
+
+  # These settings can also be given individually for each package
+  defaults:
+    uri: https://github.com/example/foobar.git
+    version: main # kpt-set: ${defaultVersion}
+    enabled: true
+
+  packages:
+  - name: foo
+    path: examples/pkg-source/pkg1
+  - name: bar
+    path: examples/pkg-source/pkg2
+    packages:
+    - name: baz
+      path: examples/pkg-source/pkg3
