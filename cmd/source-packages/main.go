@@ -14,7 +14,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,7 +23,6 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
 	"sigs.k8s.io/kustomize/kyaml/kio/kioutil"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 type Data struct {
@@ -51,43 +49,32 @@ func (fnCfg *FunctionConfig) Validate() error {
 	return nil
 }
 
-func (f *FilterState) Each(items []*yaml.RNode) ([]*yaml.RNode, error) {
-	var err error
-	for _, item := range items {
-		err = errors.Join(err, item.PipeE(f))
-	}
-	return items, err
-}
-
-func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
-	if object.GetApiVersion() == "foo.bar" {
-		objPath := filepath.Join(filepath.Dir(object.GetAnnotations()[kioutil.PathAnnotation]), object.GetName())
-		packages, err := ParsePkgSpec(object, objPath)
-		if err != nil {
-			return nil, err
-		}
-		packages.Spec.Packages.Print(os.Stderr)
-	}
-
-	var err error
-
-	return object, err
-}
-
 func Processor() framework.ResourceListProcessor {
 	return framework.ResourceListProcessorFunc(func(rl *framework.ResourceList) error {
 		config := &FunctionConfig{}
 		if err := framework.LoadFunctionConfig(rl.FunctionConfig, config); err != nil {
 			return fmt.Errorf("reading function-config: %w", err)
 		}
-		filter := FilterState{
-			fnConfig: config,
+		// filter := FilterState{
+		// 	fnConfig: config,
+		// }
+
+		for _, object := range rl.Items {
+			if object.GetApiVersion() == "foo.bar" {
+				objPath := filepath.Join(filepath.Dir(object.GetAnnotations()[kioutil.PathAnnotation]), object.GetName())
+				packages, err := ParsePkgSpec(object, objPath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "FIXME %v\n", err)
+				}
+				sources, err := packages.FetchSources("/tmp/source-packages")
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "FIXME %v\n", err)
+				}
+				fmt.Fprintf(os.Stderr, "Found %v source(s)\n", len(sources))
+			}
 		}
-
-		_, err := filter.Each(rl.Items)
-		rl.Results = append(rl.Results, filter.Results...)
-
-		return err
+			//rl.Results = append(rl.Results, filter.Results...)
+		return nil
 	})
 }
 

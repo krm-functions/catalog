@@ -16,8 +16,10 @@ package main
 import (
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 
+	"github.com/krm-functions/catalog/pkg/git"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
@@ -44,6 +46,17 @@ type Package struct {
 	Path     string       `yaml:"path,omitempty" json:"path,omitempty"`
 	Packages PackageSlice `yaml:"packages,omitempty" json:"packages,omitempty"`
 	dstPath  string
+}
+
+type Revision string
+
+type PackageSource interface {
+	GetURI() string
+	SetRevision(Revision) error
+}
+
+type GitPackageSource struct {
+	git.Repository
 }
 
 func (packages PackageSlice) Validate() error {
@@ -96,4 +109,42 @@ func ParsePkgSpec(object *yaml.RNode, basePath string) (*Packages, error) {
 	}
 	packages.Spec.Packages.Default(&packages.Spec.Defaults, basePath)
 	return packages, packages.Spec.Packages.Validate()
+}
+
+func (packages Packages) FetchSources(fileBase string) ([]PackageSource, error) {
+	repos := make([]PackageSource, 0)
+	for _, p := range packages.Spec.Packages {
+		fmt.Fprintf(os.Stderr, "%v: %v -> %v\n", p.Name, p.Path, p.dstPath)
+
+		if LookupSource(repos, p.URI) == nil {
+			r, err := git.Clone(p.URI, fileBase)
+			if err != nil {
+				return nil, err
+			}
+			err = r.Checkout(p.Version)
+			if err != nil {
+				return nil, err
+			}
+			rr := GitPackageSource{*r}
+			repos = append(repos, rr)
+		}
+	}
+	return repos, nil
+}
+
+func LookupSource(sources []PackageSource, uri string) PackageSource {
+	for _, src := range sources {
+		if src.GetURI() == uri {
+			return src
+		}
+	}
+	return nil
+}
+
+func (repo GitPackageSource) GetURI() string {
+	return repo.URI
+}
+
+func (repo GitPackageSource) SetRevision(rev Revision) error {
+	return repo.Checkout(string(rev))
 }
