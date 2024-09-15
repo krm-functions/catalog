@@ -49,7 +49,8 @@ e2e-tests: test-render-helm-chart \
 	   test-helm-upgrader \
 	   test-apply-setters \
 	   test-digester \
-	   test-kubeconform
+	   test-kubeconform \
+	   test-source-packages
 
 # BEWARE: These tests are fragile - we want to test upgrades, but without upgrade-constraints tests might fail when charts are updated
 .PHONY: test-helm-upgrader
@@ -214,6 +215,8 @@ test-kubeconform-results:
 test-source-packages:
 	rm -rf tmp-results
 	kpt fn source examples/source-packages/specs | kpt fn eval - --results-dir tmp-results --truncate-output=false $(SOURCE_PACKAGES) > test-out.txt
+	tree /tmp/source-packages-out > source-packages.tree
+	cat source-packages.tree
 
 .PHONY: test-template-kyaml
 test-template-kyaml:

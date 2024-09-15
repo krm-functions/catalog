@@ -1,24 +1,28 @@
 apiVersion: foo.bar
-kind: Packages
+kind: Fleet
 metadata:
   name: example-fleet
 spec:
 
   # These settings can also be given individually for each package
   defaults:
-    uri: https://github.com/krm-functions/catalog.git
-    version: feature/source-packages-function # kpt-set: ${defaultVersion}
+    upstream:
+      type: git
+      git:
+        repo: https://github.com/krm-functions/catalog.git
+        ref: feature/source-packages-function # kpt-set: ${defaultRef}
     enabled: true
 
   packages:
   - name: foo
-    path: examples/source-packages/pkg1
+    sourcePath: examples/source-packages/pkg1
   - name: bar
-    path: examples/source-packages/pkg2
+    sourcePath: examples/source-packages/pkg2
     packages:
     - name: baz
-      path: examples/source-packages/pkg3
+      sourcePath: examples/source-packages/pkg3
   - name: olo
+    stub: true
     packages:
     - name: baz
-      path: examples/source-packages/pkg4
+      sourcePath: examples/source-packages/pkg4

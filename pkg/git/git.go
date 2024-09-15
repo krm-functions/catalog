@@ -22,9 +22,10 @@ import (
 )
 
 type Repository struct {
-	URI  string
-	Repo *gogit.Repository
-	Tree *gogit.Worktree
+	URI             string
+	Repo            *gogit.Repository
+	Tree            *gogit.Worktree
+	CurrentCheckout string
 }
 
 func Clone(uri, fileBase string) (*Repository, error) {
@@ -38,11 +39,14 @@ func Clone(uri, fileBase string) (*Repository, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating worktree: %v", err)
 	}
-	return &Repository{uri, repo, tree}, nil
+	return &Repository{uri, repo, tree, "HEAD"}, nil
 }
 
-func (r *Repository) Checkout(reference string) error {
-	branch := reference
+func (r *Repository) Checkout(treeishRevision string) error {
+	if r.CurrentCheckout == treeishRevision {
+		return nil // already at revision
+	}
+	branch := treeishRevision // FIXME
 	branchRefName := plumbing.NewBranchReferenceName(branch)
 	branchCoOpts := gogit.CheckoutOptions{
 		Branch: plumbing.ReferenceName(branchRefName),
@@ -59,6 +63,7 @@ func (r *Repository) Checkout(reference string) error {
 			return fmt.Errorf("checkout %v @ %v: %v", r.URI, branch, err)
 		}
 	}
+	r.CurrentCheckout = treeishRevision
 	return nil
 }
 

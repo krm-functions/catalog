@@ -60,7 +60,7 @@ func Processor() framework.ResourceListProcessor {
 		// }
 
 		for _, object := range rl.Items {
-			if object.GetApiVersion() == "foo.bar" {
+			if object.GetApiVersion() == "foo.bar" && object.GetKind() == "Fleet" {
 				objPath := filepath.Join(filepath.Dir(object.GetAnnotations()[kioutil.PathAnnotation]), object.GetName())
 				packages, err := ParsePkgSpec(object, objPath)
 				if err != nil {
@@ -71,6 +71,12 @@ func Processor() framework.ResourceListProcessor {
 					fmt.Fprintf(os.Stderr, "FIXME %v\n", err)
 				}
 				fmt.Fprintf(os.Stderr, "Found %v source(s)\n", len(sources))
+				srcBase := "/tmp/source-packages"
+				dstBase := "/tmp/source-packages-out"
+				err = packages.Spec.Packages.TossFiles(sources, srcBase, filepath.Join(dstBase, object.GetName()))
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "FIXME %v\n", err)
+				}
 			}
 		}
 			//rl.Results = append(rl.Results, filter.Results...)
