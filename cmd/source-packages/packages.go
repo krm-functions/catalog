@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/krm-functions/catalog/pkg/git"
+	"github.com/krm-functions/catalog/pkg/kpt"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
@@ -54,11 +55,14 @@ type Package struct {
 	Name       string       `yaml:"name,omitempty" json:"name,omitempty"`
 	SrcPath    string       `yaml:"sourcePath,omitempty" json:"sourcePath,omitempty"`
 	Stub       *bool        `yaml:"stub,omitempty" json:"stub,omitempty"`
+	Metadata                `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 	Packages   PackageSlice `yaml:"packages,omitempty" json:"packages,omitempty"`
 	dstRelPath string
 }
 
-type Revision string
+type Metadata struct {
+	Mode string `yaml:"mode,omitempty" json:"mode,omitempty"`
+}
 
 type PackageSource struct {
 	Upstream
@@ -110,6 +114,9 @@ func (packages PackageSlice) Default(defaults *PackageDefaultable, basePath stri
 		}
 		if p.SrcPath == "" && p.Name != "" && !*p.Stub {
 			p.SrcPath = p.Name
+		}
+		if p.Metadata.Mode == "" {
+			p.Metadata.Mode = "kptForDeployment"
 		}
 		p.dstRelPath = p.Name
 		p.Packages.Default(defaults, p.dstRelPath)
@@ -194,6 +201,10 @@ func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dst
 				if err != nil {
 					return fmt.Errorf("copying package dir: %v", err)
 				}
+			}
+			if p.Metadata.Mode == "kptForDeployment" {
+				// FIXME assumes git upstream
+				kpt.UpdateKptMetadata(d, p.Name, p.SrcPath, p.Upstream.Git.Repo, p.Upstream.Git.Ref)
 			}
 			p.Packages.TossFiles(sources, srcBasePath, d)
 		}
