@@ -9,4 +9,6 @@ const (
 	HelmResourceAPIVersion                  = HelmResourceAPI + "/v1alpha1"
 
 	KptResourceAPI = "fn.kpt.dev"
+
+	KptPackageUpstreamTypeGit = "git"
 )

@@ -34,36 +34,37 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	dstBase = base + "/out"
 
 	for _, kubeObject := range rl.Items {
-		if kubeObject.IsGVK(api.KptResourceAPI, "", "Fleet") {
-			object := kubeObject.String()
-			packages, err := ParsePkgSpec([]byte(object))
+		if !kubeObject.IsGVK(api.KptResourceAPI, "", "Fleet") {
+			continue
+		}
+		object := kubeObject.String()
+		packages, err := ParsePkgSpec([]byte(object))
+		if err != nil {
+			return false, err
+		}
+		sources, err := packages.FetchSources(srcBase)
+		if err != nil {
+			return false, err
+		}
+		for _, src := range sources {
+			if src.Type == api.KptPackageUpstreamTypeGit {
+				*results = append(*results, fn.GeneralResult(fmt.Sprintf("Using upstream %v", src.Upstream.Git.Repo), fn.Info))
+			}
+		}
+		// FIXME //objPath := filepath.Join(filepath.Dir(kubeObject.GetAnnotation(kioutil.PathAnnotation)), kubeObject.GetName())
+		fnResults, err := packages.Spec.Packages.TossFiles(sources, srcBase, filepath.Join(dstBase, kubeObject.GetName()))
+		if err != nil {
+			return false, err
+		}
+		*results = append(*results, fnResults...)
+		nodes, err := FilesystemToObjects(dstBase)
+		if err != nil {
+			return false, err
+		}
+		for _, nn := range nodes {
+			err = rl.UpsertObjectToItems(nn, nil, false)
 			if err != nil {
 				return false, err
-			}
-			sources, err := packages.FetchSources(srcBase)
-			if err != nil {
-				return false, err
-			}
-			for _, src := range sources {
-				if src.Type == "git" {
-					*results = append(*results, fn.GeneralResult(fmt.Sprintf("Found source %v", src.Upstream.Git.Repo), fn.Info))
-				}
-			}
-			// FIXME //objPath := filepath.Join(filepath.Dir(kubeObject.GetAnnotation(kioutil.PathAnnotation)), kubeObject.GetName())
-			fnResults, err := packages.Spec.Packages.TossFiles(sources, srcBase, filepath.Join(dstBase, kubeObject.GetName()))
-			if err != nil {
-				return false, err
-			}
-			*results = append(*results, fnResults...)
-			nodes, err := FilesystemToObjects(dstBase)
-			if err != nil {
-				return false, err
-			}
-			for _, nn := range nodes {
-				err = rl.UpsertObjectToItems(nn, nil, false)
-				if err != nil {
-					return false, err
-				}
 			}
 		}
 	}

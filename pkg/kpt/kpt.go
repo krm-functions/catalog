@@ -59,7 +59,7 @@ func UpdateKptMetadata(path, pkgName, pkgDirectory, gitRepo, gitRef string) erro
 		kf = &kptfile.KptFile{}
 		kf.ResourceMeta = kptfile.TypeMeta
 	}
-	// kpt kpg get sets name to the name of the package create (to path) and removes namespace
+	// 'kpt kpg get' sets name to the name of the package create (to path) and removes namespace
 	kf.Name = pkgName
 	kf.Namespace = ""
 	fmt.Fprintf(os.Stderr, "kptfile: %+v\n", kf)
@@ -79,9 +79,7 @@ func writeTemplated(templateString, filename string, data map[string]string) err
 		return fmt.Errorf("opening for writing %v: %v", filename, err)
 	}
 	defer fh.Close()
-	pkgCtx.Execute(fh, data)
-
-	return nil
+	return pkgCtx.Execute(fh, data)
 }
 
 func ReadKptfile(filename string) (*kptfile.KptFile, error) {
@@ -99,7 +97,7 @@ func ReadKptfile(filename string) (*kptfile.KptFile, error) {
 
 func ParseKptfile(data []byte) (*kptfile.KptFile, error) {
 	kf := &kptfile.KptFile{}
-	if err := yaml.Unmarshal([]byte(data), kf); err != nil {
+	if err := yaml.Unmarshal(data, kf); err != nil {
 		return nil, err
 	}
 	return kf, nil

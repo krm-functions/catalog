@@ -13,7 +13,38 @@ kpt pkg get https://example.git/package2@v1.1
 kpt pkg get https://example.git/package3@v1.2
 ```
 
-Then the `source-packages` function allows you to specify this declaratively using a `Fleet` resource:
+The `source-packages` function allows you to specify this declaratively using a `Fleet` resource:
+
+```yaml
+apiVersion: fn.kpt.dev/v1alpha1
+kind: Fleet
+metadata:
+  name: example-fleet
+spec:
+  packages:
+  - name: package1       # similar to 'kpt pkg get https://example.git/package1@v1.0'
+    sourcePath: package1
+    upstream:
+	  git:
+        repo: https://example.git
+        ref: v1.0
+
+  - name: package2       # similar to 'kpt pkg get https://example.git/package2@v1.1'
+    sourcePath: package2
+    upstream:
+	  git:
+        repo: https://example.git
+        ref: v1.1
+
+  - name: package3       # similar to 'kpt pkg get https://example.git/package3@v1.2'
+    sourcePath: package3
+    upstream:
+	  git:
+        repo: https://example.git
+        ref: v1.2
+```
+
+The `defaults` setion can be used to remove some repetition for common settings:
 
 ```yaml
 apiVersion: fn.kpt.dev/v1alpha1
@@ -24,7 +55,30 @@ spec:
   # These settings can also be given individually for each package
   defaults:
     upstream:
-      type: git
+      git:
+        repo: https://example.git
+        ref: main
+
+  packages:
+  - name: package1
+    sourcePath: package1
+  - name: package2
+    sourcePath: package2
+  - name: package3
+    sourcePath: package3
+```
+
+Packages can also be composed in recursively:
+
+```yaml
+apiVersion: fn.kpt.dev/v1alpha1
+kind: Fleet
+metadata:
+  name: example-fleet
+spec:
+  # These settings can also be given individually for each package
+  defaults:
+    upstream:
       git:
         repo: https://example.git
         ref: main

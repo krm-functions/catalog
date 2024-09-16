@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
+	"github.com/krm-functions/catalog/pkg/api"
 	"github.com/krm-functions/catalog/pkg/git"
 	"github.com/krm-functions/catalog/pkg/kpt"
 	"sigs.k8s.io/kustomize/kyaml/kio"
@@ -83,8 +84,8 @@ func (packages PackageSlice) Validate() error {
 		if p.SrcPath != "" && *p.Stub {
 			return fmt.Errorf("Package %q cannot be stub and have 'path'", p.Name)
 		}
-		if p.Upstream.Type != "git" {
-			return fmt.Errorf("Package %q unsupported upstream type: %v", p.Upstream.Type)
+		if p.Upstream.Type != api.KptPackageUpstreamTypeGit {
+			return fmt.Errorf("Package %q unsupported upstream type: %v", p.Name, p.Upstream.Type)
 		}
 		if err := p.Packages.Validate(); err != nil {
 			return err
@@ -100,7 +101,7 @@ func (packages PackageSlice) Default(defaults *PackageDefaultable, basePath stri
 		if p.Upstream.Type == "" {
 			p.Upstream.Type = defaults.Upstream.Type
 		}
-		if p.Upstream.Type == "git" {
+		if p.Upstream.Type == api.KptPackageUpstreamTypeGit {
 			if p.Upstream.Git.Repo == "" {
 				p.Upstream.Git.Repo = defaults.Upstream.Git.Repo
 			}
@@ -126,7 +127,8 @@ func (packages PackageSlice) Default(defaults *PackageDefaultable, basePath stri
 }
 
 func (packages PackageSlice) Print(w io.Writer) {
-	for _, p := range packages {
+	for idx := range packages {
+		p := &packages[idx]
 		fmt.Fprintf(w, "%v: %v -> %v\n", p.Name, p.SrcPath, p.dstRelPath)
 		p.Packages.Print(w)
 	}
@@ -141,11 +143,12 @@ func ParsePkgSpec(object []byte) (*Packages, error) {
 	return packages, packages.Spec.Packages.Validate()
 }
 
-func (packages Packages) FetchSources(fileBase string) ([]PackageSource, error) {
+func (packages *Packages) FetchSources(fileBase string) ([]PackageSource, error) {
 	repos := make([]PackageSource, 0)
-	for _, p := range packages.Spec.Packages {
+	for idx := range packages.Spec.Packages {
+		p := &packages.Spec.Packages[idx]
 		if SourceLookup(repos, p.Upstream) == nil {
-			if p.Upstream.Type == "git" {
+			if p.Upstream.Type == api.KptPackageUpstreamTypeGit {
 				r, err := git.Clone(p.Upstream.Git.Repo, fileBase)
 				if err != nil {
 					return nil, err
@@ -164,7 +167,7 @@ func (packages Packages) FetchSources(fileBase string) ([]PackageSource, error) 
 
 func SourceLookup(sources []PackageSource, upstream Upstream) *PackageSource {
 	for _, src := range sources {
-		if src.Upstream.Type == "git" {
+		if src.Upstream.Type == api.KptPackageUpstreamTypeGit {
 			if src.Upstream.Git.Repo == upstream.Git.Repo {
 				return &src
 			}
@@ -175,7 +178,7 @@ func SourceLookup(sources []PackageSource, upstream Upstream) *PackageSource {
 
 func SourceEnsureVersion(sources []PackageSource, upstream Upstream) error {
 	src := SourceLookup(sources, upstream)
-	if src.Upstream.Type == "git" {
+	if src.Upstream.Type == api.KptPackageUpstreamTypeGit {
 		err := src.Git.Checkout(src.Upstream.Git.Ref)
 		if err != nil {
 			return err
@@ -187,28 +190,38 @@ func SourceEnsureVersion(sources []PackageSource, upstream Upstream) error {
 // TossFiles copies package files
 func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dstBasePath string) (fn.Results, error) {
 	var fnResults fn.Results
-	for _, p := range packages {
-		if *p.Enabled {
-			d := filepath.Join(dstBasePath, p.dstRelPath)
+	for idx := range packages {
+		p := &packages[idx]
+		if !*p.Enabled {
+			continue
+		}
+		d := filepath.Join(dstBasePath, p.dstRelPath)
+		if *p.Stub {
+			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; stub at dstPath:%v\n", p.Name, d), fn.Info))
+		} else {
 			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; srcPath:%v dstPath:%v\n", p.Name, p.SrcPath, d), fn.Info))
-			if !*p.Stub {
-				err := SourceEnsureVersion(sources, p.Upstream)
-				if err != nil {
-					return fnResults, fmt.Errorf("git checkout %v @ %v: ", p.Upstream.Git.Repo, p.Upstream.Git.Ref, err)
-				}
-				s := filepath.Join(srcBasePath, p.SrcPath)
-				//fmt.Fprintf(os.Stderr, ">> CopyFS src:%v dst:%v\n", s, d)
-				err = os.CopyFS(d, os.DirFS(s))
-				if err != nil {
-					return fnResults, fmt.Errorf("copying package dir: %v", err)
-				}
+			err := SourceEnsureVersion(sources, p.Upstream)
+			if err != nil {
+				return fnResults, fmt.Errorf("git checkout %v @ %v: %vXS", p.Upstream.Git.Repo, p.Upstream.Git.Ref, err)
+			}
+			s := filepath.Join(srcBasePath, p.SrcPath)
+			err = os.CopyFS(d, os.DirFS(s))
+			if err != nil {
+				return fnResults, fmt.Errorf("copying package dir: %v", err)
 			}
 			if p.Metadata.Mode == "kptForDeployment" {
 				// FIXME assumes git upstream
-				kpt.UpdateKptMetadata(d, p.Name, p.SrcPath, p.Upstream.Git.Repo, p.Upstream.Git.Ref)
+				err := kpt.UpdateKptMetadata(d, p.Name, p.SrcPath, p.Upstream.Git.Repo, p.Upstream.Git.Ref)
+				if err != nil {
+					return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
+				}
 			}
-			p.Packages.TossFiles(sources, srcBasePath, d)
 		}
+		fnRes, err := p.Packages.TossFiles(sources, srcBasePath, d)
+		if err != nil {
+			return fnResults, fmt.Errorf("tossing child packages for %v: %v", p.Name, err)
+		}
+		fnResults = append(fnResults, fnRes...)
 	}
 	return fnResults, nil
 }
