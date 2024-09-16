@@ -1,4 +1,4 @@
-apiVersion: foo.bar
+apiVersion: fn.kpt.dev
 kind: Fleet
 metadata:
   name: example-fleet

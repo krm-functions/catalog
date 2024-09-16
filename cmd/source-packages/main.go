@@ -18,78 +18,62 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/krm-functions/catalog/pkg/version"
-
-	"sigs.k8s.io/kustomize/kyaml/fn/framework"
-	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
+	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
+	"github.com/krm-functions/catalog/pkg/api"
 	"sigs.k8s.io/kustomize/kyaml/kio/kioutil"
 )
 
-type Data struct {
-	Foo string `yaml:"foo,omitempty" json:"foo,omitempty"`
-}
+func Run(rl *fn.ResourceList) (bool, error) {
+	results := &rl.Results
 
-type FunctionConfig struct {
-	Data Data `yaml:"data,omitempty" json:"data,omitempty"`
-}
-
-type FilterState struct {
-	fnConfig *FunctionConfig
-	Results  framework.Results
-}
-
-func (fnCfg *FunctionConfig) Default() error { //nolint:unparam // this return is part of the Defaulter interface
-	if fnCfg.Data.Foo == "" {
-		fnCfg.Data.Foo = "main"
+	var srcBase, dstBase string
+	base := os.Getenv("LOCAL_PACKAGES_DIR")
+	if base == "" {
+		base = "/tmp/source-packages"
 	}
-	return nil
-}
+	srcBase = base + "/in"
+	dstBase = base + "/out"
 
-func (fnCfg *FunctionConfig) Validate() error {
-	return nil
-}
-
-func Processor() framework.ResourceListProcessor {
-	return framework.ResourceListProcessorFunc(func(rl *framework.ResourceList) error {
-		config := &FunctionConfig{}
-		if err := framework.LoadFunctionConfig(rl.FunctionConfig, config); err != nil {
-			return fmt.Errorf("reading function-config: %w", err)
-		}
-		// filter := FilterState{
-		// 	fnConfig: config,
-		// }
-
-		for _, object := range rl.Items {
-			if object.GetApiVersion() == "foo.bar" && object.GetKind() == "Fleet" {
-				objPath := filepath.Join(filepath.Dir(object.GetAnnotations()[kioutil.PathAnnotation]), object.GetName())
-				packages, err := ParsePkgSpec(object, objPath)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "FIXME %v\n", err)
+	for _, kubeObject := range rl.Items {
+		if kubeObject.IsGVK(api.KptResourceAPI, "", "Fleet") {
+			object := kubeObject.String()
+			objPath := filepath.Join(filepath.Dir(kubeObject.GetAnnotation(kioutil.PathAnnotation)), kubeObject.GetName())
+			packages, err := ParsePkgSpec([]byte(object), objPath)
+			if err != nil {
+				return false, err
+			}
+			sources, err := packages.FetchSources(srcBase)
+			if err != nil {
+				return false, err
+			}
+			for _, src := range sources {
+				if src.Type == "git" {
+					*results = append(*results, fn.GeneralResult(fmt.Sprintf("Found source %v", src.Upstream.Git.Repo), fn.Info))
 				}
-				sources, err := packages.FetchSources("/tmp/source-packages")
+			}
+			fnResults, err := packages.Spec.Packages.TossFiles(sources, srcBase, filepath.Join(dstBase, kubeObject.GetName()))
+			if err != nil {
+				return false, err
+			}
+			*results = append(*results, fnResults...)
+			nodes, err := FilesystemToObjects(dstBase)
+			if err != nil {
+				return false, err
+			}
+			for _, nn := range nodes {
+				err = rl.UpsertObjectToItems(nn, nil, false)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "FIXME %v\n", err)
-				}
-				fmt.Fprintf(os.Stderr, "Found %v source(s)\n", len(sources))
-				srcBase := "/tmp/source-packages"
-				dstBase := "/tmp/source-packages-out"
-				err = packages.Spec.Packages.TossFiles(sources, srcBase, filepath.Join(dstBase, object.GetName()))
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "FIXME %v\n", err)
+					return false, err
 				}
 			}
 		}
-			//rl.Results = append(rl.Results, filter.Results...)
-		return nil
-	})
+	}
+
+	return true, nil
 }
 
 func main() {
-	cmd := command.Build(Processor(), command.StandaloneEnabled, false)
-
-	cmd.Version = version.Version
-
-	if err := cmd.Execute(); err != nil {
+	if err := fn.AsMain(fn.ResourceListProcessorFunc(Run)); err != nil {
 		os.Exit(1)
 	}
 }

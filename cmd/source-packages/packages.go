@@ -21,7 +21,9 @@ import (
 
 	"github.com/krm-functions/catalog/pkg/git"
 	"github.com/krm-functions/catalog/pkg/kpt"
+	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
+	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )
 
 type Packages struct {
@@ -130,9 +132,9 @@ func (packages PackageSlice) Print(w io.Writer) {
 	}
 }
 
-func ParsePkgSpec(object *yaml.RNode, basePath string) (*Packages, error) {
+func ParsePkgSpec(object []byte, basePath string) (*Packages, error) {
 	packages := &Packages{}
-	if err := yaml.Unmarshal([]byte(object.MustString()), packages); err != nil {
+	if err := yaml.Unmarshal(object, packages); err != nil {
 		return nil, err
 	}
 	packages.Spec.Packages.Default(&packages.Spec.Defaults, "")
@@ -144,7 +146,6 @@ func (packages Packages) FetchSources(fileBase string) ([]PackageSource, error) 
 	for _, p := range packages.Spec.Packages {
 		if SourceLookup(repos, p.Upstream) == nil {
 			if p.Upstream.Type == "git" {
-				fmt.Fprintf(os.Stderr, "fetching git source %v\n", p.Upstream.Git.Repo)
 				r, err := git.Clone(p.Upstream.Git.Repo, fileBase)
 				if err != nil {
 					return nil, err
@@ -175,7 +176,6 @@ func SourceLookup(sources []PackageSource, upstream Upstream) *PackageSource {
 func SourceEnsureVersion(sources []PackageSource, upstream Upstream) error {
 	src := SourceLookup(sources, upstream)
 	if src.Upstream.Type == "git" {
-		fmt.Fprintf(os.Stderr, "checkout git ref %v @ %v\n", upstream.Git.Repo, upstream.Git.Ref)
 		err := src.Git.Checkout(src.Upstream.Git.Ref)
 		if err != nil {
 			return err
@@ -185,21 +185,22 @@ func SourceEnsureVersion(sources []PackageSource, upstream Upstream) error {
 }
 
 // TossFiles copies package files
-func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dstBasePath string) error {
+func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dstBasePath string) (fn.Results, error) {
+	var fnResults fn.Results
 	for _, p := range packages {
-		fmt.Fprintf(os.Stderr, "package name:%v path:%v dstpath:%v enabled:%v\n", p.Name, p.SrcPath, p.dstRelPath, *p.Enabled)
 		if *p.Enabled {
 			d := filepath.Join(dstBasePath, p.dstRelPath)
+			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; srcPath:%v dstPath:%v\n", p.Name, p.SrcPath, d), fn.Info))
 			if !*p.Stub {
 				err := SourceEnsureVersion(sources, p.Upstream)
 				if err != nil {
-					return fmt.Errorf("git checkout %v @ %v: ", p.Upstream.Git.Repo, p.Upstream.Git.Ref, err)
+					return fnResults, fmt.Errorf("git checkout %v @ %v: ", p.Upstream.Git.Repo, p.Upstream.Git.Ref, err)
 				}
 				s := filepath.Join(srcBasePath, p.SrcPath)
-				fmt.Fprintf(os.Stderr, ">> CopyFS src:%v dst:%v\n", s, d)
+				//fmt.Fprintf(os.Stderr, ">> CopyFS src:%v dst:%v\n", s, d)
 				err = os.CopyFS(d, os.DirFS(s))
 				if err != nil {
-					return fmt.Errorf("copying package dir: %v", err)
+					return fnResults, fmt.Errorf("copying package dir: %v", err)
 				}
 			}
 			if p.Metadata.Mode == "kptForDeployment" {
@@ -209,5 +210,15 @@ func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dst
 			p.Packages.TossFiles(sources, srcBasePath, d)
 		}
 	}
-	return nil
+	return fnResults, nil
+}
+
+func FilesystemToObjects(path string) ([]*yaml.RNode, error) {
+	pr := &kio.LocalPackageReader{
+		PackagePath: path,
+		MatchFilesGlob: []string{"*"},
+		PreserveSeqIndent: true,
+		WrapBareSeqNode: true,
+	}
+	return pr.Read()
 }

@@ -213,10 +213,9 @@ test-kubeconform-results:
 
 .PHONY: test-source-packages
 test-source-packages:
-	rm -rf tmp-results
-	kpt fn source examples/source-packages/specs | kpt fn eval - --results-dir tmp-results --truncate-output=false $(SOURCE_PACKAGES) > test-out.txt
-	tree /tmp/source-packages-out > source-packages.tree
-	cat source-packages.tree
+	rm -rf tmp-results fn-output
+	kpt fn source examples/source-packages/specs | kpt fn eval - --results-dir tmp-results --truncate-output=false $(SOURCE_PACKAGES) | kpt fn sink fn-output
+	kpt pkg tree fn-output
 
 .PHONY: test-source-packages-ref
 test-source-packages-ref:
