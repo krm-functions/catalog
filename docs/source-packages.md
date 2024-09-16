@@ -1,6 +1,9 @@
 # Source Packages Function
 
-The `source-packages` function implements a declarative solution for [`kpt`](https://kpt.dev/book/03-packages/) packages.
+The `source-packages` function implements a declarative solution for
+[`kpt`](https://kpt.dev/book/03-packages/) packages similar to how
+[helmfile](https://github.com/helmfile/helmfile) manages fleets of
+Helm charts.
 
 If you manage fleets of packages with a number of invocations of `kpt pkg get` like:
 
@@ -13,7 +16,7 @@ kpt pkg get https://example.git/package3@v1.2
 Then the `source-packages` function allows you to specify this declaratively using a `Fleet` resource:
 
 ```yaml
-apiVersion: foo.bar
+apiVersion: fn.kpt.dev/v1alpha1
 kind: Fleet
 metadata:
   name: example-fleet
@@ -31,7 +34,7 @@ spec:
     sourcePath: pkg1
   - name: bar
     sourcePath: pkg2
-    packages:     # Package definitions can be recursive
+    packages:     # Package definitions can be recursive, i.e. 'baz' is inside 'bar'
     - name: baz
       sourcePath: pkg3
 ```
@@ -39,13 +42,14 @@ spec:
 This example will source packages from `https://example.git@main` and
 create the following package structure:
 
-```shell
-foo/
-  <files from 'https://example.git@main/pkg1'>
-bar/
-  <files from 'https://example.git@main/pkg2'>
-  baz/
-    <files from 'https://example.git@main/pkg3'>
+```
+example-fleet
+├── foo/
+│   └── <files from 'https://example.git@main/pkg1'>
+├── bar/
+│   ├── <files from 'https://example.git@main/pkg2'>
+    └── baz/
+        └── <files from 'https://example.git@main/pkg3'>
 ```
 
 Recursive packages is very convenient for composing a package from

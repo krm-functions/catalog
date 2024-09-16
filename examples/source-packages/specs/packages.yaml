@@ -1,4 +1,4 @@
-apiVersion: fn.kpt.dev
+apiVersion: fn.kpt.dev/v1alpha1
 kind: Fleet
 metadata:
   name: example-fleet

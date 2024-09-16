@@ -8,5 +8,5 @@ const (
 	HelmResourceAnnotationUpgradeShaSum     = HelmResourceAPI + "/upgrade-chart-sum"
 	HelmResourceAPIVersion                  = HelmResourceAPI + "/v1alpha1"
 
-	KptResourceAPI                         = "fn.kpt.dev"
+	KptResourceAPI = "fn.kpt.dev"
 )

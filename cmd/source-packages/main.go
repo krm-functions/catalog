@@ -20,7 +20,6 @@ import (
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 	"github.com/krm-functions/catalog/pkg/api"
-	"sigs.k8s.io/kustomize/kyaml/kio/kioutil"
 )
 
 func Run(rl *fn.ResourceList) (bool, error) {
@@ -37,8 +36,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	for _, kubeObject := range rl.Items {
 		if kubeObject.IsGVK(api.KptResourceAPI, "", "Fleet") {
 			object := kubeObject.String()
-			objPath := filepath.Join(filepath.Dir(kubeObject.GetAnnotation(kioutil.PathAnnotation)), kubeObject.GetName())
-			packages, err := ParsePkgSpec([]byte(object), objPath)
+			packages, err := ParsePkgSpec([]byte(object))
 			if err != nil {
 				return false, err
 			}
@@ -51,6 +49,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 					*results = append(*results, fn.GeneralResult(fmt.Sprintf("Found source %v", src.Upstream.Git.Repo), fn.Info))
 				}
 			}
+			// FIXME //objPath := filepath.Join(filepath.Dir(kubeObject.GetAnnotation(kioutil.PathAnnotation)), kubeObject.GetName())
 			fnResults, err := packages.Spec.Packages.TossFiles(sources, srcBase, filepath.Join(dstBase, kubeObject.GetName()))
 			if err != nil {
 				return false, err

@@ -28,7 +28,7 @@ linters:
     - dogsled
     - dupl
     - errcheck
-    - exportloopref
+    - copyloopvar
     - exhaustive
     - goconst
     - gocritic
@@ -56,5 +56,5 @@ linters:
 
 run:
   issues-exit-code: 1
-  skip-dirs:
+  issues.exclude-dirs:
     - test

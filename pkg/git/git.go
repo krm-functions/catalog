@@ -67,7 +67,6 @@ func (r *Repository) Checkout(treeishRevision string) error {
 	return nil
 }
 
-
 func fetchOrigin(repo *gogit.Repository, refSpecStr string) error {
 	remote, err := repo.Remote("origin")
 	if err != nil {

@@ -19,11 +19,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 	"github.com/krm-functions/catalog/pkg/git"
 	"github.com/krm-functions/catalog/pkg/kpt"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
-	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )
 
 type Packages struct {
@@ -43,8 +43,8 @@ type Upstream struct {
 }
 
 type UpstreamGit struct {
-	Repo string  `yaml:"repo,omitempty" json:"repo,omitempty"`
-	Ref string  `yaml:"ref,omitempty" json:"ref,omitempty"`
+	Repo string `yaml:"repo,omitempty" json:"repo,omitempty"`
+	Ref  string `yaml:"ref,omitempty" json:"ref,omitempty"`
 }
 
 type PackageDefaultable struct {
@@ -54,10 +54,10 @@ type PackageDefaultable struct {
 
 type Package struct {
 	PackageDefaultable
-	Name       string       `yaml:"name,omitempty" json:"name,omitempty"`
-	SrcPath    string       `yaml:"sourcePath,omitempty" json:"sourcePath,omitempty"`
-	Stub       *bool        `yaml:"stub,omitempty" json:"stub,omitempty"`
-	Metadata                `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+	Name       string `yaml:"name,omitempty" json:"name,omitempty"`
+	SrcPath    string `yaml:"sourcePath,omitempty" json:"sourcePath,omitempty"`
+	Stub       *bool  `yaml:"stub,omitempty" json:"stub,omitempty"`
+	Metadata   `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 	Packages   PackageSlice `yaml:"packages,omitempty" json:"packages,omitempty"`
 	dstRelPath string
 }
@@ -68,7 +68,7 @@ type Metadata struct {
 
 type PackageSource struct {
 	Upstream
-	Git      *git.Repository
+	Git *git.Repository
 }
 
 func (packages PackageSlice) Validate() error {
@@ -77,7 +77,7 @@ func (packages PackageSlice) Validate() error {
 		if p.Name == "" {
 			return fmt.Errorf("Packages must have 'name' (index %v)", idx)
 		}
-		if p.SrcPath == ""  && !*p.Stub {
+		if p.SrcPath == "" && !*p.Stub {
 			return fmt.Errorf("Package %q needs 'path'", p.Name)
 		}
 		if p.SrcPath != "" && *p.Stub {
@@ -132,7 +132,7 @@ func (packages PackageSlice) Print(w io.Writer) {
 	}
 }
 
-func ParsePkgSpec(object []byte, basePath string) (*Packages, error) {
+func ParsePkgSpec(object []byte) (*Packages, error) {
 	packages := &Packages{}
 	if err := yaml.Unmarshal(object, packages); err != nil {
 		return nil, err
@@ -215,10 +215,10 @@ func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dst
 
 func FilesystemToObjects(path string) ([]*yaml.RNode, error) {
 	pr := &kio.LocalPackageReader{
-		PackagePath: path,
-		MatchFilesGlob: []string{"*"},
+		PackagePath:       path,
+		MatchFilesGlob:    []string{"*"},
 		PreserveSeqIndent: true,
-		WrapBareSeqNode: true,
+		WrapBareSeqNode:   true,
 	}
 	return pr.Read()
 }
