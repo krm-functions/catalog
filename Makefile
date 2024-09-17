@@ -1,4 +1,5 @@
 -include Makefile.local
+-include Makefile.cosign
 -include Makefile.test
 -include Makefile.extra
 # Copyright 2016 The Kubernetes Authors.

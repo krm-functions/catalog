@@ -1,0 +1,6 @@
+manifest-list-sign: # @HELP signs a manifest list of containers for all platforms
+manifest-list-sign:
+	for bin in $(BINS); do \
+	    DIGEST=$$(bin/tools/manifest-tool inspect --raw $(REGISTRY)/$$bin:$(VERSION) | jq -r .digest); \
+	    echo ">> $(REGISTRY)/$$bin:$(TAG)  > $$DIGEST"; \
+	done
