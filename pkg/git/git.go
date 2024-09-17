@@ -57,7 +57,7 @@ func (r *Repository) Checkout(treeishRevision string) error {
 	if r.CurrentCheckout == treeishRevision {
 		return nil // already at revision
 	}
-	branch := treeishRevision // FIXME
+	branch := treeishRevision // FIXME: correct this for non-branch refs
 	branchRefName := plumbing.NewBranchReferenceName(branch)
 	branchCoOpts := gogit.CheckoutOptions{
 		Branch: plumbing.ReferenceName(branchRefName),
