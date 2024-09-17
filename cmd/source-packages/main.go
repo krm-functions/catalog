@@ -47,8 +47,8 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			return false, err
 		}
 		for _, src := range sources {
-			if src.Type == api.KptPackageUpstreamTypeGit {
-				*results = append(*results, fn.GeneralResult(fmt.Sprintf("Using upstream %v", src.Upstream.Git.Repo), fn.Info))
+			if src.Upstream.Type == api.PackageUpstreamTypeGit {
+				*results = append(*results, fn.GeneralResult(fmt.Sprintf("Using git upstream %v", src.Upstream.Git.Repo), fn.Info))
 			}
 		}
 		// FIXME //objPath := filepath.Join(filepath.Dir(kubeObject.GetAnnotation(kioutil.PathAnnotation)), kubeObject.GetName())

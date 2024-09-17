@@ -4,14 +4,17 @@ metadata:
   name: example-fleet
 spec:
 
+  upstreams:
+  - name: example
+    type: git
+    git:
+      repo: https://github.com/krm-functions/catalog.git
+
   # These settings can also be given individually for each package
   defaults:
-    upstream:
-      type: git
-      git:
-        repo: https://github.com/krm-functions/catalog.git
-        ref: feature/source-packages-function # kpt-set: ${defaultRef}
+    upstream: example
     enabled: true
+    ref: feature/source-packages-function # kpt-set: ${defaultRef}
 
   packages:
   - name: foo
@@ -22,7 +25,10 @@ spec:
     - name: baz
       sourcePath: examples/source-packages/pkg3
   - name: olo
-    stub: true
+    empty: true
     packages:
     - name: baz
       sourcePath: examples/source-packages/pkg4
+  - name: boo
+    enabled: false
+    sourcePath: examples/source-packages/pkg5

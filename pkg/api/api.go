@@ -10,5 +10,5 @@ const (
 
 	KptResourceAPI = "fn.kpt.dev"
 
-	KptPackageUpstreamTypeGit = "git"
+	PackageUpstreamTypeGit = "git"
 )

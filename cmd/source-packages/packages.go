@@ -32,33 +32,42 @@ type Packages struct {
 }
 
 type PackagesSpec struct {
-	Defaults PackageDefaultable `yaml:"defaults,omitempty" json:"defaults,omitempty"`
-	Packages PackageSlice       `yaml:"packages,omitempty" json:"packages,omitempty"`
+	Upstreams []Upstream      `yaml:"upstreams,omitempty" json:"upstreams,omitempty"`
+	Defaults  PackageDefaults `yaml:"defaults,omitempty" json:"defaults,omitempty"`
+	Packages  PackageSlice    `yaml:"packages,omitempty" json:"packages,omitempty"`
 }
 
 type PackageSlice []Package
 
+type UpstreamID string
+
+type SourceRef string
+
 type Upstream struct {
+	Name UpstreamID  `yaml:"name,omitempty" json:"name,omitempty"`
 	Type string      `yaml:"type,omitempty" json:"type,omitempty"`
 	Git  UpstreamGit `yaml:"git,omitempty" json:"git,omitempty"`
 }
 
 type UpstreamGit struct {
-	Repo string `yaml:"repo,omitempty" json:"repo,omitempty"`
-	Ref  string `yaml:"ref,omitempty" json:"ref,omitempty"`
+	Repo       string `yaml:"repo,omitempty" json:"repo,omitempty"`
+	AuthMethod string `yaml:"authMethod,omitempty" json:"authMethod,omitempty"`
 }
 
-type PackageDefaultable struct {
-	Upstream Upstream `yaml:"upstream,omitempty" json:"upstream,omitempty"`
-	Enabled  *bool    `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+type PackageDefaults struct {
+	Upstream UpstreamID `yaml:"upstream,omitempty" json:"upstream,omitempty"`
+	Ref      SourceRef  `yaml:"ref,omitempty" json:"ref,omitempty"`
+	Enabled  *bool      `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 }
 
 type Package struct {
-	PackageDefaultable
-	Name       string `yaml:"name,omitempty" json:"name,omitempty"`
-	SrcPath    string `yaml:"sourcePath,omitempty" json:"sourcePath,omitempty"`
-	Stub       *bool  `yaml:"stub,omitempty" json:"stub,omitempty"`
-	Metadata   `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+	Upstream   UpstreamID   `yaml:"upstream,omitempty" json:"upstream,omitempty"`
+	Ref        SourceRef    `yaml:"ref,omitempty" json:"ref,omitempty"`
+	Enabled    *bool        `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	Name       string       `yaml:"name,omitempty" json:"name,omitempty"`
+	SrcPath    string       `yaml:"sourcePath,omitempty" json:"sourcePath,omitempty"`
+	Empty      *bool        `yaml:"empty,omitempty" json:"empty,omitempty"`
+	Metadata   Metadata     `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 	Packages   PackageSlice `yaml:"packages,omitempty" json:"packages,omitempty"`
 	dstRelPath string
 }
@@ -68,8 +77,8 @@ type Metadata struct {
 }
 
 type PackageSource struct {
-	Upstream
-	Git *git.Repository
+	Upstream *Upstream
+	Git      *git.Repository
 }
 
 func (packages PackageSlice) Validate() error {
@@ -78,14 +87,17 @@ func (packages PackageSlice) Validate() error {
 		if p.Name == "" {
 			return fmt.Errorf("Packages must have 'name' (index %v)", idx)
 		}
-		if p.SrcPath == "" && !*p.Stub {
+		if p.SrcPath == "" && !*p.Empty {
 			return fmt.Errorf("Package %q needs 'path'", p.Name)
 		}
-		if p.SrcPath != "" && *p.Stub {
-			return fmt.Errorf("Package %q cannot be stub and have 'path'", p.Name)
+		if p.SrcPath != "" && *p.Empty {
+			return fmt.Errorf("Package %q cannot be empty and have 'path'", p.Name)
 		}
-		if p.Upstream.Type != api.KptPackageUpstreamTypeGit {
-			return fmt.Errorf("Package %q unsupported upstream type: %v", p.Name, p.Upstream.Type)
+		if p.Upstream == "" {
+			return fmt.Errorf("Package %q has no upstream", p.Name)
+		}
+		if p.Ref == "" {
+			return fmt.Errorf("Package %q has no ref", p.Name)
 		}
 		if err := p.Packages.Validate(); err != nil {
 			return err
@@ -94,28 +106,22 @@ func (packages PackageSlice) Validate() error {
 	return nil
 }
 
-func (packages PackageSlice) Default(defaults *PackageDefaultable, basePath string) {
-	var isStub = false
+func (packages PackageSlice) Default(defaults *PackageDefaults, basePath string) {
 	for idx := range packages {
 		p := &packages[idx]
-		if p.Upstream.Type == "" {
-			p.Upstream.Type = defaults.Upstream.Type
+		if p.Upstream == "" {
+			p.Upstream = defaults.Upstream
 		}
-		if p.Upstream.Type == api.KptPackageUpstreamTypeGit {
-			if p.Upstream.Git.Repo == "" {
-				p.Upstream.Git.Repo = defaults.Upstream.Git.Repo
-			}
-			if p.Upstream.Git.Ref == "" {
-				p.Upstream.Git.Ref = defaults.Upstream.Git.Ref
-			}
+		if p.Ref == "" {
+			p.Ref = defaults.Ref
 		}
 		if p.Enabled == nil {
-			p.Enabled = defaults.Enabled
+			p.Enabled = PtrTo(*defaults.Enabled)
 		}
-		if p.Stub == nil {
-			p.Stub = &isStub
+		if p.Empty == nil {
+			p.Empty = PtrTo(false)
 		}
-		if p.SrcPath == "" && p.Name != "" && !*p.Stub {
+		if p.SrcPath == "" && p.Name != "" && !*p.Empty {
 			p.SrcPath = p.Name
 		}
 		if p.Metadata.Mode == "" {
@@ -139,52 +145,56 @@ func ParsePkgSpec(object []byte) (*Packages, error) {
 	if err := yaml.Unmarshal(object, packages); err != nil {
 		return nil, err
 	}
+
+	// Defaults for defaults
+	if packages.Spec.Defaults.Enabled == nil {
+		packages.Spec.Defaults.Enabled = PtrTo(true)
+	}
+	if packages.Spec.Defaults.Upstream == "" && len(packages.Spec.Upstreams) == 1 {
+		packages.Spec.Defaults.Upstream = packages.Spec.Upstreams[0].Name
+	}
+
 	packages.Spec.Packages.Default(&packages.Spec.Defaults, "")
 	return packages, packages.Spec.Packages.Validate()
 }
 
 func (packages *Packages) FetchSources(fileBase string) ([]PackageSource, error) {
 	repos := make([]PackageSource, 0)
-	for idx := range packages.Spec.Packages {
-		p := &packages.Spec.Packages[idx]
-		if SourceLookup(repos, p.Upstream) == nil {
-			if p.Upstream.Type == api.KptPackageUpstreamTypeGit {
-				r, err := git.Clone(p.Upstream.Git.Repo, fileBase)
-				if err != nil {
-					return nil, err
-				}
-				err = r.Checkout(p.Upstream.Git.Ref)
-				if err != nil {
-					return nil, err
-				}
-				rr := PackageSource{Upstream: p.Upstream, Git: r}
-				repos = append(repos, rr)
+	for idx := range packages.Spec.Upstreams {
+		u := &packages.Spec.Upstreams[idx]
+		if u.Type == api.PackageUpstreamTypeGit {
+			r, err := git.Clone(u.Git.Repo, u.Git.AuthMethod, fileBase)
+			if err != nil {
+				return nil, err
 			}
+			rr := PackageSource{
+				Upstream: u,
+				Git: r}
+			repos = append(repos, rr)
 		}
 	}
 	return repos, nil
 }
 
-func SourceLookup(sources []PackageSource, upstream Upstream) *PackageSource {
+func SourceLookup(sources []PackageSource, upstream UpstreamID) *PackageSource {
 	for _, src := range sources {
-		if src.Upstream.Type == api.KptPackageUpstreamTypeGit {
-			if src.Upstream.Git.Repo == upstream.Git.Repo {
-				return &src
-			}
+		if src.Upstream.Name == upstream {
+			return &src
 		}
 	}
 	return nil
 }
 
-func SourceEnsureVersion(sources []PackageSource, upstream Upstream) error {
+func SourceEnsureVersion(sources []PackageSource, upstream UpstreamID, ref SourceRef) (*PackageSource, error) {
 	src := SourceLookup(sources, upstream)
-	if src.Upstream.Type == api.KptPackageUpstreamTypeGit {
-		err := src.Git.Checkout(src.Upstream.Git.Ref)
+	if src.Upstream.Type == api.PackageUpstreamTypeGit {
+		err := src.Git.Checkout(string(ref))
 		if err != nil {
-			return err
+			return nil, err
 		}
+		return src, nil
 	}
-	return nil
+	return nil, nil
 }
 
 // TossFiles copies package files
@@ -196,22 +206,22 @@ func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dst
 			continue
 		}
 		d := filepath.Join(dstBasePath, p.dstRelPath)
-		if *p.Stub {
-			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; stub at dstPath:%v\n", p.Name, d), fn.Info))
+		if *p.Empty {
+			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; empty package at dstPath:%v\n", p.Name, d), fn.Info))
 		} else {
 			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; srcPath:%v dstPath:%v\n", p.Name, p.SrcPath, d), fn.Info))
-			err := SourceEnsureVersion(sources, p.Upstream)
+			src, err := SourceEnsureVersion(sources, p.Upstream, p.Ref)
 			if err != nil {
-				return fnResults, fmt.Errorf("git checkout %v @ %v: %vXS", p.Upstream.Git.Repo, p.Upstream.Git.Ref, err)
+				return fnResults, fmt.Errorf("git checkout %v @ %v: %v", src.Git.Repo, p.Ref, err)
 			}
 			s := filepath.Join(srcBasePath, p.SrcPath)
 			err = os.CopyFS(d, os.DirFS(s))
 			if err != nil {
-				return fnResults, fmt.Errorf("copying package dir: %v", err)
+				return fnResults, fmt.Errorf("copying package dir (%v -> %v): %v", s, d, err)
 			}
 			if p.Metadata.Mode == "kptForDeployment" {
 				// FIXME assumes git upstream
-				err := kpt.UpdateKptMetadata(d, p.Name, p.SrcPath, p.Upstream.Git.Repo, p.Upstream.Git.Ref)
+				err := kpt.UpdateKptMetadata(d, p.Name, p.SrcPath, src.Upstream.Git.Repo, string(p.Ref))
 				if err != nil {
 					return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
 				}
@@ -234,4 +244,8 @@ func FilesystemToObjects(path string) ([]*yaml.RNode, error) {
 		WrapBareSeqNode:   true,
 	}
 	return pr.Read()
+}
+
+func PtrTo[T any](val T) *T {
+	return &val
 }

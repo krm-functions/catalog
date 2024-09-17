@@ -19,6 +19,7 @@ import (
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 )
 
 type Repository struct {
@@ -28,10 +29,20 @@ type Repository struct {
 	CurrentCheckout string
 }
 
-func Clone(uri, fileBase string) (*Repository, error) {
-	repo, err := gogit.PlainClone(fileBase, false, &gogit.CloneOptions{
+func Clone(uri, authMethod, fileBase string) (*Repository, error) {
+	var auth *ssh.PublicKeysCallback
+	var err error
+	opts := &gogit.CloneOptions{
 		URL: uri,
-	})
+	}
+	if authMethod == "ssh-agent" {
+		auth, err = ssh.NewSSHAgentAuth("git")
+		if err != nil {
+			return nil, fmt.Errorf("ssh-agent auth setup %v: %v", uri, err)
+		}
+		opts.Auth = auth
+	}
+	repo, err := gogit.PlainClone(fileBase, false, opts)
 	if err != nil {
 		return nil, fmt.Errorf("cloning %v: %v", uri, err)
 	}

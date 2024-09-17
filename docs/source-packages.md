@@ -21,27 +21,27 @@ kind: Fleet
 metadata:
   name: example-fleet
 spec:
+  upstreams:
+  - name: example-upstream
+    type: git
+    git:
+      repo: https://example.git
+
   packages:
   - name: package1       # similar to 'kpt pkg get https://example.git/package1@v1.0'
     sourcePath: package1
-    upstream:
-	  git:
-        repo: https://example.git
-        ref: v1.0
+    upstream: example-upstream
+    ref: v1.0
 
   - name: package2       # similar to 'kpt pkg get https://example.git/package2@v1.1'
     sourcePath: package2
-    upstream:
-	  git:
-        repo: https://example.git
-        ref: v1.1
+    upstream: example-upstream
+    ref: v1.1
 
   - name: package3       # similar to 'kpt pkg get https://example.git/package3@v1.2'
     sourcePath: package3
-    upstream:
-	  git:
-        repo: https://example.git
-        ref: v1.2
+    upstream: example-upstream
+    ref: v1.2
 ```
 
 The `defaults` setion can be used to remove some repetition for common settings:
@@ -52,12 +52,16 @@ kind: Fleet
 metadata:
   name: example-fleet
 spec:
+  upstreams:
+  - name: example-upstream
+    type: git
+    git:
+      repo: https://example.git
+
   # These settings can also be given individually for each package
   defaults:
-    upstream:
-      git:
-        repo: https://example.git
-        ref: main
+    upstream: example-upstream
+    ref: main
 
   packages:
   - name: package1
@@ -71,18 +75,7 @@ spec:
 Packages can also be composed in recursively:
 
 ```yaml
-apiVersion: fn.kpt.dev/v1alpha1
-kind: Fleet
-metadata:
-  name: example-fleet
-spec:
-  # These settings can also be given individually for each package
-  defaults:
-    upstream:
-      git:
-        repo: https://example.git
-        ref: main
-
+  ...
   packages:
   - name: foo
     sourcePath: pkg1
@@ -110,3 +103,14 @@ Recursive packages is very convenient for composing a package from
 several sub-packages. This is similar to how the [Open Application
 Model](https://oam.dev/) handles
 [traits](https://github.com/oam-dev/spec/blob/master/6.traits.md).
+
+## Private Repositories/Upstreams
+
+```yaml
+  upstreams:
+  - name: example-upstream
+    type: git
+    git:
+      repo: https://example.git
+	  authMethod: ssh-agent
+```
