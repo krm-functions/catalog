@@ -169,7 +169,7 @@ func (packages *Packages) FetchSources(fileBase string) ([]PackageSource, error)
 			}
 			rr := PackageSource{
 				Upstream: u,
-				Git: r}
+				Git:      r}
 			repos = append(repos, rr)
 		}
 	}
@@ -203,6 +203,7 @@ func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dst
 	for idx := range packages {
 		p := &packages[idx]
 		if !*p.Enabled {
+			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; disabled\n", p.Name), fn.Info))
 			continue
 		}
 		d := filepath.Join(dstBasePath, p.dstRelPath)

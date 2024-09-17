@@ -22,8 +22,10 @@ spec:
   - name: bar
     sourcePath: examples/source-packages/pkg2
     packages:
-    - name: baz
+    - name: baz1
       sourcePath: examples/source-packages/pkg3
+    - name: baz2
+      sourcePath: examples/source-packages/pkg1
   - name: olo
     empty: true
     packages:
@@ -31,4 +33,4 @@ spec:
       sourcePath: examples/source-packages/pkg4
   - name: boo
     enabled: false
-    sourcePath: examples/source-packages/pkg5
+    sourcePath: examples/source-packages/pkg1

@@ -104,7 +104,24 @@ several sub-packages. This is similar to how the [Open Application
 Model](https://oam.dev/) handles
 [traits](https://github.com/oam-dev/spec/blob/master/6.traits.md).
 
+Complex package composition can be created using 'empty' tree nodes,
+which is basically just a named directory for sub-packages:
+
+```yaml
+  ...
+  packages:
+  - name: top
+    empty: true  # no 'sourcePath', instead it is explicitly marked as empty
+    packages:
+    - name: sub1       # will be stored in 'top/sub1'
+      sourcePath: pkg1
+    - name: sub2       # will be stored in 'top/sub2'
+      sourcePath: pkg2
+```
+
 ## Private Repositories/Upstreams
+
+Private repositories are supported through SSH-agent integration:
 
 ```yaml
   upstreams:
