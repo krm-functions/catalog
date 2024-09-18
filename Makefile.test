@@ -220,11 +220,12 @@ test-source-packages:
 
 .PHONY: test-source-packages-ref
 test-source-packages-ref:
-	# This is identical to 'examples/source-packages/specs/packages.yaml'
-	mkdir -p example-fleet-ref/olo
+	# This is identical to 'examples/source-packages/specs/fleet-1/packages.yaml'
+	rm -rf example-fleet-ref && mkdir -p example-fleet-ref/olo
 	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg1@feature/source-packages-function example-fleet-ref/foo --for-deployment
 	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg2@feature/source-packages-function example-fleet-ref/bar --for-deployment
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg3@feature/source-packages-function example-fleet-ref/bar/baz --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg3@feature/source-packages-function example-fleet-ref/bar/baz1 --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg1@feature/source-packages-function example-fleet-ref/bar/baz2 --for-deployment
 	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg4@feature/source-packages-function example-fleet-ref/olo/baz --for-deployment
 
 .PHONY: test-template-kyaml

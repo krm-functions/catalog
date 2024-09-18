@@ -106,7 +106,7 @@ func (packages PackageSlice) Validate() error {
 	return nil
 }
 
-func (packages PackageSlice) Default(defaults *PackageDefaults, basePath string) {
+func (packages PackageSlice) Default(defaults *PackageDefaults) {
 	for idx := range packages {
 		p := &packages[idx]
 		if p.Upstream == "" {
@@ -128,7 +128,7 @@ func (packages PackageSlice) Default(defaults *PackageDefaults, basePath string)
 			p.Metadata.Mode = "kptForDeployment"
 		}
 		p.dstRelPath = p.Name
-		p.Packages.Default(defaults, p.dstRelPath)
+		p.Packages.Default(defaults)
 	}
 }
 
@@ -154,7 +154,7 @@ func ParsePkgSpec(object []byte) (*Packages, error) {
 		packages.Spec.Defaults.Upstream = packages.Spec.Upstreams[0].Name
 	}
 
-	packages.Spec.Packages.Default(&packages.Spec.Defaults, "")
+	packages.Spec.Packages.Default(&packages.Spec.Defaults)
 	return packages, packages.Spec.Packages.Validate()
 }
 

@@ -20,6 +20,7 @@ import (
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 	"github.com/krm-functions/catalog/pkg/api"
+	"sigs.k8s.io/kustomize/kyaml/kio/kioutil"
 )
 
 func Run(rl *fn.ResourceList) (bool, error) {
@@ -51,8 +52,8 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				*results = append(*results, fn.GeneralResult(fmt.Sprintf("Using git upstream %v", src.Upstream.Git.Repo), fn.Info))
 			}
 		}
-		// FIXME //objPath := filepath.Join(filepath.Dir(kubeObject.GetAnnotation(kioutil.PathAnnotation)), kubeObject.GetName())
-		fnResults, err := packages.Spec.Packages.TossFiles(sources, srcBase, filepath.Join(dstBase, kubeObject.GetName()))
+		objPath := filepath.Dir(kubeObject.GetAnnotation(kioutil.PathAnnotation))
+		fnResults, err := packages.Spec.Packages.TossFiles(sources, srcBase, filepath.Join(dstBase, objPath, kubeObject.GetName()))
 		if err != nil {
 			return false, err
 		}
@@ -63,7 +64,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 		}
 		for _, nn := range nodes {
 			err = rl.UpsertObjectToItems(nn,
-				func(obj, another *fn.KubeObject) bool { return false },
+				func(_, _ *fn.KubeObject) bool { return false }, // No de-duplication
 				false)
 			if err != nil {
 				return false, err
