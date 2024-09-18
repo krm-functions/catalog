@@ -104,14 +104,14 @@ several sub-packages. This is similar to how the [Open Application
 Model](https://oam.dev/) handles
 [traits](https://github.com/oam-dev/spec/blob/master/6.traits.md).
 
-Complex package composition can be created using 'empty' tree nodes,
+Complex package composition can be created using 'stub' tree nodes,
 which is basically just a named directory for sub-packages:
 
 ```yaml
   ...
   packages:
   - name: top
-    empty: true  # no 'sourcePath', instead it is explicitly marked as empty
+    stub: true  # no 'sourcePath', instead it is explicitly marked as empty stub node
     packages:
     - name: sub1       # will be stored in 'top/sub1'
       sourcePath: pkg1

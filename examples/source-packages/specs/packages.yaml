@@ -27,7 +27,7 @@ spec:
     - name: baz2
       sourcePath: examples/source-packages/pkg1
   - name: olo
-    empty: true
+    stub: true
     packages:
     - name: baz
       sourcePath: examples/source-packages/pkg4

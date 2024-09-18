@@ -62,7 +62,9 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			return false, err
 		}
 		for _, nn := range nodes {
-			err = rl.UpsertObjectToItems(nn, nil, false)
+			err = rl.UpsertObjectToItems(nn,
+				func(obj, another *fn.KubeObject) bool { return false },
+				false)
 			if err != nil {
 				return false, err
 			}

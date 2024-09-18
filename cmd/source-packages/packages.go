@@ -66,7 +66,7 @@ type Package struct {
 	Enabled    *bool        `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 	Name       string       `yaml:"name,omitempty" json:"name,omitempty"`
 	SrcPath    string       `yaml:"sourcePath,omitempty" json:"sourcePath,omitempty"`
-	Empty      *bool        `yaml:"empty,omitempty" json:"empty,omitempty"`
+	Stub       *bool        `yaml:"stub,omitempty" json:"stub,omitempty"`
 	Metadata   Metadata     `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 	Packages   PackageSlice `yaml:"packages,omitempty" json:"packages,omitempty"`
 	dstRelPath string
@@ -87,11 +87,11 @@ func (packages PackageSlice) Validate() error {
 		if p.Name == "" {
 			return fmt.Errorf("Packages must have 'name' (index %v)", idx)
 		}
-		if p.SrcPath == "" && !*p.Empty {
+		if p.SrcPath == "" && !*p.Stub {
 			return fmt.Errorf("Package %q needs 'path'", p.Name)
 		}
-		if p.SrcPath != "" && *p.Empty {
-			return fmt.Errorf("Package %q cannot be empty and have 'path'", p.Name)
+		if p.SrcPath != "" && *p.Stub {
+			return fmt.Errorf("Package %q cannot be a stub and have 'path'", p.Name)
 		}
 		if p.Upstream == "" {
 			return fmt.Errorf("Package %q has no upstream", p.Name)
@@ -118,10 +118,10 @@ func (packages PackageSlice) Default(defaults *PackageDefaults, basePath string)
 		if p.Enabled == nil {
 			p.Enabled = PtrTo(*defaults.Enabled)
 		}
-		if p.Empty == nil {
-			p.Empty = PtrTo(false)
+		if p.Stub == nil {
+			p.Stub = PtrTo(false)
 		}
-		if p.SrcPath == "" && p.Name != "" && !*p.Empty {
+		if p.SrcPath == "" && p.Name != "" && !*p.Stub {
 			p.SrcPath = p.Name
 		}
 		if p.Metadata.Mode == "" {
@@ -207,7 +207,7 @@ func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dst
 			continue
 		}
 		d := filepath.Join(dstBasePath, p.dstRelPath)
-		if *p.Empty {
+		if *p.Stub {
 			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; empty package at dstPath:%v\n", p.Name, d), fn.Info))
 		} else {
 			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; srcPath:%v dstPath:%v\n", p.Name, p.SrcPath, d), fn.Info))
