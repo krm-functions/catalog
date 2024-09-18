@@ -36,7 +36,7 @@ data:
   name: {{.Name}}
 `
 
-func UpdateKptMetadata(path, pkgName, pkgDirectory, gitRepo, gitRef string) error {
+func UpdateKptMetadata(path, pkgName, _ /*pkgDirectory*/, _ /*gitRepo*/, _ /*gitRef*/ string) error {
 	data := map[string]string{
 		"Name": pkgName,
 	}
@@ -62,7 +62,6 @@ func UpdateKptMetadata(path, pkgName, pkgDirectory, gitRepo, gitRef string) erro
 	// 'kpt kpg get' sets name to the name of the package create (to path) and removes namespace
 	kf.Name = pkgName
 	kf.Namespace = ""
-	fmt.Fprintf(os.Stderr, "kptfile: %+v\n", kf)
 	err = WriteKptfile(kfn, kf)
 	if err != nil {
 		return err

@@ -60,7 +60,7 @@ func (r *Repository) Checkout(treeishRevision string) error {
 	branch := treeishRevision // FIXME: correct this for non-branch refs
 	branchRefName := plumbing.NewBranchReferenceName(branch)
 	branchCoOpts := gogit.CheckoutOptions{
-		Branch: plumbing.ReferenceName(branchRefName),
+		Branch: branchRefName, // plumbing.ReferenceName(branchRefName),
 	}
 	if err := r.Tree.Checkout(&branchCoOpts); err != nil {
 		// Local checkout failed, try remote
