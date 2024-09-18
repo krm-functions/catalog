@@ -102,7 +102,8 @@ func ExtractChart(chartTarball []byte, destDir string) error {
 				return mkdErr
 			}
 
-			file, fErr := os.OpenFile(fileWithPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(hdr.Mode))
+			file, fErr := os.Create(fileWithPath)
+
 			if fErr != nil {
 				return fErr
 			}

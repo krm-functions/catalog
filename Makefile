@@ -25,7 +25,7 @@ else
 endif
 
 # The binaries to build (just the basenames)
-BINS ?= apply-setters digester helm-upgrader kubeconform render-helm-chart source-helm-chart # template-kyaml
+BINS ?= apply-setters digester helm-upgrader kubeconform render-helm-chart source-helm-chart source-packages # template-kyaml
 
 # The platforms we support
 #ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64 linux/ppc64le linux/s390x
@@ -68,7 +68,7 @@ ARCH := $(if $(GOARCH),$(GOARCH),$(shell go env GOARCH))
 
 TAG := $(VERSION)__$(OS)_$(ARCH)
 
-GO_VERSION := 1.22
+GO_VERSION := 1.23
 BUILD_IMAGE := golang:$(GO_VERSION)-alpine
 
 BIN_EXTENSION :=

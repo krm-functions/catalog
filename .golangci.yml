@@ -12,9 +12,8 @@ linters-settings:
       - performance
       - style
   govet:
-    check-shadowing: true
-    #enable:
-    #  - fieldalignment
+    enable:
+      - shadow
   nolintlint:
     require-explanation: true
     require-specific: true
@@ -28,7 +27,7 @@ linters:
     - dogsled
     - dupl
     - errcheck
-    - exportloopref
+    - copyloopvar
     - exhaustive
     - goconst
     - gocritic
@@ -56,5 +55,5 @@ linters:
 
 run:
   issues-exit-code: 1
-  skip-dirs:
+  issues.exclude-dirs:
     - test

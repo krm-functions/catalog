@@ -1,0 +1,36 @@
+apiVersion: fn.kpt.dev/v1alpha1
+kind: Fleet
+metadata:
+  name: example-fleet
+spec:
+
+  upstreams:
+  - name: example
+    type: git
+    git:
+      repo: https://github.com/krm-functions/catalog.git
+
+  # These settings can also be given individually for each package
+  defaults:
+    upstream: example
+    enabled: true
+    ref: feature/source-packages-function # kpt-set: ${defaultRef}
+
+  packages:
+  - name: foo
+    sourcePath: examples/source-packages/pkg1
+  - name: bar
+    sourcePath: examples/source-packages/pkg2
+    packages:
+    - name: baz1
+      sourcePath: examples/source-packages/pkg3
+    - name: baz2
+      sourcePath: examples/source-packages/pkg1
+  - name: olo
+    stub: true
+    packages:
+    - name: baz
+      sourcePath: examples/source-packages/pkg4
+  - name: boo
+    enabled: false
+    sourcePath: examples/source-packages/pkg1
