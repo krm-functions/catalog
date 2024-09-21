@@ -36,10 +36,10 @@ COPY .licenses/ /LICENSES/
 
 # Helm tools add-on
 COPY --from=build /usr/local/bin/helm /usr/local/bin/helm
-ENV PATH /usr/local/bin:$PATH
-ENV HELM_PATH_CACHE /var/cache
-ENV HELM_CONFIG_HOME /tmp/helm/config
-ENV HELM_CACHE_HOME /tmp/helm/cache
+ENV PATH=/usr/local/bin:$PATH
+ENV HELM_PATH_CACHE=/var/cache
+ENV HELM_CONFIG_HOME=/tmp/helm/config
+ENV HELM_CACHE_HOME=/tmp/helm/cache
 
 
 # When building, we can pass a hash of the binary, which docker checks against
@@ -52,6 +52,6 @@ COPY bin/{ARG_OS}_{ARG_ARCH}/{ARG_BIN} /{ARG_BIN}
 
 # This would be nicer as `nobody:nobody` but distroless has no such entries.
 USER 65535:65535
-ENV HOME /
+ENV HOME=/
 
 ENTRYPOINT ["/{ARG_BIN}"]

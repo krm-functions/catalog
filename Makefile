@@ -34,12 +34,12 @@ ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64
 
 # The "FROM" part of the Dockerfile.  This should be a manifest-list which
 # supports all of the platforms listed in ALL_PLATFORMS.
-BUILDER_IMAGE ?= alpine:3.19.1
-BASE_IMAGE ?= alpine:3.19.1
+BUILDER_IMAGE ?= alpine:3.20.3
+BASE_IMAGE ?= alpine:3.20.3
 BASE_IMAGE_DISTROLESS ?= gcr.io/distroless/static
 
 # For functions building on top of Helm
-HELM_VERSION=v3.14.4
+HELM_VERSION=v3.16.1
 
 REGISTRY ?= ghcr.io/krm-functions
 
