@@ -50,7 +50,7 @@ e2e-tests: test-render-helm-chart \
 	   test-apply-setters \
 	   test-digester \
 	   test-kubeconform \
-	   test-source-packages
+	   test-source-packages-e2e
 
 # BEWARE: These tests are fragile - we want to test upgrades, but without upgrade-constraints tests might fail when charts are updated
 .PHONY: test-helm-upgrader
@@ -210,6 +210,13 @@ test-kubeconform-results:
 	grep -e '.* name: invalid-nested-dict' tmp-results/results.yaml
 	grep -e '.* /data/a-number: expected string or null, but got number' tmp-results/results.yaml
 	grep -e '.* name: invalid-non-string-value' tmp-results/results.yaml
+
+LOCAL_PACKAGES_DIR ?= /tmp/source-packages
+
+.PHONY: test-source-packages-e2e
+test-source-packages-e2e: test-source-packages test-source-packages-ref
+	echo "Unfinished Kptfile handling"
+	#diff -rwq fn-output/fleet-1/example-fleet example-fleet-ref
 
 .PHONY: test-source-packages
 test-source-packages:
