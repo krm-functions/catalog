@@ -15,7 +15,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/yannh/kubeconform v0.6.6
 	k8s.io/api v0.30.3
-	sigs.k8s.io/kustomize/api v0.17.2
+	sigs.k8s.io/kustomize/api v0.17.3
 	sigs.k8s.io/kustomize/kyaml v0.17.2
 )
 
