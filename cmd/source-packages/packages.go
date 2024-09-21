@@ -18,6 +18,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 	"github.com/krm-functions/catalog/pkg/api"
@@ -27,11 +28,11 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-type Packages struct {
-	Spec PackagesSpec `yaml:"spec,omitempty" json:"spec,omitempty"`
+type Fleet struct {
+	Spec FleetSpec `yaml:"spec,omitempty" json:"spec,omitempty"`
 }
 
-type PackagesSpec struct {
+type FleetSpec struct {
 	Upstreams []Upstream      `yaml:"upstreams,omitempty" json:"upstreams,omitempty"`
 	Defaults  PackageDefaults `yaml:"defaults,omitempty" json:"defaults,omitempty"`
 	Packages  PackageSlice    `yaml:"packages,omitempty" json:"packages,omitempty"`
@@ -61,14 +62,15 @@ type PackageDefaults struct {
 }
 
 type Package struct {
-	Upstream   UpstreamID   `yaml:"upstream,omitempty" json:"upstream,omitempty"`
-	Ref        SourceRef    `yaml:"ref,omitempty" json:"ref,omitempty"`
-	Enabled    *bool        `yaml:"enabled,omitempty" json:"enabled,omitempty"`
-	Name       string       `yaml:"name,omitempty" json:"name,omitempty"`
-	SrcPath    string       `yaml:"sourcePath,omitempty" json:"sourcePath,omitempty"`
-	Stub       *bool        `yaml:"stub,omitempty" json:"stub,omitempty"`
-	Metadata   Metadata     `yaml:"metadata,omitempty" json:"metadata,omitempty"`
-	Packages   PackageSlice `yaml:"packages,omitempty" json:"packages,omitempty"`
+	Upstream UpstreamID   `yaml:"upstream,omitempty" json:"upstream,omitempty"`
+	Ref      SourceRef    `yaml:"ref,omitempty" json:"ref,omitempty"`
+	Enabled  *bool        `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	Name     string       `yaml:"name,omitempty" json:"name,omitempty"`
+	SrcPath  string       `yaml:"sourcePath,omitempty" json:"sourcePath,omitempty"`
+	Stub     *bool        `yaml:"stub,omitempty" json:"stub,omitempty"`
+	Metadata Metadata     `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+	Packages PackageSlice `yaml:"packages,omitempty" json:"packages,omitempty"`
+	// Relative path of where to store package. Generally identical to 'Name'
 	dstRelPath string
 }
 
@@ -77,15 +79,18 @@ type Metadata struct {
 }
 
 type PackageSource struct {
-	Upstream *Upstream
+	Type     string
+	CurrRef  SourceRef
+	Upstream *UpstreamGit
 	Git      *git.Repository
+	Path     string // Local absolute path to repo files
 }
 
 func (packages PackageSlice) Validate() error {
 	for idx := range packages {
 		p := &packages[idx]
 		if p.Name == "" {
-			return fmt.Errorf("Packages must have 'name' (index %v)", idx)
+			return fmt.Errorf("packages must have 'name' (index %v)", idx)
 		}
 		if p.SrcPath == "" && !*p.Stub {
 			return fmt.Errorf("Package %q needs 'path'", p.Name)
@@ -140,8 +145,8 @@ func (packages PackageSlice) Print(w io.Writer) {
 	}
 }
 
-func ParsePkgSpec(object []byte) (*Packages, error) {
-	packages := &Packages{}
+func ParseFleetSpec(object []byte) (*Fleet, error) {
+	packages := &Fleet{}
 	if err := yaml.Unmarshal(object, packages); err != nil {
 		return nil, err
 	}
@@ -158,47 +163,73 @@ func ParsePkgSpec(object []byte) (*Packages, error) {
 	return packages, packages.Spec.Packages.Validate()
 }
 
-func (packages *Packages) FetchSources(fileBase string) ([]PackageSource, error) {
-	repos := make([]PackageSource, 0)
-	for idx := range packages.Spec.Upstreams {
-		u := &packages.Spec.Upstreams[idx]
-		if u.Type == api.PackageUpstreamTypeGit {
-			r, err := git.Clone(u.Git.Repo, u.Git.AuthMethod, fileBase)
-			if err != nil {
-				return nil, err
-			}
-			rr := PackageSource{
-				Upstream: u,
-				Git:      r}
-			repos = append(repos, rr)
+func NewPackageSource(u *Upstream, fileBase string) (*PackageSource, fn.Results, error) {
+	var fnResults fn.Results
+	localPath := filepath.Join(fileBase, string(u.Name)) // FIXME: Use better name reflecting repo name
+	if u.Type == api.PackageUpstreamTypeGit {
+		start := time.Now()
+		r, err := git.Clone(u.Git.Repo, u.Git.AuthMethod, localPath)
+		if err != nil {
+			return nil, fnResults, err
 		}
+		t := time.Now()
+		elapsed := t.Sub(start).Truncate(time.Millisecond)
+		fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("cloned %v in %v\n", u.Git.Repo, elapsed), fn.Info))
+		return &PackageSource{
+			Type:     api.PackageUpstreamTypeGit,
+			Upstream: &u.Git,
+			Git:      r,
+			Path:     localPath}, fnResults, nil
 	}
-	return repos, nil
+	return nil, fnResults, nil
 }
 
-func SourceLookup(sources []PackageSource, upstream UpstreamID) *PackageSource {
-	for _, src := range sources {
-		if src.Upstream.Name == upstream {
-			return &src
+func PackageSourceLookup(sources []PackageSource, upstream *Upstream) *PackageSource {
+	for idx := range sources {
+		src := &sources[idx]
+		if upstream.Type == api.PackageUpstreamTypeGit {
+			if upstream.Git == *src.Upstream {
+				return src
+			}
 		}
 	}
 	return nil
 }
 
-func SourceEnsureVersion(sources []PackageSource, upstream UpstreamID, ref SourceRef) (*PackageSource, error) {
-	src := SourceLookup(sources, upstream)
-	if src.Upstream.Type == api.PackageUpstreamTypeGit {
+// UpstreamLookup locates an upstream definition by name in a given Fleet
+func UpstreamLookup(fleet *Fleet, upstream UpstreamID) *Upstream {
+	for idx := range fleet.Spec.Upstreams {
+		u := &fleet.Spec.Upstreams[idx]
+		if u.Name == upstream {
+			return u
+		}
+	}
+	return nil
+}
+
+func SourceEnsureVersion(src *PackageSource, ref SourceRef) (fn.Results, error) {
+	var fnResults fn.Results
+	if src.CurrRef == ref {
+		return fnResults, nil
+	}
+	if src.Type == api.PackageUpstreamTypeGit {
+		start := time.Now()
 		err := src.Git.Checkout(string(ref))
 		if err != nil {
-			return nil, err
+			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("error fetching %v @ %v\n", src.Upstream.Repo, ref), fn.Error))
+			return fnResults, err
 		}
-		return src, nil
+		t := time.Now()
+		elapsed := t.Sub(start).Truncate(time.Millisecond)
+		fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("fetched %v @ %v in %v\n", src.Upstream.Repo, ref, elapsed), fn.Info))
+		src.CurrRef = ref
+		return fnResults, nil
 	}
-	return nil, nil
+	return fnResults, nil
 }
 
 // TossFiles copies package files
-func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dstBasePath string) (fn.Results, error) {
+func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, dstAbsBasePath string) (fn.Results, error) {
 	var fnResults fn.Results
 	for idx := range packages {
 		p := &packages[idx]
@@ -206,29 +237,38 @@ func (packages PackageSlice) TossFiles(sources []PackageSource, srcBasePath, dst
 			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; disabled\n", p.Name), fn.Info))
 			continue
 		}
-		d := filepath.Join(dstBasePath, p.dstRelPath)
+		d := filepath.Join(dstAbsBasePath, p.dstRelPath)
 		if *p.Stub {
-			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; empty package at dstPath:%v\n", p.Name, d), fn.Info))
+			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; stub package at %v\n", p.Name, p.dstRelPath), fn.Info))
 		} else {
-			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; srcPath:%v dstPath:%v\n", p.Name, p.SrcPath, d), fn.Info))
-			src, err := SourceEnsureVersion(sources, p.Upstream, p.Ref)
-			if err != nil {
-				return fnResults, fmt.Errorf("git checkout %v @ %v: %v", src.Git.Repo, p.Ref, err)
+			u := UpstreamLookup(fleet, p.Upstream)
+			if u == nil {
+				return fnResults, fmt.Errorf("unknown upstream: %v", p.Upstream)
 			}
-			s := filepath.Join(srcBasePath, p.SrcPath)
+			src := PackageSourceLookup(sources, u)
+			if src == nil { // FIXME: This should not happen
+				return fnResults, fmt.Errorf("unknown upstream source: %v", p.Upstream)
+			}
+			fnRes, err := SourceEnsureVersion(src, p.Ref)
+			fnResults = append(fnResults, fnRes...)
+			if err != nil {
+				return fnResults, err
+			}
+			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; %v --> %v\n", p.Name, p.SrcPath, p.dstRelPath), fn.Info))
+			s := filepath.Join(src.Path, p.SrcPath)
 			err = os.CopyFS(d, os.DirFS(s))
 			if err != nil {
-				return fnResults, fmt.Errorf("copying package dir (%v -> %v): %v", s, d, err)
+				return fnResults, fmt.Errorf("copying package dir (%v --> %v): %v", src.Path, d, err)
 			}
 			if p.Metadata.Mode == "kptForDeployment" {
 				// FIXME assumes git upstream
-				err := kpt.UpdateKptMetadata(d, p.Name, p.SrcPath, src.Upstream.Git.Repo, string(p.Ref))
+				err := kpt.UpdateKptMetadata(d, p.Name, p.SrcPath, u.Git.Repo, string(p.Ref))
 				if err != nil {
 					return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
 				}
 			}
 		}
-		fnRes, err := p.Packages.TossFiles(sources, srcBasePath, d)
+		fnRes, err := fleet.TossFiles(sources, p.Packages, d)
 		if err != nil {
 			return fnResults, fmt.Errorf("tossing child packages for %v: %v", p.Name, err)
 		}
@@ -241,7 +281,7 @@ func FilesystemToObjects(path string) ([]*yaml.RNode, error) {
 	pr := &kio.LocalPackageReader{
 		PackagePath:       path,
 		MatchFilesGlob:    []string{"*"},
-		PreserveSeqIndent: true,
+		PreserveSeqIndent: false,
 		WrapBareSeqNode:   true,
 	}
 	return pr.Read()

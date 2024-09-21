@@ -14,7 +14,7 @@ spec:
   defaults:
     upstream: example
     enabled: true
-    ref: feature/source-packages-function # kpt-set: ${defaultRef}
+    ref: main
 
   packages:
   - name: foo

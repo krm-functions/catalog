@@ -25,11 +25,17 @@ import (
 
 func Run(rl *fn.ResourceList) (bool, error) {
 	results := &rl.Results
+	sources := make([]PackageSource, 0)
 
-	var srcBase, dstBase string
-	base := os.Getenv("LOCAL_PACKAGES_DIR")
+	var base, srcBase, dstBase string
+	base = os.Getenv("LOCAL_PACKAGES_DIR")
 	if base == "" {
-		base = "/tmp/source-packages"
+		var er error
+		base, er = os.MkdirTemp("", "source-packages-")
+		if er != nil {
+			return false, er
+		}
+		defer os.RemoveAll(base)
 	}
 	srcBase = base + "/in"
 	dstBase = base + "/out"
@@ -39,36 +45,41 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			continue
 		}
 		object := kubeObject.String()
-		packages, err := ParsePkgSpec([]byte(object))
+		fleet, err := ParseFleetSpec([]byte(object))
 		if err != nil {
 			return false, err
 		}
-		sources, err := packages.FetchSources(srcBase)
-		if err != nil {
-			return false, err
-		}
-		for _, src := range sources {
-			if src.Upstream.Type == api.PackageUpstreamTypeGit {
-				*results = append(*results, fn.GeneralResult(fmt.Sprintf("Using git upstream %v", src.Upstream.Git.Repo), fn.Info))
+		for idx := range fleet.Spec.Upstreams {
+			var er error
+			u := &fleet.Spec.Upstreams[idx]
+			if PackageSourceLookup(sources, u) != nil {
+				continue
 			}
+			src, fnRes, er := NewPackageSource(u, srcBase)
+			if er != nil {
+				return false, er
+			}
+			*results = append(*results, fnRes...)
+			sources = append(sources, *src)
 		}
 		objPath := filepath.Dir(kubeObject.GetAnnotation(kioutil.PathAnnotation))
-		fnResults, err := packages.Spec.Packages.TossFiles(sources, srcBase, filepath.Join(dstBase, objPath, kubeObject.GetName()))
+		fleetBaseDir := filepath.Join(dstBase, objPath, kubeObject.GetName())
+		fnResults, err := fleet.TossFiles(sources, fleet.Spec.Packages, fleetBaseDir)
 		if err != nil {
 			return false, err
 		}
 		*results = append(*results, fnResults...)
-		nodes, err := FilesystemToObjects(dstBase)
+	}
+	nodes, err := FilesystemToObjects(dstBase)
+	if err != nil {
+		return false, err
+	}
+	for _, nn := range nodes {
+		err = rl.UpsertObjectToItems(nn,
+			func(_, _ *fn.KubeObject) bool { return false }, // No de-duplication
+			false)
 		if err != nil {
-			return false, err
-		}
-		for _, nn := range nodes {
-			err = rl.UpsertObjectToItems(nn,
-				func(_, _ *fn.KubeObject) bool { return false }, // No de-duplication
-				false)
-			if err != nil {
-				return false, err
-			}
+			return false, fmt.Errorf("inserting %v/%v: %v", nn.GetKind(), nn.GetName(), err)
 		}
 	}
 

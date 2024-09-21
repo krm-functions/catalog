@@ -93,8 +93,8 @@ create the following package structure:
 example-fleet
 ├── foo/
 │   └── <files from 'https://example.git@main/pkg1'>
-├── bar/
-│   ├── <files from 'https://example.git@main/pkg2'>
+└── bar/
+    ├── <files from 'https://example.git@main/pkg2'>
     └── baz/
         └── <files from 'https://example.git@main/pkg3'>
 ```
@@ -104,8 +104,22 @@ several sub-packages. This is similar to how the [Open Application
 Model](https://oam.dev/) handles
 [traits](https://github.com/oam-dev/spec/blob/master/6.traits.md).
 
-Complex package composition can be created using 'stub' tree nodes,
-which is basically just a named directory for sub-packages:
+A useful example of this *package composition pattern* is if a common
+pipeline (as defined in a `Kptfile`) should be applied to
+sub-packages. In this case, the pipeline package can be used as
+parent:
+
+```yaml
+  ...
+  packages:
+  - name: common-pipeline
+    packages:   # common-pipeline `Kptfile` will be applied to sub-packages
+    - name: foo
+    - name: bar
+```
+
+Alternatively, package composition can be created using 'stub' tree
+nodes, which is basically just a named directory for sub-packages:
 
 ```yaml
   ...
@@ -131,3 +145,10 @@ Private repositories are supported through SSH-agent integration:
       repo: https://example.git
 	  authMethod: ssh-agent
 ```
+
+## Future Directions
+
+- Currently, `source-packages` is not recursive and `Fleet` resources
+  fetched as part of a package is not processed.
+- Generally, better error checking could be implemented
+- OCI upstreams
