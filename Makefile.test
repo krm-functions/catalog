@@ -9,7 +9,7 @@ HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:e52cb02d7ee9
 HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:bfc983b8952da8c9f99388e9a86d0a69dbf5210fc8df959de3a96bcdde6c47cb
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:73b22ac455bb472809c55d49f5b2615013a90649742c2e2100f565da57a44d80
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:0004ae1d875060c7b8747527f0f584878aa46e47d100a3c2a6aa25fee3aa0e28
-SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/source-packages@sha256:abc
+SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/source-packages@sha256:ad660e59239b27412854883e2c3cf6754fabbfbe1220092427446674c6a262c1
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
@@ -215,8 +215,8 @@ LOCAL_PACKAGES_DIR ?= /tmp/source-packages
 
 .PHONY: test-source-packages-e2e
 test-source-packages-e2e: test-source-packages test-source-packages-ref
-	echo "Unfinished Kptfile handling"
-	#diff -rwq fn-output/fleet-1/example-fleet example-fleet-ref
+	# We don't set all annotations and comments exactly as kpt
+	if [ "$(shell diff -rw fn-output/fleet-1/example-fleet example-fleet-ref | wc -l)" != "40" ]; then echo "*** source-package diff not as expected"; exit 1; fi
 
 .PHONY: test-source-packages
 test-source-packages:
@@ -229,11 +229,11 @@ test-source-packages:
 test-source-packages-ref:
 	# This is identical to 'examples/source-packages/specs/fleet-1/packages.yaml'
 	rm -rf example-fleet-ref && mkdir -p example-fleet-ref/olo
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg1@feature/source-packages-function example-fleet-ref/foo --for-deployment
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg2@feature/source-packages-function example-fleet-ref/bar --for-deployment
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg3@feature/source-packages-function example-fleet-ref/bar/baz1 --for-deployment
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg1@feature/source-packages-function example-fleet-ref/bar/baz2 --for-deployment
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg4@feature/source-packages-function example-fleet-ref/olo/baz --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg1 example-fleet-ref/foo --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg2 example-fleet-ref/bar --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg3 example-fleet-ref/bar/baz1 --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg1 example-fleet-ref/bar/baz2 --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/source-packages/pkg4 example-fleet-ref/olo/baz --for-deployment
 
 .PHONY: test-template-kyaml
 test-template-kyaml:

@@ -50,3 +50,9 @@ DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .
 echo "digester digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/kubeconform.*@).*#\1$DIGEST#" docs/*.md
 sed -i -E "s#(.*?ghcr.io/krm-functions/kubeconform.*@).*#\1$DIGEST#" Makefile.test
+
+IMAGE=ghcr.io/krm-functions/source-packages
+DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
+echo "digester digest: $DIGEST"
+sed -i -E "s#(.*?ghcr.io/krm-functions/source-packages.*@).*#\1$DIGEST#" docs/*.md
+sed -i -E "s#(.*?ghcr.io/krm-functions/source-packages.*@).*#\1$DIGEST#" Makefile.test

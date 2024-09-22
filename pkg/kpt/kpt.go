@@ -36,7 +36,7 @@ data:
   name: {{.Name}}
 `
 
-func UpdateKptMetadata(path, pkgName, _ /*pkgDirectory*/, _ /*gitRepo*/, _ /*gitRef*/ string) error {
+func UpdateKptMetadata(path, pkgName, gitDirectory, gitRepo, gitRev, gitHash string) error {
 	data := map[string]string{
 		"Name": pkgName,
 	}
@@ -62,6 +62,26 @@ func UpdateKptMetadata(path, pkgName, _ /*pkgDirectory*/, _ /*gitRepo*/, _ /*git
 	// 'kpt kpg get' sets name to the name of the package create (to path) and removes namespace
 	kf.Name = pkgName
 	kf.Namespace = ""
+	// Set source
+	kf.Upstream = &kptfile.Upstream{
+		Type: "git",
+		Git: &kptfile.Git{
+			Repo:      gitRepo,
+			Directory: "/" + gitDirectory,
+			Ref:       gitRev,
+		},
+		UpdateStrategy: "resource-merge",
+	}
+	kf.UpstreamLock = &kptfile.UpstreamLock{
+		Type: "git",
+		Git: &kptfile.GitLock{
+			Repo:      gitRepo,
+			Directory: "/" + gitDirectory,
+			Ref:       gitRev,
+			Commit:    gitHash,
+		},
+	}
+
 	err = WriteKptfile(kfn, kf)
 	if err != nil {
 		return err
