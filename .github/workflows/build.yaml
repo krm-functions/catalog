@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: none
+      id-token: write
 
     steps:
     - name: Checkout
@@ -38,38 +38,18 @@ jobs:
     - name: Push containers
       run: make manifest-list | tee manifest.log
 
-    - name: Container meta
-      id: meta
-      run: |
-        # manifest-list outputs digest last
-        DIGEST=$(cat manifest.log | tail -n1 | grep 'Digest:' | cut -c9- | cut -d' ' -f1)
-        echo "digest=$DIGEST" >> $GITHUB_OUTPUT
-        GITSHA=$(make version | tail -n1)
-        echo "sha=$GITSHA" >> $GITHUB_OUTPUT
-        IMAGE=$(echo ghcr.io/${{ github.repository }} | tr '[:upper:]' '[:lower:]')
-        echo "image=$IMAGE@$DIGEST" >> $GITHUB_OUTPUT
+    # - name: Container meta
+    #   id: meta
+    #   run: |
+    #     # manifest-list outputs digest last
+    #     DIGEST=$(cat manifest.log | tail -n1 | grep 'Digest:' | cut -c9- | cut -d' ' -f1)
+    #     echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+    #     GITSHA=$(make version | tail -n1)
+    #     echo "sha=$GITSHA" >> $GITHUB_OUTPUT
+    #     IMAGE=$(echo ghcr.io/${{ github.repository }} | tr '[:upper:]' '[:lower:]')
+    #     echo "image=$IMAGE@$DIGEST" >> $GITHUB_OUTPUT
 
-    outputs:
-      image: ${{ steps.meta.outputs.image }}
-      digest: ${{ steps.meta.outputs.digest }}
-
-  sign:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: none
-      packages: write
-      id-token: write
-
-    steps:
-    - name: Log in to the Container registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # tag=v3.1.1
+    - uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # tag=v3.6.0
 
     - name: Sign container
       run: make manifest-list-sign
