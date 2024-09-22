@@ -3,13 +3,13 @@
 FN_MODE ?= exec
 
 ifeq ($(CONTAINER_TAG),)
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:4a4901ace1b5d4badc3bbbc25c74b1451ef72f9ddc3bdc365fe465c4d26251c1
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:55a87369921526780f23c9f4bf3a4f12d5a3e4e1d9ee14402d480281a6869539
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:8d9b2b7b549c5d6ca0a9a533a75e8a48e427cd773cf01f72f7706945aac73491
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:f30cfabe1b6d2c3f88471d1216c35a65a5107efe9f06ff49311e25e362596cce
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:43d20ff7b9ae57bb3594fb2fe28c120b51463f1ec8c9e3ecc5838339967a6e2c
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:9fa8753fc17fc03eea6d2b63c9d8224cd7409a251820e511a3523ba55c5c9fe6
-SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/source-packages@sha256:5e2dc249512f54382f414e88e560743ab5668cca48e74dc382dbf0395192b42a
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:b5fd738b862d67dcd0b7b7c431ac0b3938381437bf480326eea6166424988431
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:67728806eda722949c3cf64fa46e62c918f5afb731d35e933c4aec0bb4afe8f3
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:f4fef3565fc30e0f8d5bfe36322b0c4fbcca1bf6178c6ceed191d9ad27b17f0e
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:826bfd4da1edcfb1cc980c141f5486da443c0a1a4994fde6f051d076f7318bf2
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:e68edfa7bbd58623ac70b2189decb361a22344c27019166f06da20dd42d35147
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:5f8f5aded4f450ad0a698d07be3fb2ee9aea499e764fd836e45e198e8701faf3
+SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/source-packages@sha256:a332f1545f124972270fa4b76a866ff62200ad4e2c9d4661bfc0a8c0404ff7f5
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)

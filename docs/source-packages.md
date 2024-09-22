@@ -134,7 +134,7 @@ nodes, which is basically just a named directory for sub-packages:
 ## Example Usage
 
 ```shell
-export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/source-packages@sha256:5e2dc249512f54382f414e88e560743ab5668cca48e74dc382dbf0395192b42a
+export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/source-packages@sha256:a332f1545f124972270fa4b76a866ff62200ad4e2c9d4661bfc0a8c0404ff7f5
 
 kpt fn source examples/source-packages/specs | \
   kpt fn eval - --network -i $(SOURCE_PACKAGES_IMAGE) | \
@@ -159,7 +159,7 @@ Private repositories are supported through SSH-agent integration:
 The SSH-agent socket must be mounted into the container:
 
 ```shell
-export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/source-packages@sha256:5e2dc249512f54382f414e88e560743ab5668cca48e74dc382dbf0395192b42a
+export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/source-packages@sha256:a332f1545f124972270fa4b76a866ff62200ad4e2c9d4661bfc0a8c0404ff7f5
 
 kpt fn source examples/source-packages/specs | \
   kpt fn eval - -e SSH_AUTH_SOCK --mount type=bind,src="$SSH_AUTH_SOCK",target="$SSH_AUTH_SOCK",rw=true --as-current-user --network -i $(SOURCE_PACKAGES_IMAGE) | \
