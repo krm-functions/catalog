@@ -67,7 +67,7 @@ func UpdateKptMetadata(path, pkgName, gitDirectory, gitRepo, gitRev, gitHash str
 		Type: "git",
 		Git: &kptfile.Git{
 			Repo:      gitRepo,
-			Directory: "/"+gitDirectory,
+			Directory: "/" + gitDirectory,
 			Ref:       gitRev,
 		},
 		UpdateStrategy: "resource-merge",
@@ -76,7 +76,7 @@ func UpdateKptMetadata(path, pkgName, gitDirectory, gitRepo, gitRev, gitHash str
 		Type: "git",
 		Git: &kptfile.GitLock{
 			Repo:      gitRepo,
-			Directory: "/"+gitDirectory,
+			Directory: "/" + gitDirectory,
 			Ref:       gitRev,
 			Commit:    gitHash,
 		},
