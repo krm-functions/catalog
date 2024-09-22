@@ -44,7 +44,7 @@ spec:
     ref: v1.2
 ```
 
-The `defaults` setion can be used to remove some repetition for common settings:
+A `defaults` setion can be used to remove some repetition for common settings:
 
 ```yaml
 apiVersion: fn.kpt.dev/v1alpha1
@@ -63,13 +63,11 @@ spec:
     upstream: example-upstream
     ref: main
 
+  # 'sourcePath' defaults to package 'name'
   packages:
   - name: package1
-    sourcePath: package1
   - name: package2
-    sourcePath: package2
   - name: package3
-    sourcePath: package3
 ```
 
 Packages can also be composed in recursively:
@@ -133,6 +131,18 @@ nodes, which is basically just a named directory for sub-packages:
       sourcePath: pkg2
 ```
 
+## Example Usage
+
+```shell
+export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/source-packages@sha256:ad660e59239b27412854883e2c3cf6754fabbfbe1220092427446674c6a262c1
+
+kpt fn source examples/source-packages/specs | \
+  kpt fn eval - --network -i $(SOURCE_PACKAGES_IMAGE) | \
+  kpt fn sink fn-output
+
+kpt pkg tree fn-output
+```
+
 ## Private Repositories/Upstreams
 
 Private repositories are supported through SSH-agent integration:
@@ -142,9 +152,21 @@ Private repositories are supported through SSH-agent integration:
   - name: example-upstream
     type: git
     git:
-      repo: https://example.git
-	  authMethod: ssh-agent
+      repo: git@github.com:example-org/example-repo.git
+      authMethod: sshAgent
 ```
+
+The SSH-agent socket must be mounted into the container:
+
+```shell
+export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/source-packages@sha256:ad660e59239b27412854883e2c3cf6754fabbfbe1220092427446674c6a262c1
+
+kpt fn source examples/source-packages/specs | \
+  kpt fn eval - -e SSH_AUTH_SOCK --mount type=bind,src="$SSH_AUTH_SOCK",target="$SSH_AUTH_SOCK",rw=true --as-current-user --network -i $(SOURCE_PACKAGES_IMAGE) | \
+  kpt fn sink fn-output
+```
+
+The container's `known_hosts` file currently contain GitHub SSH hosts only. See the `ssh` folder.
 
 ## Future Directions
 

@@ -14,6 +14,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -165,8 +166,10 @@ func ParseFleetSpec(object []byte) (*Fleet, error) {
 
 func NewPackageSource(u *Upstream, fileBase string) (*PackageSource, fn.Results, error) {
 	var fnResults fn.Results
-	localPath := filepath.Join(fileBase, string(u.Name)) // FIXME: Use better name reflecting repo name
 	if u.Type == api.PackageUpstreamTypeGit {
+		// Hash repo url and auth method to create local tmp path
+		repoHash := base64.StdEncoding.EncodeToString([]byte(u.Git.Repo + "+" + u.Git.AuthMethod))
+		localPath := filepath.Join(fileBase, repoHash)
 		start := time.Now()
 		r, err := git.Clone(u.Git.Repo, u.Git.AuthMethod, localPath)
 		if err != nil {
@@ -214,14 +217,14 @@ func SourceEnsureVersion(src *PackageSource, ref SourceRef) (fn.Results, error) 
 	}
 	if src.Type == api.PackageUpstreamTypeGit {
 		start := time.Now()
-		err := src.Git.Checkout(string(ref))
+		hash, err := src.Git.Checkout(string(ref))
 		if err != nil {
-			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("error fetching %v @ %v\n", src.Upstream.Repo, ref), fn.Error))
+			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("error fetching %v@%v\n", src.Upstream.Repo, ref), fn.Error))
 			return fnResults, err
 		}
 		t := time.Now()
 		elapsed := t.Sub(start).Truncate(time.Millisecond)
-		fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("fetched %v @ %v in %v\n", src.Upstream.Repo, ref, elapsed), fn.Info))
+		fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("fetched %v@%v (%v) in %v\n", src.Upstream.Repo, ref, hash, elapsed), fn.Info))
 		src.CurrRef = ref
 		return fnResults, nil
 	}
@@ -262,7 +265,7 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 			}
 			if p.Metadata.Mode == "kptForDeployment" {
 				// FIXME assumes git upstream
-				err := kpt.UpdateKptMetadata(d, p.Name, p.SrcPath, u.Git.Repo, string(p.Ref))
+				err := kpt.UpdateKptMetadata(d, p.Name, p.SrcPath, src.Git.URI, src.Git.CurrentRevision, src.Git.CurrentHash)
 				if err != nil {
 					return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
 				}
