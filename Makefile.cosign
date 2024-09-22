@@ -1,0 +1,8 @@
+manifest-list-sign: # @HELP signs a manifest list of containers for all platforms
+manifest-list-sign:
+	IMAGES=""; \
+	for bin in $(BINS); do \
+	    DIGEST=$$(bin/tools/manifest-tool inspect --raw $(REGISTRY)/$$bin:$(VERSION) | jq -r .digest); \
+	    IMAGES+="$(REGISTRY)/$$bin@$$DIGEST "; \
+	done; \
+	cosign sign --yes $$IMAGES;
