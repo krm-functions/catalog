@@ -61,7 +61,7 @@ test-helm-upgrader:
 	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.txt
 	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.txt
 	grep -e '.*upgrade-available.0: .*karpenter:0.35.0' test-out.txt
-	grep -e '.*upgrade-available.1: .*/external-secrets:0.10.3' test-out.txt
+	grep -e '.*upgrade-available.1: .*/external-secrets:0.10.4' test-out.txt
 	rm test-out.txt
 	rm -rf tmp-results
 
@@ -188,20 +188,20 @@ test-digester-w-containers2:
 	rm -rf cert-manager-rendered
 	kpt fn render cert-manager-package -o stdout | kpt fn sink cert-manager-rendered
 
-KUBECONFORM_SCHEMA_LOCATIONS ?= "default"
-#KUBECONFORM_SCHEMA_LOCATIONS ?= '/schema-bundle/,/schema-bundle/CRDs-catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+#KUBECONFORM_SCHEMA_LOCATIONS ?= "default"
+KUBECONFORM_SCHEMA_LOCATIONS ?= 'examples/kubeconform/schema-bundle/,examples/kubeconform/schema-bundle/CRDs-catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 
 .PHONY: test-kubeconform
 test-kubeconform:
 	rm -rf tmp-results
-	kpt fn source examples/kubeconform | kpt fn eval - --results-dir tmp-results --truncate-output=false $(KUBECONFORM) -- ignore_missing_schemas=true kubernetes_version=1.29.1 schema_locations=$(KUBECONFORM_SCHEMA_LOCATIONS) > test-out.txt || true
-	#kpt fn source examples/kubeconform | kpt fn eval - --results-dir tmp-results --truncate-output=false $(KUBECONFORM) -- schema_locations=$(KUBECONFORM_SCHEMA_LOCATIONS) > test-out.txt || true
+	#kpt fn source examples/kubeconform/manifests | kpt fn eval - --results-dir tmp-results --truncate-output=false $(KUBECONFORM) -- ignore_missing_schemas=true kubernetes_version=1.29.1 schema_locations=$(KUBECONFORM_SCHEMA_LOCATIONS) > test-out.txt || true
+	kpt fn source examples/kubeconform/manifests | kpt fn eval - --results-dir tmp-results --truncate-output=false $(KUBECONFORM) -- schema_locations=$(KUBECONFORM_SCHEMA_LOCATIONS) debug=true > test-out.txt || true
 	make test-kubeconform-results
 
 .PHONY: test-kubeconform-w-container
 test-kubeconform-w-container:
 	rm -rf tmp-results
-	kpt fn source examples/kubeconform | kpt fn eval - --results-dir tmp-results --truncate-output=false -i $(KUBECONFORM_IMAGE) -- ignore_missing_schemas=true schema_locations=$(KUBECONFORM_SCHEMA_LOCATIONS) > test-out.txt || true
+	kpt fn source examples/kubeconform/manifests | kpt fn eval - --results-dir tmp-results --truncate-output=false -i $(KUBECONFORM_IMAGE) -- ignore_missing_schemas=true schema_locations=$(KUBECONFORM_SCHEMA_LOCATIONS) > test-out.txt || true
 	make test-kubeconform-results
 
 .PHONY: test-kubeconform-results

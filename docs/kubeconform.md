@@ -52,11 +52,13 @@ kind: ConfigMap
 metadata:
   name: my-kubeconform-config
 data:
-  kubernetes_version: "1.30.0"   // Must be one from https://github.com/instrumenta/kubernetes-json-schema without leading `v` e.g. `1.29.1`.
-                                 // Defaults to `master`, which work with built-in schemas
-  ignore_missing_schemas: "true" // Do not fail on missing schemas, only warn
-  strict: "true"                 // Do not allow properties not defined in the schema
+  kubernetes_version: "1.30.0"   # Must be one from https://github.com/instrumenta/kubernetes-json-schema without leading `v` e.g. `1.29.1`.
+                                 # Defaults to `master`, which work with built-in schemas
+  ignore_missing_schemas: "true" # Do not fail on missing schemas, only warn
+  strict: "true"                 # Do not allow properties not defined in the schema
   schema_locations: "/path/to/schemas,/another/path"
+  skip_kinds: ""                 # Comma-separated list of kinds to ignore in validation, e.g. 'v1/ConfigMap'
+  reject_kinds: ""               # Comma-separated list of kinds to reject in validation
 ```
 
 For settings `schema_locations`, see [kubeconform docs](https://github.com/yannh/kubeconform#overriding-schemas-location).
