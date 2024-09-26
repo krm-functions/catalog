@@ -13,7 +13,7 @@ require (
 	github.com/google/go-containerregistry v0.20.2
 	github.com/nephio-project/porch v1.3.1
 	github.com/stretchr/testify v1.9.0
-	github.com/yannh/kubeconform v0.6.6
+	github.com/yannh/kubeconform v0.6.7
 	k8s.io/api v0.31.1
 	sigs.k8s.io/kustomize/api v0.17.3
 	sigs.k8s.io/kustomize/kyaml v0.17.2
@@ -45,6 +45,8 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
