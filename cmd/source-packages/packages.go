@@ -51,9 +51,16 @@ type Upstream struct {
 	Git  UpstreamGit `yaml:"git,omitempty" json:"git,omitempty"`
 }
 
+type SSHAuth struct {
+	Kind      string `yaml:"kind,omitempty" json:"kind,omitempty"`
+	Name      string `yaml:"name,omitempty" json:"name,omitempty"`
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+}
+
 type UpstreamGit struct {
-	Repo       string `yaml:"repo,omitempty" json:"repo,omitempty"`
-	AuthMethod string `yaml:"authMethod,omitempty" json:"authMethod,omitempty"`
+	Repo       string   `yaml:"repo,omitempty" json:"repo,omitempty"`
+	AuthMethod string   `yaml:"authMethod,omitempty" json:"authMethod,omitempty"`
+	SSH        *SSHAuth `yaml:"ssh,omitempty" json:"ssh,omitempty"`
 }
 
 type PackageDefaults struct {
@@ -80,11 +87,13 @@ type Metadata struct {
 }
 
 type PackageSource struct {
-	Type     string
-	CurrRef  SourceRef
-	Upstream *UpstreamGit
-	Git      *git.Repository
-	Path     string // Local absolute path to repo files
+	Type        string
+	CurrRef     SourceRef
+	Upstream    *UpstreamGit
+	Git         *git.Repository
+	SSHUsername string
+	SSHPassword string
+	Path        string // Local absolute path to repo files
 }
 
 func (packages PackageSlice) Validate() error {
@@ -112,7 +121,8 @@ func (packages PackageSlice) Validate() error {
 	return nil
 }
 
-func (packages PackageSlice) Default(defaults *PackageDefaults) {
+func (fleet *Fleet) Default(packages PackageSlice) {
+	defaults := fleet.Spec.Defaults
 	for idx := range packages {
 		p := &packages[idx]
 		if p.Upstream == "" {
@@ -134,7 +144,7 @@ func (packages PackageSlice) Default(defaults *PackageDefaults) {
 			p.Metadata.Mode = "kptForDeployment"
 		}
 		p.dstRelPath = p.Name
-		p.Packages.Default(defaults)
+		fleet.Default(p.Packages)
 	}
 }
 
@@ -147,31 +157,31 @@ func (packages PackageSlice) Print(w io.Writer) {
 }
 
 func ParseFleetSpec(object []byte) (*Fleet, error) {
-	packages := &Fleet{}
-	if err := yaml.Unmarshal(object, packages); err != nil {
+	fleet := &Fleet{}
+	if err := yaml.Unmarshal(object, fleet); err != nil {
 		return nil, err
 	}
 
 	// Defaults for defaults
-	if packages.Spec.Defaults.Enabled == nil {
-		packages.Spec.Defaults.Enabled = PtrTo(true)
+	if fleet.Spec.Defaults.Enabled == nil {
+		fleet.Spec.Defaults.Enabled = PtrTo(true)
 	}
-	if packages.Spec.Defaults.Upstream == "" && len(packages.Spec.Upstreams) == 1 {
-		packages.Spec.Defaults.Upstream = packages.Spec.Upstreams[0].Name
+	if fleet.Spec.Defaults.Upstream == "" && len(fleet.Spec.Upstreams) == 1 {
+		fleet.Spec.Defaults.Upstream = fleet.Spec.Upstreams[0].Name
 	}
 
-	packages.Spec.Packages.Default(&packages.Spec.Defaults)
-	return packages, packages.Spec.Packages.Validate()
+	fleet.Default(fleet.Spec.Packages)
+	return fleet, fleet.Spec.Packages.Validate()
 }
 
-func NewPackageSource(u *Upstream, fileBase string) (*PackageSource, fn.Results, error) {
+func NewPackageSource(u *Upstream, fileBase, username, password string) (*PackageSource, fn.Results, error) {
 	var fnResults fn.Results
 	if u.Type == api.PackageUpstreamTypeGit {
 		// Hash repo url and auth method to create local tmp path
 		repoHash := base64.StdEncoding.EncodeToString([]byte(u.Git.Repo + "+" + u.Git.AuthMethod))
 		localPath := filepath.Join(fileBase, repoHash)
 		start := time.Now()
-		r, err := git.Clone(u.Git.Repo, u.Git.AuthMethod, localPath)
+		r, err := git.Clone(u.Git.Repo, u.Git.AuthMethod, username, password, localPath)
 		if err != nil {
 			return nil, fnResults, err
 		}

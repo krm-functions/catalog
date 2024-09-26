@@ -30,14 +30,14 @@ type Repository struct {
 	CurrentHash     string
 }
 
-func Clone(uri, authMethod, fileBase string) (*Repository, error) {
+func Clone(uri, authMethod, username, _ /*password*/, fileBase string) (*Repository, error) {
 	var auth *ssh.PublicKeysCallback
 	var err error
 	opts := &gogit.CloneOptions{
 		URL: uri,
 	}
 	if authMethod == "sshAgent" {
-		auth, err = ssh.NewSSHAgentAuth("git")
+		auth, err = ssh.NewSSHAgentAuth(username)
 		if err != nil {
 			return nil, fmt.Errorf("sshAgent auth setup %v: %v", uri, err)
 		}
