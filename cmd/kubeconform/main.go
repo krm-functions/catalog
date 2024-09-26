@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 
+	"github.com/krm-functions/catalog/pkg/util"
 	"github.com/krm-functions/catalog/pkg/version"
+
 	"github.com/yannh/kubeconform/pkg/resource"
 	"github.com/yannh/kubeconform/pkg/validator"
-
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
 	"sigs.k8s.io/kustomize/kyaml/kio/kioutil"
@@ -35,6 +35,9 @@ type Data struct {
 	IgnoreMissingSchemas string `yaml:"ignore_missing_schemas,omitempty" json:"ignore_missing_schemas,omitempty"`
 	Strict               string `yaml:"strict,omitempty" json:"strict,omitempty"`
 	SchemaLocations      string `yaml:"schema_locations,omitempty" json:"schema_locations,omitempty"`
+	SkipKinds            string `yaml:"skip_kinds,omitempty" json:"skip_kinds,omitempty"`
+	RejectKinds          string `yaml:"reject_kinds,omitempty" json:"reject_kinds,omitempty"`
+	Debug                string `yaml:"debug,omitempty" json:"debug,omitempty"`
 }
 
 type FunctionConfig struct {
@@ -72,6 +75,9 @@ func (fnCfg *FunctionConfig) Default() error { //nolint:unparam // this return i
 	}
 	if fnCfg.Data.SchemaLocations == "" {
 		fnCfg.Data.SchemaLocations = os.Getenv("KUBECONFORM_SCHEMA_LOCATIONS")
+	}
+	if fnCfg.Data.Debug == "" {
+		fnCfg.Data.Debug = StringFalse
 	}
 	return nil
 }
@@ -166,13 +172,20 @@ func Processor() framework.ResourceListProcessor {
 			return fmt.Errorf("reading function-config: %w", err)
 		}
 		opts := validator.Opts{
+			Debug:                config.Data.Debug == StringTrue,
 			KubernetesVersion:    config.Data.KubernetesVersion,
-			Strict:               config.Data.Strict == "true",
-			IgnoreMissingSchemas: config.Data.IgnoreMissingSchemas == "true",
+			Strict:               config.Data.Strict == StringTrue,
+			IgnoreMissingSchemas: config.Data.IgnoreMissingSchemas == StringTrue,
 		}
 		var schemas []string
 		if config.Data.SchemaLocations != "" {
-			schemas = append(schemas, strings.Split(config.Data.SchemaLocations, ",")...)
+			schemas = util.CsvToList(config.Data.SchemaLocations)
+		}
+		if config.Data.SkipKinds != "" {
+			opts.SkipKinds = csvToKindMap(config.Data.SkipKinds)
+		}
+		if config.Data.RejectKinds != "" {
+			opts.RejectKinds = csvToKindMap(config.Data.RejectKinds)
 		}
 		v, err := validator.New(schemas, opts)
 		if err != nil {
@@ -189,6 +202,14 @@ func Processor() framework.ResourceListProcessor {
 
 		return err
 	})
+}
+
+func csvToKindMap(cvs string) map[string]struct{} {
+	kinds := make(map[string]struct{})
+	for _, itm := range util.CsvToList(cvs) {
+		kinds[itm] = struct{}{}
+	}
+	return kinds
 }
 
 func main() {
