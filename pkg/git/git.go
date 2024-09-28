@@ -26,30 +26,29 @@ type Repository struct {
 	URI             string
 	Repo            *gogit.Repository
 	Tree            *gogit.Worktree
+	AuthMethod      ssh.AuthMethod
 	CurrentRevision string
 	CurrentHash     string
 }
 
 func Clone(uri, authMethod, username, password, fileBase string) (*Repository, error) {
 	var err error
+	var auth ssh.AuthMethod
 	opts := &gogit.CloneOptions{
 		URL: uri,
 	}
 	if authMethod == "sshAgent" {
-		var auth *ssh.PublicKeysCallback
 		auth, err = ssh.NewSSHAgentAuth(username)
 		if err != nil {
 			return nil, fmt.Errorf("sshAgent auth setup %v: %v", uri, err)
 		}
-		opts.Auth = auth
 	} else if authMethod == "sshPrivateKey" {
-		var auth *ssh.PublicKeys
 		auth, err = ssh.NewPublicKeys(username, []byte(password), "")
 		if err != nil {
 			return nil, fmt.Errorf("sshPrivateKey auth setup %v: %v", uri, err)
 		}
-		opts.Auth = auth
 	}
+	opts.Auth = auth
 	repo, err := gogit.PlainClone(fileBase, false, opts)
 	if err != nil {
 		return nil, fmt.Errorf("cloning %v, authMethod: %v: %v", uri, authMethod, err)
@@ -58,7 +57,14 @@ func Clone(uri, authMethod, username, password, fileBase string) (*Repository, e
 	if err != nil {
 		return nil, fmt.Errorf("creating worktree: %v", err)
 	}
-	r := &Repository{uri, repo, tree, "HEAD", ""}
+	r := &Repository{
+		URI:             uri,
+		Repo:            repo,
+		Tree:            tree,
+		AuthMethod:      auth,
+		CurrentRevision: "HEAD",
+		CurrentHash:     "",
+	}
 	hash, err := r.ResolveRevision("HEAD")
 	if err != nil {
 		return nil, fmt.Errorf("resolving HEAD: %v", err)
@@ -72,7 +78,7 @@ func (r *Repository) ResolveRevision(treeishRevision string) (string, error) {
 	if err != nil {
 		// Unknown ref, try remote branch
 		mirrorRemoteBranchRefSpec := fmt.Sprintf("refs/heads/%s:refs/heads/%s", treeishRevision, treeishRevision)
-		err = fetchOrigin(r.Repo, mirrorRemoteBranchRefSpec)
+		err = r.fetchOrigin(mirrorRemoteBranchRefSpec)
 		if err != nil {
 			return "", fmt.Errorf("fetch remote %v@%v: %v", r.URI, treeishRevision, err)
 		}
@@ -105,8 +111,8 @@ func (r *Repository) Checkout(treeishRevision string) (string, error) {
 	return hash, nil
 }
 
-func fetchOrigin(repo *gogit.Repository, refSpecStr string) error {
-	remote, err := repo.Remote("origin")
+func (r *Repository) fetchOrigin(refSpecStr string) error {
+	remote, err := r.Repo.Remote("origin")
 	if err != nil {
 		return fmt.Errorf("create remote: %v", err)
 	}
@@ -118,6 +124,7 @@ func fetchOrigin(repo *gogit.Repository, refSpecStr string) error {
 
 	if err = remote.Fetch(&gogit.FetchOptions{
 		RefSpecs: refSpecs,
+		Auth:     r.AuthMethod,
 	}); err != nil {
 		if err == gogit.NoErrAlreadyUpToDate {
 			fmt.Print("refs already up to date")
