@@ -6,3 +6,11 @@ manifest-list-sign:
 	    IMAGES+="$(REGISTRY)/$$bin@$$DIGEST "; \
 	done; \
 	cosign sign --yes $$IMAGES;
+
+manifest-list-sign-verify: # @HELP verify cosign signatures
+manifest-list-sign-verify:
+	for img in $(ALL_IMAGES); do \
+	    echo ">> Verify $$img"; \
+	    cosign verify --certificate-identity-regexp https://github.com/krm-functions/catalog/.github/workflows/build.yaml@refs/.* \
+	    --certificate-oidc-issuer https://token.actions.githubusercontent.com $$img | jq . ; \
+	done

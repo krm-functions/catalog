@@ -20,6 +20,7 @@ import (
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 	"github.com/krm-functions/catalog/pkg/api"
+	"github.com/krm-functions/catalog/pkg/util"
 	"sigs.k8s.io/kustomize/kyaml/kio/kioutil"
 )
 
@@ -55,7 +56,17 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			if PackageSourceLookup(sources, u) != nil {
 				continue
 			}
-			src, fnRes, er := NewPackageSource(u, srcBase)
+
+			var username, password string
+			username = "git"
+			if u.Git.Auth != nil {
+				username, password, err = util.LookupSSHAuthSecret(u.Git.Auth.Name, u.Git.Auth.Namespace, rl)
+				if err != nil {
+					return false, err
+				}
+			}
+
+			src, fnRes, er := NewPackageSource(u, srcBase, username, password)
 			if er != nil {
 				return false, er
 			}

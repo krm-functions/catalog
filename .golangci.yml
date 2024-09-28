@@ -39,7 +39,6 @@ linters:
     - ineffassign
     - misspell
     - nolintlint
-    - nakedret
     #- prealloc
     - predeclared
     - revive

@@ -131,6 +131,8 @@ nodes, which is basically just a named directory for sub-packages:
       sourcePath: pkg2
 ```
 
+Note, that no package merge strategies are supported.
+
 ## Example Usage
 
 ```shell
@@ -166,7 +168,31 @@ kpt fn source examples/source-packages/specs | \
   kpt fn sink fn-output
 ```
 
-The container's `known_hosts` file currently contain GitHub SSH hosts only. See the `ssh` folder.
+Private keys can also be used by referencing a `Secret` resource:
+
+```yaml
+  upstreams:
+  - name: example-upstream
+    type: git
+    git:
+      repo: git@github.com:example-org/example-repo.git
+      authMethod: sshPrivateKey
+      ssh:
+        apiVersion: v1
+        kind: Secret
+        name: ssh-private-key
+        namespace: optional-namespace
+```
+
+The `Secret` must have `ssh-username` and `ssh-privatekey`fields e.g.:
+
+```
+kubectl create secret generic foo --dry-run=client --type=kubernetes.io/ssh-auth \
+  --from-literal ssh-username=git --from-file ssh-privatekey=<key-file> -o yaml
+```
+
+The container's `known_hosts` file currently contain GitHub SSH hosts
+only. See the `ssh` folder.
 
 ## Future Directions
 
