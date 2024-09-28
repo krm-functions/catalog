@@ -57,16 +57,16 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				continue
 			}
 
-			var username, password *string
-			username = PtrTo("git")
-			if u.Git.SSH != nil {
-				username, password, err = util.LookupAuthSecret(u.Git.SSH.Name, u.Git.SSH.Namespace, rl)
+			var username, password string
+			username = "git"
+			if u.Git.Auth != nil {
+				username, password, err = util.LookupSSHAuthSecret(u.Git.Auth.Name, u.Git.Auth.Namespace, rl)
 				if err != nil {
 					return false, err
 				}
 			}
 
-			src, fnRes, er := NewPackageSource(u, srcBase, *username, *password)
+			src, fnRes, er := NewPackageSource(u, srcBase, username, password)
 			if er != nil {
 				return false, er
 			}

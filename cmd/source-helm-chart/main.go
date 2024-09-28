@@ -22,8 +22,8 @@ import (
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 	"github.com/krm-functions/catalog/pkg/api"
 	"github.com/krm-functions/catalog/pkg/helm"
-	"github.com/krm-functions/catalog/pkg/util"
 	t "github.com/krm-functions/catalog/pkg/helmspecs"
+	"github.com/krm-functions/catalog/pkg/util"
 )
 
 func Run(rl *fn.ResourceList) (bool, error) {
@@ -38,7 +38,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			}
 			for idx := range spec.Charts {
 				chart := &spec.Charts[idx]
-				var uname, pword *string
+				var uname, pword string
 				if chart.Args.Auth != nil {
 					uname, pword, err = util.LookupAuthSecret(chart.Args.Auth.Name, chart.Args.Auth.Namespace, rl)
 					if err != nil {
@@ -46,7 +46,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 					}
 				}
 
-				chartData, _, chartSum, err := helm.SourceChart(&chart.Args, "", uname, pword)
+				chartData, _, chartSum, err := helm.SourceChart(&chart.Args, "", &uname, &pword)
 				if err != nil {
 					return false, err
 				}

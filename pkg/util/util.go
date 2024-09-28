@@ -16,6 +16,7 @@ package util
 import (
 	"encoding/base64"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
@@ -29,10 +30,28 @@ func CsvToList(in string) []string {
 	return lst
 }
 
-func LookupAuthSecret(secretName, namespace string, rl *fn.ResourceList) (username, password *string, err error) {
+func ResultPrintf(fnResults *fn.Results, sev fn.Severity, format string, a ...any) {
+	*fnResults = append(*fnResults,
+		fn.GeneralResult(fmt.Sprintf(format+"\n", a...), sev))
+}
+
+// LookupAuthSecret will lookup a secret in a resourcelist and return username and password decoded from secret
+func LookupAuthSecret(secretName, namespace string, rl *fn.ResourceList) (username, password string, err error) {
+	return LookupAuthSecretWithKeys(secretName, namespace, "username", "password", rl)
+}
+
+// LookupSSHAuthSecret will lookup an SSH secret in a resourcelist and return username and password decoded from secret
+func LookupSSHAuthSecret(secretName, namespace string, rl *fn.ResourceList) (username, password string, err error) {
+	return LookupAuthSecretWithKeys(secretName, namespace, "ssh-username", "ssh-privatekey", rl)
+}
+
+// LookupAuthSecretWithKeys will lookup a secret in a resourcelist and return username and password decoded from secret with the username and password being defined by supplied key names
+func LookupAuthSecretWithKeys(secretName, namespace, usernameKey, passwordKey string, rl *fn.ResourceList) (username, password string, err error) {
 	if namespace == "" {
 		namespace = "default" // Default according to spec
 	}
+	username = ""
+	password = ""
 	for _, k := range rl.Items {
 		if !k.IsGVK("v1", "", "Secret") || k.GetName() != secretName {
 			continue
@@ -41,33 +60,46 @@ func LookupAuthSecret(secretName, namespace string, rl *fn.ResourceList) (userna
 		if oNamespace == "" {
 			oNamespace = "default" // Default according to spec
 		}
+		var found bool
 		if namespace == oNamespace {
-			uname, found, err := k.NestedString("data", "username")
+			username, found, err = k.NestedString("data", usernameKey)
 			if !found {
-				return nil, nil, fmt.Errorf("key 'username' not found in Secret %s/%s", namespace, secretName)
+				err = fmt.Errorf("key '%v' not found in Secret %s/%s", usernameKey, namespace, secretName)
+				return
 			}
 			if err != nil {
-				return nil, nil, err
+				return
 			}
-			pword, found, err := k.NestedString("data", "password")
+			password, found, err = k.NestedString("data", passwordKey)
 			if !found {
-				return nil, nil, fmt.Errorf("key 'password' not found in Secret %s/%s", namespace, secretName)
+				err = fmt.Errorf("key '%v' not found in Secret %s/%s", passwordKey, namespace, secretName)
+				return
 			}
 			if err != nil {
-				return nil, nil, err
+				return
 			}
-			u, err := base64.StdEncoding.DecodeString(uname)
+			var u, p []byte
+			u, err = base64.StdEncoding.DecodeString(username)
 			if err != nil {
-				return nil, nil, fmt.Errorf("decoding 'username' in Secret %s/%s: %w", namespace, secretName, err)
+				err = fmt.Errorf("decoding '%v' in Secret %s/%s: %w", usernameKey, namespace, secretName, err)
+				return
 			}
-			uname = string(u)
-			p, err := base64.StdEncoding.DecodeString(pword)
+			username = string(u)
+			p, err = base64.StdEncoding.DecodeString(password)
 			if err != nil {
-				return nil, nil, fmt.Errorf("decoding 'password' in Secret %s/%s: %w", namespace, secretName, err)
+				err = fmt.Errorf("decoding '%v' in Secret %s/%s: %w", passwordKey, namespace, secretName, err)
+				return
 			}
-			pword = string(p)
-			return &uname, &pword, nil
+			password = string(p)
+			return
 		}
 	}
-	return nil, nil, fmt.Errorf("auth Secret %s/%s not found", namespace, secretName)
+	err = fmt.Errorf("auth Secret %s/%s not found", namespace, secretName)
+	return
+}
+
+// UniqueStrings removes duplicate strings from slice
+func UniqueStrings(list []string) []string {
+	slices.Sort(list)
+	return slices.Compact(list)
 }

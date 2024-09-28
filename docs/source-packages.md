@@ -184,8 +184,12 @@ Private keys can also be used by referencing a `Secret` resource:
         namespace: optional-namespace
 ```
 
-The `Secret` must have `username` and `password`fields with `password`
-holding the private SSH key.
+The `Secret` must have `ssh-username` and `ssh-privatekey`fields e.g.:
+
+```
+kubectl create secret generic foo --dry-run=client --type=kubernetes.io/ssh-auth \
+  --from-literal ssh-username=git --from-file ssh-privatekey=<key-file> -o yaml
+```
 
 The container's `known_hosts` file currently contain GitHub SSH hosts
 only. See the `ssh` folder.

@@ -23,9 +23,9 @@ import (
 
 	"github.com/krm-functions/catalog/pkg/api"
 	"github.com/krm-functions/catalog/pkg/helm"
-	"github.com/krm-functions/catalog/pkg/util"
 	t "github.com/krm-functions/catalog/pkg/helmspecs"
 	"github.com/krm-functions/catalog/pkg/semver"
+	"github.com/krm-functions/catalog/pkg/util"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 )
@@ -177,18 +177,18 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				var upgraded *t.HelmChartArgs
 				var currSearch, newVersion *helm.RepoSearch
 				var info string
-				var uname, pword *string
+				var uname, pword string
 				if helmChart.Args.Auth != nil {
 					uname, pword, err = util.LookupAuthSecret(helmChart.Args.Auth.Name, helmChart.Args.Auth.Namespace, rl)
 					if err != nil {
 						return false, err
 					}
 				}
-				currSearch, newVersion, err = evaluateChartVersion(&helmChart.Args, upgradeConstraint, uname, pword)
+				currSearch, newVersion, err = evaluateChartVersion(&helmChart.Args, upgradeConstraint, &uname, &pword)
 				if err != nil {
 					return false, err
 				}
-				upgraded, info, err = handleNewVersion(currSearch, newVersion, &helmChart.Args, kubeObject, idx, upgradeConstraint, uname, pword)
+				upgraded, info, err = handleNewVersion(currSearch, newVersion, &helmChart.Args, kubeObject, idx, upgradeConstraint, &uname, &pword)
 				if err != nil {
 					return false, err
 				}

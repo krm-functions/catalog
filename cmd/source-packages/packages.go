@@ -25,6 +25,7 @@ import (
 	"github.com/krm-functions/catalog/pkg/api"
 	"github.com/krm-functions/catalog/pkg/git"
 	"github.com/krm-functions/catalog/pkg/kpt"
+	"github.com/krm-functions/catalog/pkg/util"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
@@ -51,16 +52,16 @@ type Upstream struct {
 	Git  UpstreamGit `yaml:"git,omitempty" json:"git,omitempty"`
 }
 
-type SSHAuth struct {
+type Auth struct {
 	Kind      string `yaml:"kind,omitempty" json:"kind,omitempty"`
 	Name      string `yaml:"name,omitempty" json:"name,omitempty"`
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 }
 
 type UpstreamGit struct {
-	Repo       string   `yaml:"repo,omitempty" json:"repo,omitempty"`
-	AuthMethod string   `yaml:"authMethod,omitempty" json:"authMethod,omitempty"`
-	SSH        *SSHAuth `yaml:"ssh,omitempty" json:"ssh,omitempty"`
+	Repo       string `yaml:"repo,omitempty" json:"repo,omitempty"`
+	AuthMethod string `yaml:"authMethod,omitempty" json:"authMethod,omitempty"`
+	Auth       *Auth  `yaml:"auth,omitempty" json:"auth,omitempty"`
 }
 
 type PackageDefaults struct {
@@ -87,13 +88,13 @@ type Metadata struct {
 }
 
 type PackageSource struct {
-	Type        string
-	CurrRef     SourceRef
-	Upstream    *UpstreamGit
-	Git         *git.Repository
-	SSHUsername string
-	SSHPassword string
-	Path        string // Local absolute path to repo files
+	Type     string
+	CurrRef  SourceRef
+	Upstream *UpstreamGit
+	Git      *git.Repository
+	Username string
+	Password string
+	Path     string // Local absolute path to repo files
 }
 
 func (packages PackageSlice) Validate() error {
@@ -119,6 +120,36 @@ func (packages PackageSlice) Validate() error {
 		}
 	}
 	return nil
+}
+
+func (fleet *Fleet) Validate() error {
+	var names []string
+	for idx := range fleet.Spec.Upstreams {
+		u := &fleet.Spec.Upstreams[idx]
+		names = append(names, string(u.Name))
+		if u.Type == api.PackageUpstreamTypeGit {
+			switch u.Git.AuthMethod {
+			case "":
+			case "sshAgent":
+				if u.Git.Auth != nil {
+					return fmt.Errorf("upstream %v, cannot use auth specification with method 'sshAgent'", u.Name)
+				}
+			case "sshPrivateKey":
+				if u.Git.Auth == nil {
+					return fmt.Errorf("upstream %v, auth method 'sshPrivateKey' require auth specification", u.Name)
+				}
+				if u.Git.Auth.Kind != "Secret" {
+					return fmt.Errorf("upstream %v, only auth kind 'Secret' supported", u.Name)
+				}
+			default:
+				return fmt.Errorf("upstream %v, unsupported auth method: %v", u.Name, u.Git.AuthMethod)
+			}
+		}
+	}
+	if len(util.UniqueStrings(names)) != len(names) {
+		return fmt.Errorf("upstream names must be unique")
+	}
+	return fleet.Spec.Packages.Validate()
 }
 
 func (fleet *Fleet) Default(packages PackageSlice) {
@@ -171,7 +202,8 @@ func ParseFleetSpec(object []byte) (*Fleet, error) {
 	}
 
 	fleet.Default(fleet.Spec.Packages)
-	return fleet, fleet.Spec.Packages.Validate()
+	err := fleet.Validate()
+	return fleet, err
 }
 
 func NewPackageSource(u *Upstream, fileBase, username, password string) (*PackageSource, fn.Results, error) {
@@ -192,6 +224,8 @@ func NewPackageSource(u *Upstream, fileBase, username, password string) (*Packag
 			Type:     api.PackageUpstreamTypeGit,
 			Upstream: &u.Git,
 			Git:      r,
+			Username: username,
+			Password: password,
 			Path:     localPath}, fnResults, nil
 	}
 	return nil, fnResults, nil
@@ -247,12 +281,12 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 	for idx := range packages {
 		p := &packages[idx]
 		if !*p.Enabled {
-			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; disabled\n", p.Name), fn.Info))
+			util.ResultPrintf(&fnResults, fn.Info, "package %v; disabled", p.Name)
 			continue
 		}
 		d := filepath.Join(dstAbsBasePath, p.dstRelPath)
 		if *p.Stub {
-			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; stub package at %v\n", p.Name, p.dstRelPath), fn.Info))
+			util.ResultPrintf(&fnResults, fn.Info, "package %v; stub package at %v", p.Name, p.dstRelPath)
 		} else {
 			u := UpstreamLookup(fleet, p.Upstream)
 			if u == nil {
@@ -267,7 +301,7 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 			if err != nil {
 				return fnResults, err
 			}
-			fnResults = append(fnResults, fn.GeneralResult(fmt.Sprintf("package %v; %v --> %v\n", p.Name, p.SrcPath, p.dstRelPath), fn.Info))
+			util.ResultPrintf(&fnResults, fn.Info, "package %v; %v --> %v", p.Name, p.SrcPath, p.dstRelPath)
 			s := filepath.Join(src.Path, p.SrcPath)
 			err = os.CopyFS(d, os.DirFS(s))
 			if err != nil {

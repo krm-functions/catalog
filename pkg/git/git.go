@@ -30,16 +30,23 @@ type Repository struct {
 	CurrentHash     string
 }
 
-func Clone(uri, authMethod, username, _ /*password*/, fileBase string) (*Repository, error) {
-	var auth *ssh.PublicKeysCallback
+func Clone(uri, authMethod, username, password, fileBase string) (*Repository, error) {
 	var err error
 	opts := &gogit.CloneOptions{
 		URL: uri,
 	}
 	if authMethod == "sshAgent" {
+		var auth *ssh.PublicKeysCallback
 		auth, err = ssh.NewSSHAgentAuth(username)
 		if err != nil {
 			return nil, fmt.Errorf("sshAgent auth setup %v: %v", uri, err)
+		}
+		opts.Auth = auth
+	} else if authMethod == "sshPrivateKey" {
+		var auth *ssh.PublicKeys
+		auth, err = ssh.NewPublicKeys(username, []byte(password), "")
+		if err != nil {
+			return nil, fmt.Errorf("sshPrivateKey auth setup %v: %v", uri, err)
 		}
 		opts.Auth = auth
 	}
@@ -67,11 +74,11 @@ func (r *Repository) ResolveRevision(treeishRevision string) (string, error) {
 		mirrorRemoteBranchRefSpec := fmt.Sprintf("refs/heads/%s:refs/heads/%s", treeishRevision, treeishRevision)
 		err = fetchOrigin(r.Repo, mirrorRemoteBranchRefSpec)
 		if err != nil {
-			return "", fmt.Errorf("fetch remote %v @ %v: %v", r.URI, treeishRevision, err)
+			return "", fmt.Errorf("fetch remote %v@%v: %v", r.URI, treeishRevision, err)
 		}
 		hash, err = r.Repo.ResolveRevision(plumbing.Revision(treeishRevision))
 		if err != nil {
-			return "", fmt.Errorf("unknown ref %v @ %v: %v", r.URI, treeishRevision, err)
+			return "", fmt.Errorf("unknown ref %v@ %v: %v", r.URI, treeishRevision, err)
 		}
 	}
 	return hash.String(), nil
@@ -84,13 +91,13 @@ func (r *Repository) Checkout(treeishRevision string) (string, error) {
 
 	hash, err := r.ResolveRevision(treeishRevision)
 	if err != nil {
-		return "", fmt.Errorf("unknown ref %v @ %v: %v", r.URI, treeishRevision, err)
+		return "", fmt.Errorf("failed to resolve ref %v@%v: %v", r.URI, treeishRevision, err)
 	}
 	opts := gogit.CheckoutOptions{
 		Hash: plumbing.NewHash(hash),
 	}
 	if err := r.Tree.Checkout(&opts); err != nil {
-		return "", fmt.Errorf("checkout %v @ %v: %v", r.URI, treeishRevision, err)
+		return "", fmt.Errorf("checkout %v@%v: %v", r.URI, treeishRevision, err)
 	}
 
 	r.CurrentRevision = treeishRevision
