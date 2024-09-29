@@ -70,7 +70,7 @@ spec:
   - name: package3
 ```
 
-Packages can also be composed in recursively:
+Packages can also be composed recursively:
 
 ```yaml
   ...
@@ -248,7 +248,7 @@ following:
           k4: v4-3
 ```
 
-will result in the following `package-context.yaml for the
+will result in the following `package-context.yaml` for the
 `foo-sub-pkg` package:
 
 ```
