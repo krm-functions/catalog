@@ -8,7 +8,7 @@ declaratively. When run declaratively, the built-in schemas are used.
 Example
 
 ```shell
-export KUBECONFORM_IMAGE=ghcr.io/krm-functions/kubeconform@sha256:3c3f5790bac63b2f2e0dd32173b68fc82908483a8be9962ba31b77b015144700
+export KUBECONFORM_IMAGE=ghcr.io/krm-functions/kubeconform@sha256:aab67e8b52eebd95cb068314818bbc3b05059ff3b71d3de84a661a1df4718b73
 
 kpt fn source examples/kubeconform \
   | kpt fn eval - --truncate-output=false --image $KUBECONFORM_IMAGE -- ignore_missing_schemas=true

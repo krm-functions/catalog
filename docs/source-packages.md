@@ -136,7 +136,7 @@ Note, that no package merge strategies are supported.
 ## Example Usage
 
 ```shell
-export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/source-packages@sha256:fcc332ebb875177baa35e3d29ec37d32e64fc6667555862d58216031cc32a7c0
+export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/source-packages@sha256:30e52b8976e867d50d0a1745e2577c806790987befb477e3ca8ea53bd0aa3859
 
 kpt fn source examples/source-packages/specs | \
   kpt fn eval - --network -i $(SOURCE_PACKAGES_IMAGE) | \
@@ -161,7 +161,7 @@ Private repositories are supported through SSH-agent integration:
 The SSH-agent socket must be mounted into the container:
 
 ```shell
-export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/source-packages@sha256:fcc332ebb875177baa35e3d29ec37d32e64fc6667555862d58216031cc32a7c0
+export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/source-packages@sha256:30e52b8976e867d50d0a1745e2577c806790987befb477e3ca8ea53bd0aa3859
 
 kpt fn source examples/source-packages/specs | \
   kpt fn eval - -e SSH_AUTH_SOCK --mount type=bind,src="$SSH_AUTH_SOCK",target="$SSH_AUTH_SOCK",rw=true --as-current-user --network -i $(SOURCE_PACKAGES_IMAGE) | \
