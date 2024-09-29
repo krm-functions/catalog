@@ -98,8 +98,8 @@ render-helm-chart-example2:
 .PHONY: render-with-kube-version
 render-with-kube-version:
 	mkdir _tmp
-	helm package test/test-chart
-	scripts/source-chart.sh test/render-test-chart.yaml test-chart-0.1.0.tgz > _tmp/render.yaml
+	helm package test-data/test-chart
+	scripts/source-chart.sh test-data/render-test-chart.yaml test-chart-0.1.0.tgz > _tmp/render.yaml
 	rm test-chart-0.1.0.tgz
 	# Note, no patch version
 	sed -i 's/kubeVersion: .*/kubeVersion: 1.29/' _tmp/render.yaml

@@ -68,6 +68,7 @@ type PackageDefaults struct {
 	Upstream UpstreamID `yaml:"upstream,omitempty" json:"upstream,omitempty"`
 	Ref      SourceRef  `yaml:"ref,omitempty" json:"ref,omitempty"`
 	Enabled  *bool      `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	Metadata Metadata   `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 }
 
 type Package struct {
@@ -84,7 +85,9 @@ type Package struct {
 }
 
 type Metadata struct {
-	Mode string `yaml:"mode,omitempty" json:"mode,omitempty"`
+	Mode       string            `yaml:"mode,omitempty" json:"mode,omitempty"`
+	Spec       map[string]string `yaml:"spec,omitempty" json:"spec,omitempty"`
+	mergedSpec map[string]string // Spec, merged with parent spec
 }
 
 type PackageSource struct {
@@ -115,7 +118,7 @@ func (packages PackageSlice) Validate() error {
 		if p.Ref == "" {
 			return fmt.Errorf("Package %q has no ref", p.Name)
 		}
-		if err := p.Packages.Validate(); err != nil {
+		if err := p.Packages.Validate(); err != nil { // Recursively validate packages
 			return err
 		}
 	}
@@ -149,6 +152,9 @@ func (fleet *Fleet) Validate() error {
 	if len(util.UniqueStrings(names)) != len(names) {
 		return fmt.Errorf("upstream names must be unique")
 	}
+	if _, found := fleet.Spec.Defaults.Metadata.Spec["name"]; found {
+		return fmt.Errorf("defaults.metadata.spec cannot have 'name' field")
+	}
 	return fleet.Spec.Packages.Validate()
 }
 
@@ -174,8 +180,15 @@ func (fleet *Fleet) Default(packages PackageSlice) {
 		if p.Metadata.Mode == "" {
 			p.Metadata.Mode = "kptForDeployment"
 		}
+		if len(p.Metadata.Spec) == 0 {
+			p.Metadata.Spec = map[string]string{}
+		}
+		if _, found := p.Metadata.Spec["name"]; !found {
+			p.Metadata.Spec["name"] = p.Name
+		}
+		p.Metadata.Spec = util.MergeMaps(defaults.Metadata.Spec, p.Metadata.Spec)
 		p.dstRelPath = p.Name
-		fleet.Default(p.Packages)
+		fleet.Default(p.Packages) // Recursively default packages
 	}
 }
 
@@ -184,6 +197,14 @@ func (packages PackageSlice) Print(w io.Writer) {
 		p := &packages[idx]
 		fmt.Fprintf(w, "%v: %v -> %v\n", p.Name, p.SrcPath, p.dstRelPath)
 		p.Packages.Print(w)
+	}
+}
+
+func (packages PackageSlice) combineMetadata() {
+	for idx := range packages {
+		p := &packages[idx]
+		p.Metadata.mergedSpec = p.Metadata.Spec // FIXME: implement real combine
+		p.Packages.combineMetadata()
 	}
 }
 
@@ -203,7 +224,13 @@ func ParseFleetSpec(object []byte) (*Fleet, error) {
 
 	fleet.Default(fleet.Spec.Packages)
 	err := fleet.Validate()
-	return fleet, err
+	if err != nil {
+		return nil, err
+	}
+
+	fleet.Spec.Packages.combineMetadata()
+
+	return fleet, nil
 }
 
 func NewPackageSource(u *Upstream, fileBase, username, password string) (*PackageSource, fn.Results, error) {
@@ -307,12 +334,10 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 			if err != nil {
 				return fnResults, fmt.Errorf("copying package dir (%v --> %v): %v", src.Path, d, err)
 			}
-			if p.Metadata.Mode == "kptForDeployment" {
-				// FIXME assumes git upstream
-				err := kpt.UpdateKptMetadata(d, p.Name, p.SrcPath, src.Git.URI, src.Git.CurrentRevision, src.Git.CurrentHash)
-				if err != nil {
-					return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
-				}
+			// FIXME assumes git upstream
+			err = kpt.UpdateKptMetadata(d, p.Name, p.Metadata.mergedSpec, p.SrcPath, src.Git.URI, src.Git.CurrentRevision, src.Git.CurrentHash)
+			if err != nil {
+				return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
 			}
 		}
 		fnRes, err := fleet.TossFiles(sources, p.Packages, d)
