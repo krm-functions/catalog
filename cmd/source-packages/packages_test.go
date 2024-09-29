@@ -15,6 +15,7 @@ package main
 
 import (
 	"testing"
+
 	a "github.com/stretchr/testify/assert"
 )
 

@@ -194,6 +194,78 @@ kubectl create secret generic foo --dry-run=client --type=kubernetes.io/ssh-auth
 The container's `known_hosts` file currently contain GitHub SSH hosts
 only. See the `ssh` folder.
 
+## Package Metadata
+
+The default behaviour of `source-packages` is to create a
+`package-context.yaml` file together with the sourced packaged in a
+way compatible with `kpt`:
+
+```
+# package-context.yaml in kpt compatible mode
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kptfile.kpt.dev
+  annotations:
+    config.kubernetes.io/local-config: "true"
+data:
+  name: <destination name of package>
+```
+
+Additional metadata can be added to the `package-context.yaml` file
+through the `metadata.spec` package field:
+
+```
+  packages:
+  - name: foo
+    sourcePath: examples/source-packages/pkg1
+    metadata:
+      spec:
+        k2: v2
+        k3: v3
+```
+
+Metadata can both be defaulted and inherited by sub-packages, i.e. the
+following:
+
+```
+  defaults:
+    metadata:
+      spec:
+        k1: v1
+        k2: v2
+  packages:
+  - name: foo
+    metadata:
+      spec:
+        k2: v2-2
+        k3: v3-2
+    packages:
+    - name: foo-sub-pkg
+      metadata:
+        spec:
+          k3: v3-3
+          k4: v4-3
+```
+
+will result in the following `package-context.yaml for the
+`foo-sub-pkg` package:
+
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kptfile.kpt.dev
+  annotations:
+    config.kubernetes.io/local-config: "true"
+data:
+  name: foo-sub-pkg
+  k1: v1    # From 'defaults'
+  k2: v2-2  # Inherited from parent 'foo'
+  k3: v3-3  # foo-sub-pkg value takes precedence over parents value
+  k4: v4-3
+```
+
 ## Future Directions
 
 - Currently, `source-packages` is not recursive and `Fleet` resources

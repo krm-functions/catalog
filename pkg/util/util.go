@@ -107,7 +107,7 @@ func UniqueStrings(list []string) []string {
 
 // MergeMaps will merge m1 and m2 with precedence to m2
 func MergeMaps[M ~map[K]V, K comparable, V any](m1, m2 M) M {
-	merged := make(M, len(m1) + len(m2))
+	merged := make(M, len(m1)+len(m2))
 	maps.Copy(merged, m1)
 	maps.Copy(merged, m2)
 	return merged
