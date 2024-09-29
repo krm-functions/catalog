@@ -16,6 +16,7 @@ package util
 import (
 	"encoding/base64"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -102,4 +103,12 @@ func LookupAuthSecretWithKeys(secretName, namespace, usernameKey, passwordKey st
 func UniqueStrings(list []string) []string {
 	slices.Sort(list)
 	return slices.Compact(list)
+}
+
+// MergeMaps will merge m1 and m2 with precedence to m2
+func MergeMaps[M ~map[K]V, K comparable, V any](m1, m2 M) M {
+	merged := make(M, len(m1) + len(m2))
+	maps.Copy(merged, m1)
+	maps.Copy(merged, m2)
+	return merged
 }

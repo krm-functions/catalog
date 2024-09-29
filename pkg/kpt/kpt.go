@@ -33,14 +33,16 @@ metadata:
   annotations:
     config.kubernetes.io/local-config: "true"
 data:
-  name: {{.Name}}
+{{ range $k,$v := .Data }}
+  {{$k}}: {{$v}}
+{{ end }}
 `
 
-func UpdateKptMetadata(path, pkgName, gitDirectory, gitRepo, gitRev, gitHash string) error {
-	data := map[string]string{
-		"Name": pkgName,
-	}
+func UpdateKptMetadata(path, pkgName string, metadata map[string]string, gitDirectory, gitRepo, gitRev, gitHash string) error {
 	fname := filepath.Join(path, "package-context.yaml")
+	data := map[string]any{
+		"Data": metadata,
+	}
 	err := writeTemplated(pkgContextCm, fname, data)
 	if err != nil {
 		return err
@@ -90,7 +92,7 @@ func UpdateKptMetadata(path, pkgName, gitDirectory, gitRepo, gitRev, gitHash str
 	return nil
 }
 
-func writeTemplated(templateString, filename string, data map[string]string) error {
+func writeTemplated(templateString, filename string, data map[string]any) error {
 	pkgCtx := template.New("tpl")
 	pkgCtx = template.Must(pkgCtx.Parse(templateString))
 	fh, err := os.Create(filename)
@@ -102,7 +104,6 @@ func writeTemplated(templateString, filename string, data map[string]string) err
 }
 
 func ReadKptfile(filename string) (*kptfile.KptFile, error) {
-	fmt.Fprintf(os.Stderr, "kptfile read: %v\n", filename)
 	kr, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("opening %v: %v", filename, err)
