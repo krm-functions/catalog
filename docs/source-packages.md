@@ -197,8 +197,8 @@ only. See the `ssh` folder.
 ## Package Metadata
 
 The default behaviour of `source-packages` is to create a
-`package-context.yaml` file together with the sourced packaged in a
-way compatible with `kpt`:
+`package-context.yaml` file together with the sourced package in a
+way compatible with `kpt`, i.e. with a single `name` field:
 
 ```
 # package-context.yaml in kpt compatible mode
@@ -212,8 +212,8 @@ data:
   name: <destination name of package>
 ```
 
-Additional metadata can be added to the `package-context.yaml` file
-through the `metadata.spec` package field:
+The `source-packages` function allows additional metadata to be added
+to the `package-context.yaml` file through the `metadata.spec` field:
 
 ```
   packages:
@@ -221,7 +221,7 @@ through the `metadata.spec` package field:
     sourcePath: examples/source-packages/pkg1
     metadata:
       spec:
-        k2: v2
+        k2: v2   # Additional key/values to be added to package-context.yaml
         k3: v3
 ```
 
@@ -262,7 +262,7 @@ data:
   name: foo-sub-pkg
   k1: v1    # From 'defaults'
   k2: v2-2  # Inherited from parent 'foo'
-  k3: v3-3  # foo-sub-pkg value takes precedence over parents value
+  k3: v3-3  # foo-sub-pkg value takes precedence over parent value
   k4: v4-3
 ```
 
