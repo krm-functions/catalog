@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	kptfile "github.com/nephio-project/porch/pkg/kpt/api/kptfile/v1"
@@ -33,9 +34,9 @@ metadata:
   annotations:
     config.kubernetes.io/local-config: "true"
 data:
-{{ range $k,$v := .Data }}
-  {{$k}}: {{$v}}
-{{ end }}
+{{- range $k,$v := .Data }}
+  {{$k}}: {{ $v | toYaml | indent 2}}
+{{- end }}
 `
 
 func UpdateKptMetadata(path, pkgName string, metadata map[string]string, gitDirectory, gitRepo, gitRev, gitHash string) error {
@@ -92,8 +93,24 @@ func UpdateKptMetadata(path, pkgName string, metadata map[string]string, gitDire
 	return nil
 }
 
+func toYAML(v interface{}) string {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSuffix(string(data), "\n")
+}
+
+func indent(spaces int, v string) string {
+	pad := strings.Repeat(" ", spaces)
+	return strings.Replace(v, "\n", "\n"+pad, -1)
+}
+
 func writeTemplated(templateString, filename string, data map[string]any) error {
-	pkgCtx := template.New("tpl")
+	pkgCtx := template.New("tpl").Funcs(map[string]any{
+		"toYaml": toYAML,
+		"indent": indent,
+	})
 	pkgCtx = template.Must(pkgCtx.Parse(templateString))
 	fh, err := os.Create(filename)
 	if err != nil {
