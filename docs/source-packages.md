@@ -177,7 +177,7 @@ Private keys can also be used by referencing a `Secret` resource:
     git:
       repo: git@github.com:example-org/example-repo.git
       authMethod: sshPrivateKey
-      ssh:
+      auth:
         apiVersion: v1
         kind: Secret
         name: ssh-private-key
