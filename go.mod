@@ -14,7 +14,7 @@ require (
 	github.com/nephio-project/porch v1.3.1
 	github.com/stretchr/testify v1.9.0
 	github.com/yannh/kubeconform v0.6.7
-	k8s.io/api v0.31.1
+	k8s.io/api v0.31.2
 	sigs.k8s.io/kustomize/api v0.18.0
 	sigs.k8s.io/kustomize/kyaml v0.18.1
 )
@@ -85,7 +85,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apimachinery v0.31.1 // indirect
+	k8s.io/apimachinery v0.31.2 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240620174524-b456828f718b // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
