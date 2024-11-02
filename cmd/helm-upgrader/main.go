@@ -63,8 +63,14 @@ func evaluateChartVersion(chart *t.HelmChartArgs, upgradeConstraint string, user
 		return nil, nil, err
 	}
 
-	currChartRepoSearch = helm.GetSearch(search, chart.Version)
-	newChartRepoSearch = helm.GetSearch(search, newVersion)
+	currChartRepoSearch, err = helm.GetSearch(search, chart.Version)
+	if err != nil {
+		return nil, nil, err
+	}
+	newChartRepoSearch, err = helm.GetSearch(search, newVersion)
+	if err != nil {
+		return nil, nil, err
+	}
 	return currChartRepoSearch, newChartRepoSearch, nil
 }
 

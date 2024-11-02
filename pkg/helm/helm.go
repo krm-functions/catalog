@@ -239,12 +239,31 @@ func ToList(search []RepoSearch) []string {
 	return versions
 }
 
-// GetVersion looks up a specific chart version in repo-search
-func GetSearch(search []RepoSearch, version string) *RepoSearch {
+func lookupVersion(search []RepoSearch, version string) *RepoSearch {
 	for _, s := range search {
 		if s.Version == version {
 			return &s
 		}
 	}
 	return nil
+}
+
+// GetVersion looks up a specific chart version in repo-search
+func GetSearch(search []RepoSearch, version string) (*RepoSearch, error) {
+	s := lookupVersion(search, version)
+	if s != nil {
+		return s, nil
+	}
+	// Try some Helm isms for better error reporting
+	var alt string
+	if strings.HasPrefix(version, "v") {
+		alt = strings.TrimPrefix(version, "v")
+	} else {
+		alt = "v" + version
+	}
+	s = lookupVersion(search, alt)
+	if s != nil {
+		return nil, fmt.Errorf("version %v not found, did you mean %v", version, alt)
+	}
+	return nil, fmt.Errorf("version %v not found", version)
 }
