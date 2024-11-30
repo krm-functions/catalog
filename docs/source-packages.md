@@ -22,29 +22,29 @@ metadata:
   name: example-fleet
 spec:
   upstreams:
-  - name: example-upstream
-    type: git
-    git:
-      repo: https://example.git
+    - name: example-upstream
+      type: git
+      git:
+        repo: https://example.git
 
   packages:
-  - name: package1       # similar to 'kpt pkg get https://example.git/package1@v1.0'
-    sourcePath: package1
-    upstream: example-upstream
-    ref: v1.0
+    - name: package1 # similar to 'kpt pkg get https://example.git/package1@v1.0'
+      sourcePath: package1
+      upstream: example-upstream
+      ref: v1.0
 
-  - name: package2       # similar to 'kpt pkg get https://example.git/package2@v1.1'
-    sourcePath: package2
-    upstream: example-upstream
-    ref: v1.1
+    - name: package2 # similar to 'kpt pkg get https://example.git/package2@v1.1'
+      sourcePath: package2
+      upstream: example-upstream
+      ref: v1.1
 
-  - name: package3       # similar to 'kpt pkg get https://example.git/package3@v1.2'
-    sourcePath: package3
-    upstream: example-upstream
-    ref: v1.2
+    - name: package3 # similar to 'kpt pkg get https://example.git/package3@v1.2'
+      sourcePath: package3
+      upstream: example-upstream
+      ref: v1.2
 ```
 
-A `defaults` setion can be used to remove some repetition for common settings:
+A `defaults` section can be used to remove some repetition for common settings:
 
 ```yaml
 apiVersion: fn.kpt.dev/v1alpha1
@@ -53,10 +53,10 @@ metadata:
   name: example-fleet
 spec:
   upstreams:
-  - name: example-upstream
-    type: git
-    git:
-      repo: https://example.git
+    - name: example-upstream
+      type: git
+      git:
+        repo: https://example.git
 
   # These settings can also be given individually for each package
   defaults:
@@ -65,9 +65,9 @@ spec:
 
   # 'sourcePath' defaults to package 'name'
   packages:
-  - name: package1
-  - name: package2
-  - name: package3
+    - name: package1
+    - name: package2
+    - name: package3
 ```
 
 Packages can also be composed recursively:
@@ -102,7 +102,7 @@ several sub-packages. This is similar to how the [Open Application
 Model](https://oam.dev/) handles
 [traits](https://github.com/oam-dev/spec/blob/master/6.traits.md).
 
-A useful example of this *package composition pattern* is if a common
+A useful example of this _package composition pattern_ is if a common
 pipeline (as defined in a `Kptfile`) should be applied to
 sub-packages. In this case, the pipeline package can be used as
 parent:
@@ -150,7 +150,7 @@ kpt pkg tree fn-output
 Private repositories are supported through SSH-agent integration:
 
 ```yaml
-  upstreams:
+upstreams:
   - name: example-upstream
     type: git
     git:
@@ -171,7 +171,7 @@ kpt fn source examples/source-packages/specs | \
 Private keys can also be used by referencing a `Secret` resource:
 
 ```yaml
-  upstreams:
+upstreams:
   - name: example-upstream
     type: git
     git:
@@ -265,6 +265,8 @@ data:
   k3: v3-3  # foo-sub-pkg value takes precedence over parent value
   k4: v4-3
 ```
+
+Inheritance can be disabled for a package by setting `metadata.inheritFromParent` to `false`.
 
 ## Future Directions
 

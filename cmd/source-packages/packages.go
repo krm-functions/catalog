@@ -85,9 +85,10 @@ type Package struct {
 }
 
 type Metadata struct {
-	Mode       string            `yaml:"mode,omitempty" json:"mode,omitempty"`
-	Spec       map[string]string `yaml:"spec,omitempty" json:"spec,omitempty"`
-	mergedSpec map[string]string // Spec, merged with parent spec
+	Mode              string            `yaml:"mode,omitempty" json:"mode,omitempty"`
+	Spec              map[string]string `yaml:"spec,omitempty" json:"spec,omitempty"`
+	InheritFromParent *bool             `yaml:"inheritFromParent" json:"inheritFromParent"`
+	mergedSpec        map[string]string // Spec, merged with parent spec
 }
 
 type PackageSource struct {
@@ -158,7 +159,7 @@ func (fleet *Fleet) Validate() error {
 	return fleet.Spec.Packages.Validate()
 }
 
-func (fleet *Fleet) Default(packages PackageSlice) {
+func (fleet *Fleet) Default(packages PackageSlice, parentMeta map[string]string) {
 	defaults := fleet.Spec.Defaults
 	for idx := range packages {
 		p := &packages[idx]
@@ -186,9 +187,14 @@ func (fleet *Fleet) Default(packages PackageSlice) {
 		if _, found := p.Metadata.Spec["name"]; !found {
 			p.Metadata.Spec["name"] = p.Name
 		}
-		p.Metadata.Spec = util.MergeMaps(defaults.Metadata.Spec, p.Metadata.Spec)
+		if p.Metadata.InheritFromParent == nil {
+			p.Metadata.InheritFromParent = PtrTo(true)
+		}
+		if *p.Metadata.InheritFromParent {
+			p.Metadata.Spec = util.MergeMaps(parentMeta, p.Metadata.Spec)
+		}
 		p.dstRelPath = p.Name
-		fleet.Default(p.Packages) // Recursively default packages
+		fleet.Default(p.Packages, p.Metadata.Spec) // Recursively default packages
 	}
 }
 
@@ -222,7 +228,7 @@ func ParseFleetSpec(object []byte) (*Fleet, error) {
 		fleet.Spec.Defaults.Upstream = fleet.Spec.Upstreams[0].Name
 	}
 
-	fleet.Default(fleet.Spec.Packages)
+	fleet.Default(fleet.Spec.Packages, fleet.Spec.Defaults.Metadata.Spec)
 	err := fleet.Validate()
 	if err != nil {
 		return nil, err
@@ -332,7 +338,7 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 			s := filepath.Join(src.Path, p.SrcPath)
 			err = os.CopyFS(d, os.DirFS(s))
 			if err != nil {
-				return fnResults, fmt.Errorf("copying package dir (%v --> %v): %v", src.Path, d, err)
+				return fnResults, fmt.Errorf("copying package dir (%v --> %v): %v", p.SrcPath, p.dstRelPath, err)
 			}
 			// FIXME assumes git upstream
 			err = kpt.UpdateKptMetadata(d, p.Name, p.Metadata.mergedSpec, p.SrcPath, src.Git.URI, src.Git.CurrentRevision, src.Git.CurrentHash)
