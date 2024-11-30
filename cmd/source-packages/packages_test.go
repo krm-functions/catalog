@@ -45,12 +45,32 @@ spec:
         k2: v2
         k3: v3
     packages:
-    - name: baz1
+    - name: bar1
       sourcePath: examples/source-packages/pkg3
       metadata:
         spec:
           k3-2: v3-2
-          k4-2: v4-2`,
+          k4-2: v4-2
+  - name: zap
+    stub: true
+    metadata:
+      spec:
+        k4: v4
+        k5: v5
+    packages:
+    - name: zap1
+      sourcePath: examples/source-packages/pkg4
+      metadata:
+        spec:
+          k5-2: v5-2
+          k6-2: v6-2
+    - name: zap2
+      sourcePath: examples/source-packages/pkg4
+      metadata:
+        inheritFromParent: false
+        spec:
+          k7: v7
+          k8: v8`,
 }
 
 var fleetMustFailParse = []string{
@@ -115,5 +135,7 @@ func TestMetadataPropagation(t *testing.T) {
 
 	a.Equal(t, map[string]string{"name": "foo", "k1": "v1", "k2": "v2"}, f.Spec.Packages[0].Metadata.mergedSpec, "calculated metadata")
 	a.Equal(t, map[string]string{"name": "bar", "k1": "v1", "k2": "v2", "k3": "v3"}, f.Spec.Packages[1].Metadata.mergedSpec, "calculated metadata")
-	a.Equal(t, map[string]string{"name": "baz1", "k1": "v1", "k2": "v2", "k3-2": "v3-2", "k4-2": "v4-2"}, f.Spec.Packages[1].Packages[0].Metadata.mergedSpec, "calculated metadata")
+	a.Equal(t, map[string]string{"name": "bar1", "k1": "v1", "k2": "v2", "k3": "v3", "k3-2": "v3-2", "k4-2": "v4-2"}, f.Spec.Packages[1].Packages[0].Metadata.mergedSpec, "calculated metadata")
+	a.Equal(t, map[string]string{"name": "zap1", "k1": "v1", "k2": "v2", "k4": "v4", "k5": "v5", "k5-2": "v5-2", "k6-2": "v6-2"}, f.Spec.Packages[2].Packages[0].Metadata.mergedSpec, "calculated metadata")
+	a.Equal(t, map[string]string{"name": "zap2", "k7": "v7", "k8": "v8"}, f.Spec.Packages[2].Packages[1].Metadata.mergedSpec, "calculated metadata")
 }
