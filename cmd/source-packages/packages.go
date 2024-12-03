@@ -14,14 +14,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"text/template"
 	"time"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/krm-functions/catalog/pkg/api"
 	"github.com/krm-functions/catalog/pkg/git"
 	"github.com/krm-functions/catalog/pkg/kpt"
@@ -87,6 +90,7 @@ type Package struct {
 type Metadata struct {
 	Mode              string            `yaml:"mode,omitempty" json:"mode,omitempty"`
 	Spec              map[string]string `yaml:"spec,omitempty" json:"spec,omitempty"`
+	Templated         map[string]string `yaml:"templated,omitempty" json:"templated,omitempty"`
 	InheritFromParent *bool             `yaml:"inheritFromParent" json:"inheritFromParent"`
 	mergedSpec        map[string]string // Spec, merged with parent spec
 }
@@ -191,10 +195,13 @@ func (fleet *Fleet) Default(packages PackageSlice, parentMeta map[string]string)
 			p.Metadata.InheritFromParent = PtrTo(true)
 		}
 		if *p.Metadata.InheritFromParent {
-			p.Metadata.Spec = util.MergeMaps(parentMeta, p.Metadata.Spec)
+			p.Metadata.mergedSpec = util.MergeMaps(parentMeta, p.Metadata.Spec)
+		} else {
+			p.Metadata.mergedSpec = p.Metadata.Spec
 		}
+		p.parseTemplateMeta()
 		p.dstRelPath = p.Name
-		fleet.Default(p.Packages, p.Metadata.Spec) // Recursively default packages
+		fleet.Default(p.Packages, p.Metadata.mergedSpec) // Recursively default packages
 	}
 }
 
@@ -206,12 +213,24 @@ func (packages PackageSlice) Print(w io.Writer) {
 	}
 }
 
-func (packages PackageSlice) combineMetadata() {
-	for idx := range packages {
-		p := &packages[idx]
-		p.Metadata.mergedSpec = p.Metadata.Spec // FIXME: implement real combine
-		p.Packages.combineMetadata()
+func (p *Package) parseTemplateMeta() error {
+	data := map[string]string{
+		"name": p.Name,
 	}
+	pCtx := template.New("tpl").Option("missingkey=error").Funcs(sprig.TxtFuncMap())
+	for k, v := range p.Metadata.Templated {
+		var tp bytes.Buffer
+		tpl, err := pCtx.Parse(v)
+		if err != nil {
+			return err
+		}
+		err = tpl.Execute(&tp, data)
+		if err != nil {
+			return err
+		}
+		p.Metadata.mergedSpec[k] = tp.String()
+	}
+	return nil
 }
 
 func ParseFleetSpec(object []byte) (*Fleet, error) {
@@ -233,8 +252,6 @@ func ParseFleetSpec(object []byte) (*Fleet, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fleet.Spec.Packages.combineMetadata()
 
 	return fleet, nil
 }
