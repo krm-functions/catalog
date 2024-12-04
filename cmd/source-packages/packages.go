@@ -93,6 +93,7 @@ type Metadata struct {
 	Templated         map[string]string `yaml:"templated,omitempty" json:"templated,omitempty"`
 	InheritFromParent *bool             `yaml:"inheritFromParent" json:"inheritFromParent"`
 	mergedSpec        map[string]string // Spec, merged with parent spec
+	mergedTemplated   map[string]string // Templated, merged with parent
 }
 
 type PackageSource struct {
@@ -163,7 +164,7 @@ func (fleet *Fleet) Validate() error {
 	return fleet.Spec.Packages.Validate()
 }
 
-func (fleet *Fleet) Default(packages PackageSlice, parentMeta map[string]string) {
+func (fleet *Fleet) Default(packages PackageSlice, parentMeta Metadata) {
 	defaults := fleet.Spec.Defaults
 	for idx := range packages {
 		p := &packages[idx]
@@ -195,13 +196,14 @@ func (fleet *Fleet) Default(packages PackageSlice, parentMeta map[string]string)
 			p.Metadata.InheritFromParent = PtrTo(true)
 		}
 		if *p.Metadata.InheritFromParent {
-			p.Metadata.mergedSpec = util.MergeMaps(parentMeta, p.Metadata.Spec)
+			p.Metadata.mergedSpec = util.MergeMaps(parentMeta.mergedSpec, p.Metadata.Spec)
+			p.Metadata.mergedTemplated = util.MergeMaps(parentMeta.mergedTemplated, p.Metadata.Templated)
 		} else {
 			p.Metadata.mergedSpec = p.Metadata.Spec
+			p.Metadata.mergedTemplated = p.Metadata.Templated
 		}
-		p.parseTemplateMeta()
 		p.dstRelPath = p.Name
-		fleet.Default(p.Packages, p.Metadata.mergedSpec) // Recursively default packages
+		fleet.Default(p.Packages, p.Metadata) // Recursively default packages
 	}
 }
 
@@ -213,12 +215,13 @@ func (packages PackageSlice) Print(w io.Writer) {
 	}
 }
 
-func (p *Package) parseTemplateMeta() error {
+func (p *Package) renderTemplateMeta(src *PackageSource) error {
 	data := map[string]string{
-		"name": p.Name,
+		"name":   p.Name,
+		"commit": src.Git.CurrentHash,
 	}
 	pCtx := template.New("tpl").Option("missingkey=error").Funcs(sprig.TxtFuncMap())
-	for k, v := range p.Metadata.Templated {
+	for k, v := range p.Metadata.mergedTemplated {
 		var tp bytes.Buffer
 		tpl, err := pCtx.Parse(v)
 		if err != nil {
@@ -247,7 +250,8 @@ func ParseFleetSpec(object []byte) (*Fleet, error) {
 		fleet.Spec.Defaults.Upstream = fleet.Spec.Upstreams[0].Name
 	}
 
-	fleet.Default(fleet.Spec.Packages, fleet.Spec.Defaults.Metadata.Spec)
+	fleet.Spec.Defaults.Metadata.mergedSpec = fleet.Spec.Defaults.Metadata.Spec
+	fleet.Default(fleet.Spec.Packages, fleet.Spec.Defaults.Metadata)
 	err := fleet.Validate()
 	if err != nil {
 		return nil, err
@@ -355,9 +359,13 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 			s := filepath.Join(src.Path, p.SrcPath)
 			err = os.CopyFS(d, os.DirFS(s))
 			if err != nil {
-				return fnResults, fmt.Errorf("copying package dir (%v --> %v): %v", p.SrcPath, p.dstRelPath, err)
+				return fnResults, fmt.Errorf("copying package %v dir (%v --> %v): %v", p.Name, p.SrcPath, p.dstRelPath, err)
 			}
 			// FIXME assumes git upstream
+			err = p.renderTemplateMeta(src)
+			if err != nil {
+				return fnResults, fmt.Errorf("rendering package %v metadata: %v", p.Name, err)
+			}
 			err = kpt.UpdateKptMetadata(d, p.Name, p.Metadata.mergedSpec, p.SrcPath, src.Git.URI, src.Git.CurrentRevision, src.Git.CurrentHash)
 			if err != nil {
 				return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)

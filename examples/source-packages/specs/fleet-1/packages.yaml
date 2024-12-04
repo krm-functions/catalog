@@ -15,6 +15,11 @@ spec:
     upstream: example
     enabled: true
     ref: main
+    metadata:
+      spec:
+        foo: bar
+      templated:
+        short-commit-sha: "{{ .commit | trunc 7 }}"
 
   packages:
   - name: foo
