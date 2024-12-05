@@ -14,14 +14,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"text/template"
 	"time"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/krm-functions/catalog/pkg/api"
 	"github.com/krm-functions/catalog/pkg/git"
 	"github.com/krm-functions/catalog/pkg/kpt"
@@ -87,8 +90,10 @@ type Package struct {
 type Metadata struct {
 	Mode              string            `yaml:"mode,omitempty" json:"mode,omitempty"`
 	Spec              map[string]string `yaml:"spec,omitempty" json:"spec,omitempty"`
+	Templated         map[string]string `yaml:"templated,omitempty" json:"templated,omitempty"`
 	InheritFromParent *bool             `yaml:"inheritFromParent" json:"inheritFromParent"`
 	mergedSpec        map[string]string // Spec, merged with parent spec
+	mergedTemplated   map[string]string // Templated, merged with parent
 }
 
 type PackageSource struct {
@@ -159,7 +164,7 @@ func (fleet *Fleet) Validate() error {
 	return fleet.Spec.Packages.Validate()
 }
 
-func (fleet *Fleet) Default(packages PackageSlice, parentMeta map[string]string) {
+func (fleet *Fleet) Default(packages PackageSlice, parentMeta Metadata) {
 	defaults := fleet.Spec.Defaults
 	for idx := range packages {
 		p := &packages[idx]
@@ -191,10 +196,14 @@ func (fleet *Fleet) Default(packages PackageSlice, parentMeta map[string]string)
 			p.Metadata.InheritFromParent = PtrTo(true)
 		}
 		if *p.Metadata.InheritFromParent {
-			p.Metadata.Spec = util.MergeMaps(parentMeta, p.Metadata.Spec)
+			p.Metadata.mergedSpec = util.MergeMaps(parentMeta.mergedSpec, p.Metadata.Spec)
+			p.Metadata.mergedTemplated = util.MergeMaps(parentMeta.mergedTemplated, p.Metadata.Templated)
+		} else {
+			p.Metadata.mergedSpec = p.Metadata.Spec
+			p.Metadata.mergedTemplated = p.Metadata.Templated
 		}
 		p.dstRelPath = p.Name
-		fleet.Default(p.Packages, p.Metadata.Spec) // Recursively default packages
+		fleet.Default(p.Packages, p.Metadata) // Recursively default packages
 	}
 }
 
@@ -206,12 +215,25 @@ func (packages PackageSlice) Print(w io.Writer) {
 	}
 }
 
-func (packages PackageSlice) combineMetadata() {
-	for idx := range packages {
-		p := &packages[idx]
-		p.Metadata.mergedSpec = p.Metadata.Spec // FIXME: implement real combine
-		p.Packages.combineMetadata()
+func (p *Package) renderTemplateMeta(src *PackageSource) error {
+	data := map[string]string{
+		"name":   p.Name,
+		"commit": src.Git.CurrentHash,
 	}
+	pCtx := template.New("tpl").Option("missingkey=error").Funcs(sprig.TxtFuncMap())
+	for k, v := range p.Metadata.mergedTemplated {
+		var tp bytes.Buffer
+		tpl, err := pCtx.Parse(v)
+		if err != nil {
+			return err
+		}
+		err = tpl.Execute(&tp, data)
+		if err != nil {
+			return err
+		}
+		p.Metadata.mergedSpec[k] = tp.String()
+	}
+	return nil
 }
 
 func ParseFleetSpec(object []byte) (*Fleet, error) {
@@ -228,13 +250,13 @@ func ParseFleetSpec(object []byte) (*Fleet, error) {
 		fleet.Spec.Defaults.Upstream = fleet.Spec.Upstreams[0].Name
 	}
 
-	fleet.Default(fleet.Spec.Packages, fleet.Spec.Defaults.Metadata.Spec)
+	fleet.Spec.Defaults.Metadata.mergedSpec = fleet.Spec.Defaults.Metadata.Spec
+	fleet.Spec.Defaults.Metadata.mergedTemplated = fleet.Spec.Defaults.Metadata.Templated
+	fleet.Default(fleet.Spec.Packages, fleet.Spec.Defaults.Metadata)
 	err := fleet.Validate()
 	if err != nil {
 		return nil, err
 	}
-
-	fleet.Spec.Packages.combineMetadata()
 
 	return fleet, nil
 }
@@ -338,9 +360,13 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 			s := filepath.Join(src.Path, p.SrcPath)
 			err = os.CopyFS(d, os.DirFS(s))
 			if err != nil {
-				return fnResults, fmt.Errorf("copying package dir (%v --> %v): %v", p.SrcPath, p.dstRelPath, err)
+				return fnResults, fmt.Errorf("copying package %v dir (%v --> %v): %v", p.Name, p.SrcPath, p.dstRelPath, err)
 			}
 			// FIXME assumes git upstream
+			err = p.renderTemplateMeta(src)
+			if err != nil {
+				return fnResults, fmt.Errorf("rendering package %v metadata: %v", p.Name, err)
+			}
 			err = kpt.UpdateKptMetadata(d, p.Name, p.Metadata.mergedSpec, p.SrcPath, src.Git.URI, src.Git.CurrentRevision, src.Git.CurrentHash)
 			if err != nil {
 				return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)

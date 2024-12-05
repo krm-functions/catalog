@@ -251,7 +251,7 @@ following:
 will result in the following `package-context.yaml` for the
 `foo-sub-pkg` package:
 
-```
+```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -260,13 +260,35 @@ metadata:
     config.kubernetes.io/local-config: "true"
 data:
   name: foo-sub-pkg
-  k1: v1    # From 'defaults'
-  k2: v2-2  # Inherited from parent 'foo'
-  k3: v3-3  # foo-sub-pkg value takes precedence over parent value
+  k1: v1 # From 'defaults'
+  k2: v2-2 # Inherited from parent 'foo'
+  k3: v3-3 # foo-sub-pkg value takes precedence over parent value
   k4: v4-3
 ```
 
 Inheritance can be disabled for a package by setting `metadata.inheritFromParent` to `false`.
+
+## Templated Metadata
+
+In some situations, its convenient to apply simple modifications to existing package metadata
+and provide the result as a new metadata value. To support this, the metadata section may use
+a `Templated` section:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kptfile.kpt.dev
+  annotations:
+    config.kubernetes.io/local-config: "true"
+data:
+  name: "{{ .name}}" # Default kpt behaviour
+  nameWithPrefix: "prefix-{{ .name }}"
+  shortGitSha: "{{ .commit | trunc 8 }}"
+```
+
+Currently, only `name` and `commit` values can be used in templates. Function from the
+[Sprig library](http://masterminds.github.io/sprig/) can be used in templates.
 
 ## Future Directions
 
