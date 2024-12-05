@@ -251,6 +251,7 @@ func ParseFleetSpec(object []byte) (*Fleet, error) {
 	}
 
 	fleet.Spec.Defaults.Metadata.mergedSpec = fleet.Spec.Defaults.Metadata.Spec
+	fleet.Spec.Defaults.Metadata.mergedTemplated = fleet.Spec.Defaults.Metadata.Templated
 	fleet.Default(fleet.Spec.Packages, fleet.Spec.Defaults.Metadata)
 	err := fleet.Validate()
 	if err != nil {
