@@ -13,7 +13,7 @@ require (
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/go-containerregistry v0.20.2
 	github.com/nephio-project/porch v1.3.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/yannh/kubeconform v0.6.7
 	k8s.io/api v0.31.2
 	sigs.k8s.io/kustomize/api v0.18.0
