@@ -24,6 +24,7 @@ import (
 	"text/template"
 
 	kptfile "github.com/nephio-project/porch/pkg/kpt/api/kptfile/v1"
+	"sigs.k8s.io/kustomize/kyaml/kio/filters"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
@@ -65,6 +66,9 @@ func UpdateKptMetadata(path, pkgName string, metadata map[string]string, gitDire
 	// 'kpt kpg get' sets name to the name of the package create (to path) and removes namespace
 	kf.Name = pkgName
 	kf.Namespace = ""
+	kf.ResourceMeta.Annotations = map[string]string{
+		filters.LocalConfigAnnotation: "true",
+	}
 	// Set source
 	kf.Upstream = &kptfile.Upstream{
 		Type: "git",
