@@ -216,7 +216,7 @@ LOCAL_PACKAGES_DIR ?= /tmp/source-packages
 .PHONY: test-source-packages-e2e
 test-source-packages-e2e: test-source-packages test-source-packages-ref
 	# We don't set all annotations and comments exactly as kpt
-	if [ "$(shell diff -rw fn-output/fleet-1/example-fleet example-fleet-ref | wc -l)" != "40" ]; then echo "*** source-package diff not as expected"; exit 1; fi
+	if [ "$(shell diff -rw fn-output/fleet-1/example-fleet example-fleet-ref | wc -l)" != "60" ]; then echo "*** source-package diff not as expected"; exit 1; fi
 
 .PHONY: test-source-packages
 test-source-packages:
