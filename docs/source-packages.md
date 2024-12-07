@@ -287,8 +287,15 @@ data:
   shortGitSha: "{{ .commit | trunc 8 }}"
 ```
 
-Currently, only `name` and `commit` values can be used in templates. Function from the
-[Sprig library](http://masterminds.github.io/sprig/) can be used in templates.
+The following values can be used in templates:
+
+- `name` - package name.
+- `commit` commit SHA of `rev`.
+- `rev` git revision as given in package `rev` spec.
+- `srcPath` - source path of package.
+- `dstPath` - destination path of package.
+
+Function from the [Sprig library](http://masterminds.github.io/sprig/) can be used in templates.
 
 ## Future Directions
 

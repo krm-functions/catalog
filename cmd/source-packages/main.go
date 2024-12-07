@@ -74,8 +74,8 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			sources = append(sources, *src)
 		}
 		objPath := filepath.Dir(kubeObject.GetAnnotation(kioutil.PathAnnotation))
-		fleetBaseDir := filepath.Join(dstBase, objPath, kubeObject.GetName())
-		fnResults, err := fleet.TossFiles(sources, fleet.Spec.Packages, fleetBaseDir)
+		fleetBaseDir := filepath.Join(objPath, kubeObject.GetName())
+		fnResults, err := fleet.TossFiles(sources, fleet.Spec.Packages, dstBase, fleetBaseDir)
 		if err != nil {
 			return false, err
 		}

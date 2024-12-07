@@ -215,10 +215,13 @@ func (packages PackageSlice) Print(w io.Writer) {
 	}
 }
 
-func (p *Package) renderTemplateMeta(src *PackageSource) error {
+func (p *Package) renderTemplateMeta(src *PackageSource, dstPath string) error {
 	data := map[string]string{
-		"name":   p.Name,
-		"commit": src.Git.CurrentHash,
+		"name":    p.Name,
+		"commit":  src.Git.CurrentHash,
+		"rev":     src.Git.CurrentRevision,
+		"srcPath": p.SrcPath,
+		"dstPath": dstPath,
 	}
 	pCtx := template.New("tpl").Option("missingkey=error").Funcs(sprig.TxtFuncMap())
 	for k, v := range p.Metadata.mergedTemplated {
@@ -331,7 +334,7 @@ func SourceEnsureVersion(src *PackageSource, ref SourceRef) (fn.Results, error) 
 }
 
 // TossFiles copies package files
-func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, dstAbsBasePath string) (fn.Results, error) {
+func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, dstBaseDir, pkgsBasePath string) (fn.Results, error) {
 	var fnResults fn.Results
 	for idx := range packages {
 		p := &packages[idx]
@@ -339,7 +342,8 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 			util.ResultPrintf(&fnResults, fn.Info, "package %v; disabled", p.Name)
 			continue
 		}
-		d := filepath.Join(dstAbsBasePath, p.dstRelPath)
+		pkgDstPath := filepath.Join(pkgsBasePath, p.dstRelPath)
+		d := filepath.Join(dstBaseDir, pkgDstPath)
 		if *p.Stub {
 			util.ResultPrintf(&fnResults, fn.Info, "package %v; stub package at %v", p.Name, p.dstRelPath)
 		} else {
@@ -348,7 +352,7 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 				return fnResults, fmt.Errorf("unknown upstream: %v", p.Upstream)
 			}
 			src := PackageSourceLookup(sources, u)
-			if src == nil { // FIXME: This should not happen
+			if src == nil {
 				return fnResults, fmt.Errorf("unknown upstream source: %v", p.Upstream)
 			}
 			fnRes, err := SourceEnsureVersion(src, p.Ref)
@@ -362,8 +366,9 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 			if err != nil {
 				return fnResults, fmt.Errorf("copying package %v dir (%v --> %v): %v", p.Name, p.SrcPath, p.dstRelPath, err)
 			}
-			// FIXME assumes git upstream
-			err = p.renderTemplateMeta(src)
+			// FIXME: assumes git upstream
+			fmt.Fprintf(os.Stderr, ">> %v\n", pkgDstPath)
+			err = p.renderTemplateMeta(src, pkgDstPath)
 			if err != nil {
 				return fnResults, fmt.Errorf("rendering package %v metadata: %v", p.Name, err)
 			}
@@ -372,7 +377,7 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 				return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
 			}
 		}
-		fnRes, err := fleet.TossFiles(sources, p.Packages, d)
+		fnRes, err := fleet.TossFiles(sources, p.Packages, dstBaseDir, pkgDstPath)
 		if err != nil {
 			return fnResults, fmt.Errorf("tossing child packages for %v: %v", p.Name, err)
 		}
