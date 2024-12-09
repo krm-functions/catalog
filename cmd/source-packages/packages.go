@@ -367,7 +367,6 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 				return fnResults, fmt.Errorf("copying package %v dir (%v --> %v): %v", p.Name, p.SrcPath, p.dstRelPath, err)
 			}
 			// FIXME: assumes git upstream
-			fmt.Fprintf(os.Stderr, ">> %v\n", pkgDstPath)
 			err = p.renderTemplateMeta(src, pkgDstPath)
 			if err != nil {
 				return fnResults, fmt.Errorf("rendering package %v metadata: %v", p.Name, err)
