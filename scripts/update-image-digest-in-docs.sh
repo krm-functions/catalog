@@ -51,8 +51,8 @@ echo "kubeconform digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/kubeconform.*@).*#\1$DIGEST#" docs/*.md
 sed -i -E "s#(.*?ghcr.io/krm-functions/kubeconform.*@).*#\1$DIGEST#" Makefile.test
 
-IMAGE=ghcr.io/krm-functions/source-packages
+IMAGE=ghcr.io/krm-functions/package-composer
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
-echo "source-packages digest: $DIGEST"
-sed -i -E "s#(.*?ghcr.io/krm-functions/source-packages.*@).*#\1$DIGEST#" docs/*.md
-sed -i -E "s#(.*?ghcr.io/krm-functions/source-packages.*@).*#\1$DIGEST#" Makefile.test
+echo "package-composer digest: $DIGEST"
+sed -i -E "s#(.*?ghcr.io/krm-functions/package-composer.*@).*#\1$DIGEST#" docs/*.md
+sed -i -E "s#(.*?ghcr.io/krm-functions/package-composer.*@).*#\1$DIGEST#" Makefile.test

@@ -3,13 +3,13 @@
 FN_MODE ?= exec
 
 ifeq ($(CONTAINER_TAG),)
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:f6d4e8a695a52ee706352b87a9440d8c962216d917e83ef9343423088a36c5b6
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:4083e3a7f72b2d520500ac7b59cb17f133e54998147602e35e5b06a6b13d7de8
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:1e779b5a00c47d9fb9fe1d5e60be73bc04be2fb37cf04f9670ad0df8b423021d
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:2f6b0d69fe981820946d6185a87d19bbe73029a728ba2c7307fe7c1e8b676c51
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:01564e838d4107772823ffb82c58542cdf3a38cf2dfd1df7a43d66e5388abeb0
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:0c284f682bca9440ee374c1f8e9417e75b31d9005c227e7cc804ab5ffb224cd0
-SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/package-composer@sha256:5b63b6d52a9e72a59d6d6098d92975542daa9b79dbe11bc4fe36af7b8f2e4fdc
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:ecc486a6ed8c8b55a71d74f496e4d999172287740957eb5647f63233310ff587
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:a05393987cec0b726dba7e419e998c1464c45d9e2f1a738ed2dfb7498af39617
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:33f11ba09c3d8450314157e488e328660dffbd1cc116ab0e8b561bd8baf3a998
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:7e575ae00be5dc4a4459c029be35aa20e26bdc9ab946e908f6301e63ed0410a1
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:06654055dea4377b484fd25b000e066ad747abbb000f7cf09456af390bbcd090
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:c09eaa191dbdf6e214fb10d8af3e5eb764c5aab34e3791ad89ece7d4f3fc83ff
+SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/package-composer@sha256:1e0bd5f0c0c674d43764586d8fd3403eea17faeecf4e62c5ef12c12839432ac8
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
