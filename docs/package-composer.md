@@ -1,4 +1,4 @@
-# Source Packages Function
+# Package Composer Function
 
 The `package-composer` function implements a declarative solution for composing
 [`kpt`](https://kpt.dev/book/03-packages/) packages and managing packages similar to how
@@ -117,7 +117,9 @@ parent:
 ```
 
 Alternatively, package composition can be created using 'stub' tree
-nodes, which is basically just a named directory for sub-packages:
+nodes, which is basically just a named directory for sub-packages. Stubs are
+convenient for composing packages where multiple sub-packages should be
+grouped together:
 
 ```yaml
   ...
