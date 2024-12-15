@@ -37,16 +37,16 @@ spec:
         k2: v2
   packages:
   - name: foo
-    sourcePath: examples/source-packages/pkg1
+    sourcePath: examples/package-composer/pkg1
   - name: bar
-    sourcePath: examples/source-packages/pkg2
+    sourcePath: examples/package-composer/pkg2
     metadata:
       spec:
         k2: v2
         k3: v3
     packages:
     - name: bar1
-      sourcePath: examples/source-packages/pkg3
+      sourcePath: examples/package-composer/pkg3
       metadata:
         spec:
           k3-2: v3-2
@@ -59,13 +59,13 @@ spec:
         k5: v5
     packages:
     - name: zap1
-      sourcePath: examples/source-packages/pkg4
+      sourcePath: examples/package-composer/pkg4
       metadata:
         spec:
           k5-2: v5-2
           k6-2: v6-2
     - name: zap2
-      sourcePath: examples/source-packages/pkg4
+      sourcePath: examples/package-composer/pkg4
       metadata:
         inheritFromParent: false
         spec:
@@ -90,7 +90,7 @@ spec:
       repo: https://github.com/krm-functions/catalog.git
   packages:
   - name: foo
-    sourcePath: examples/source-packages/pkg1
+    sourcePath: examples/package-composer/pkg1
 `,
 	// Defaults cannot hanve metadata 'name'
 	`apiVersion: fn.kpt.dev/v1alpha1
@@ -109,7 +109,7 @@ spec:
         name: cannot-have-name-key
   packages:
   - name: foo
-    sourcePath: examples/source-packages/pkg1
+    sourcePath: examples/package-composer/pkg1
     ref: main
 `,
 }

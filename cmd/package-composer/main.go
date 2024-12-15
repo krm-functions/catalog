@@ -32,7 +32,7 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	base = os.Getenv("LOCAL_PACKAGES_DIR")
 	if base == "" {
 		var er error
-		base, er = os.MkdirTemp("", "source-packages-")
+		base, er = os.MkdirTemp("", "package-composer")
 		if er != nil {
 			return false, er
 		}

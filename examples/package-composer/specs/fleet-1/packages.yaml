@@ -18,19 +18,19 @@ spec:
 
   packages:
   - name: foo
-    sourcePath: examples/source-packages/pkg1
+    sourcePath: examples/package-composer/pkg1
   - name: bar
-    sourcePath: examples/source-packages/pkg2
+    sourcePath: examples/package-composer/pkg2
     packages:
     - name: baz1
-      sourcePath: examples/source-packages/pkg3
+      sourcePath: examples/package-composer/pkg3
     - name: baz2
-      sourcePath: examples/source-packages/pkg1
+      sourcePath: examples/package-composer/pkg1
   - name: olo
     stub: true
     packages:
     - name: baz
-      sourcePath: examples/source-packages/pkg4
+      sourcePath: examples/package-composer/pkg4
   - name: boo
     enabled: false
-    sourcePath: examples/source-packages/pkg1
+    sourcePath: examples/package-composer/pkg1
