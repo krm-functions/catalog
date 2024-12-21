@@ -1,6 +1,6 @@
-# Package Composer Function
+# Package Compositor Function
 
-The `package-composer` function implements a declarative solution for composing
+The `package-compositor` function implements a declarative solution for composing
 [`kpt`](https://kpt.dev/book/03-packages/) packages and managing packages similar to how
 [helmfile](https://github.com/helmfile/helmfile) manages fleets of
 Helm charts.
@@ -13,7 +13,7 @@ kpt pkg get https://example.git/package2@v1.1
 kpt pkg get https://example.git/package3@v1.2
 ```
 
-The `package-composer` function allows you to specify this declaratively using a `Fleet` resource:
+The `package-compositor` function allows you to specify this declaratively using a `Fleet` resource:
 
 ```yaml
 apiVersion: fn.kpt.dev/v1alpha1
@@ -138,9 +138,9 @@ Note, that no package merge strategies are supported.
 ## Example Usage
 
 ```shell
-export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/package-composer@sha256:1e0bd5f0c0c674d43764586d8fd3403eea17faeecf4e62c5ef12c12839432ac8
+export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/package-compositor@sha256:1e0bd5f0c0c674d43764586d8fd3403eea17faeecf4e62c5ef12c12839432ac8
 
-kpt fn source examples/package-composer/specs | \
+kpt fn source examples/package-compositor/specs | \
   kpt fn eval - --network -i $(SOURCE_PACKAGES_IMAGE) | \
   kpt fn sink fn-output
 
@@ -163,9 +163,9 @@ upstreams:
 The SSH-agent socket must be mounted into the container:
 
 ```shell
-export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/package-composer@sha256:1e0bd5f0c0c674d43764586d8fd3403eea17faeecf4e62c5ef12c12839432ac8
+export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/package-compositor@sha256:1e0bd5f0c0c674d43764586d8fd3403eea17faeecf4e62c5ef12c12839432ac8
 
-kpt fn source examples/package-composer/specs | \
+kpt fn source examples/package-compositor/specs | \
   kpt fn eval - -e SSH_AUTH_SOCK --mount type=bind,src="$SSH_AUTH_SOCK",target="$SSH_AUTH_SOCK",rw=true --as-current-user --network -i $(SOURCE_PACKAGES_IMAGE) | \
   kpt fn sink fn-output
 ```
@@ -198,7 +198,7 @@ only. See the `ssh` folder.
 
 ## Package Metadata
 
-The default behaviour of `package-composer` is to create a
+The default behaviour of `package-compositor` is to create a
 `package-context.yaml` file together with the sourced package in a
 way compatible with `kpt`, i.e. with a single `name` field:
 
@@ -214,13 +214,13 @@ data:
   name: <destination name of package>
 ```
 
-The `package-composer` function allows additional metadata to be added
+The `package-compositor` function allows additional metadata to be added
 to the `package-context.yaml` file through the `metadata.spec` field:
 
 ```
   packages:
   - name: foo
-    sourcePath: examples/package-composer/pkg1
+    sourcePath: examples/package-compositor/pkg1
     metadata:
       spec:
         k2: v2   # Additional key/values to be added to package-context.yaml
@@ -301,7 +301,7 @@ Function from the [Sprig library](http://masterminds.github.io/sprig/) can be us
 
 ## Future Directions
 
-- Currently, `package-composer` is not recursive and `Fleet` resources
+- Currently, `package-compositor` is not recursive and `Fleet` resources
   fetched as part of a package is not processed.
 - Generally, better error checking could be implemented
 - OCI upstreams
