@@ -9,7 +9,7 @@ HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:33f11ba09c3d
 HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:7e575ae00be5dc4a4459c029be35aa20e26bdc9ab946e908f6301e63ed0410a1
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:06654055dea4377b484fd25b000e066ad747abbb000f7cf09456af390bbcd090
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:c09eaa191dbdf6e214fb10d8af3e5eb764c5aab34e3791ad89ece7d4f3fc83ff
-SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/package-composer@sha256:1e0bd5f0c0c674d43764586d8fd3403eea17faeecf4e62c5ef12c12839432ac8
+SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:1e0bd5f0c0c674d43764586d8fd3403eea17faeecf4e62c5ef12c12839432ac8
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
@@ -17,7 +17,7 @@ HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart:$(CONTAINER_TAG)
 HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart:$(CONTAINER_TAG)
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader:$(CONTAINER_TAG)
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform:$(CONTAINER_TAG)
-SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/package-composer:$(CONTAINER_TAG)
+SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/package-compositor:$(CONTAINER_TAG)
 endif
 
 ifeq ($(FN_MODE),exec)
@@ -28,7 +28,7 @@ HELM_SOURCE := --exec bin/linux_amd64/source-helm-chart
 HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
 KUBECONFORM := --exec bin/linux_amd64/kubeconform
 TEMPLATE_KYAML := --exec bin/linux_amd64/template-kyaml
-SOURCE_PACKAGES := --exec bin/linux_amd64/package-composer
+SOURCE_PACKAGES := --exec bin/linux_amd64/package-compositor
 else
 APPLY_SETTERS := --image $(APPLY_SETTERS_IMAGE)
 DIGESTER := --network --image $(DIGESTER_IMAGE)
@@ -50,7 +50,7 @@ e2e-tests: test-render-helm-chart \
 	   test-apply-setters \
 	   test-digester \
 	   test-kubeconform \
-	   test-package-composer-e2e
+	   test-package-compositor-e2e
 
 # BEWARE: These tests are fragile - we want to test upgrades, but without upgrade-constraints tests might fail when charts are updated
 .PHONY: test-helm-upgrader
@@ -211,29 +211,29 @@ test-kubeconform-results:
 	grep -e '.* /data/a-number: expected string or null, but got number' tmp-results/results.yaml
 	grep -e '.* name: invalid-non-string-value' tmp-results/results.yaml
 
-LOCAL_PACKAGES_DIR ?= /tmp/package-composer
+LOCAL_PACKAGES_DIR ?= /tmp/package-compositor
 
-.PHONY: test-package-composer-e2e
-test-package-composer-e2e: test-package-composer test-package-composer-ref
+.PHONY: test-package-compositor-e2e
+test-package-compositor-e2e: test-package-compositor test-package-compositor-ref
 	# We don't set all annotations and comments exactly as kpt
 	if [ "$(shell diff -rw fn-output/fleet-1/example-fleet example-fleet-ref | wc -l)" != "40" ]; then echo "*** source-package diff not as expected"; exit 1; fi
 
-.PHONY: test-package-composer
-test-package-composer:
+.PHONY: test-package-compositor
+test-package-compositor:
 	rm -rf tmp-results fn-output
-	kpt fn source examples/package-composer/specs | kpt fn eval - --results-dir tmp-results --truncate-output=false $(SOURCE_PACKAGES) | kpt fn sink fn-output
+	kpt fn source examples/package-compositor/specs | kpt fn eval - --results-dir tmp-results --truncate-output=false $(SOURCE_PACKAGES) | kpt fn sink fn-output
 	kpt pkg tree fn-output
 	tree fn-output
 
-.PHONY: test-package-composer-ref
-test-package-composer-ref:
-	# This is identical to 'examples/package-composer/specs/fleet-1/packages.yaml'
+.PHONY: test-package-compositor-ref
+test-package-compositor-ref:
+	# This is identical to 'examples/package-compositor/specs/fleet-1/packages.yaml'
 	rm -rf example-fleet-ref && mkdir -p example-fleet-ref/olo
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-composer/pkg1 example-fleet-ref/foo --for-deployment
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-composer/pkg2 example-fleet-ref/bar --for-deployment
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-composer/pkg3 example-fleet-ref/bar/baz1 --for-deployment
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-composer/pkg1 example-fleet-ref/bar/baz2 --for-deployment
-	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-composer/pkg4 example-fleet-ref/olo/baz --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-compositor/pkg1 example-fleet-ref/foo --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-compositor/pkg2 example-fleet-ref/bar --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-compositor/pkg3 example-fleet-ref/bar/baz1 --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-compositor/pkg1 example-fleet-ref/bar/baz2 --for-deployment
+	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-compositor/pkg4 example-fleet-ref/olo/baz --for-deployment
 
 .PHONY: test-template-kyaml
 test-template-kyaml:
