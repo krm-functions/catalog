@@ -3,13 +3,13 @@
 FN_MODE ?= exec
 
 ifeq ($(CONTAINER_TAG),)
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:ecc486a6ed8c8b55a71d74f496e4d999172287740957eb5647f63233310ff587
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:a05393987cec0b726dba7e419e998c1464c45d9e2f1a738ed2dfb7498af39617
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:33f11ba09c3d8450314157e488e328660dffbd1cc116ab0e8b561bd8baf3a998
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:7e575ae00be5dc4a4459c029be35aa20e26bdc9ab946e908f6301e63ed0410a1
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:06654055dea4377b484fd25b000e066ad747abbb000f7cf09456af390bbcd090
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:c09eaa191dbdf6e214fb10d8af3e5eb764c5aab34e3791ad89ece7d4f3fc83ff
-SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:1e0bd5f0c0c674d43764586d8fd3403eea17faeecf4e62c5ef12c12839432ac8
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:83229abce139675f6491399591e5fbdd54271e8de848af486e928eaef623ca2b
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:e57c6f0f3df3ce1549169b597321887abf702f296f20693f8dfce150f17c50d6
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:b80ada67979bc0651f92f001fd44501b0851f9b07dac10f453f4acde36eb7808
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:17d717d90df96b5b82dda65507fd04303d1e9d1b5f21c691c14de04a1230a253
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:f4281a146fa8a8decae36f6bff60d2aa5fd9d30294d6ad0b3f890c0f115d4618
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:459dff1f5026ba45fbb16ee88519875ce835dc147ac630da485ae3f809d9b0f2
+SOURCE_PACKAGES_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:53c8452ed490b379b54067010697b436987ac984a7dc2f303a16ca59c7af7461
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
