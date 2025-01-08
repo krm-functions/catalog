@@ -336,6 +336,9 @@ func SourceEnsureVersion(src *PackageSource, ref SourceRef) (fn.Results, error) 
 // TossFiles copies package files
 func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, dstBaseDir, pkgsBasePath string) (fn.Results, error) {
 	var fnResults fn.Results
+
+	fleet.ComputeReferences(sources, packages)
+
 	for idx := range packages {
 		p := &packages[idx]
 		if !*p.Enabled {
@@ -383,6 +386,26 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 		fnResults = append(fnResults, fnRes...)
 	}
 	return fnResults, nil
+}
+
+// ComputeRevisions will look through all packages and collect all references used by packages
+func (fleet *Fleet) ComputeReferences(sources []PackageSource, packages PackageSlice) (error) {
+	for idx := range packages {
+		p := &packages[idx]
+		if !*p.Enabled {
+			continue
+		}
+		if ! *p.Stub {
+			//u := UpstreamLookup(fleet, p.Upstream)
+			//src := PackageSourceLookup(sources, u)
+			fmt.Fprintf(os.Stderr, ">> %+v, rev %v\n", p.Name, p.Ref)
+		}
+		err := fleet.ComputeReferences(sources, p.Packages)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func FilesystemToObjects(path string) ([]*yaml.RNode, error) {
