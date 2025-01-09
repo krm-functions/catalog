@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"text/template"
 	"time"
 
@@ -85,6 +86,8 @@ type Package struct {
 	Packages PackageSlice `yaml:"packages,omitempty" json:"packages,omitempty"`
 	// Relative path of where to store package. Generally identical to 'Name'
 	dstRelPath string
+	// hierarchical path, i.e. including parent package paths
+	dstAbsPath string
 }
 
 type Metadata struct {
@@ -104,6 +107,7 @@ type PackageSource struct {
 	Username string
 	Password string
 	Path     string // Local absolute path to repo files
+	refs     []SourceRef
 }
 
 func (packages PackageSlice) Validate() error {
@@ -284,7 +288,8 @@ func NewPackageSource(u *Upstream, fileBase, username, password string) (*Packag
 			Git:      r,
 			Username: username,
 			Password: password,
-			Path:     localPath}, fnResults, nil
+			Path:     localPath,
+			refs:     []SourceRef{}}, fnResults, nil
 	}
 	return nil, fnResults, nil
 }
@@ -339,66 +344,77 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 
 	fleet.ComputeReferences(sources, packages)
 
-	for idx := range packages {
-		p := &packages[idx]
-		if !*p.Enabled {
-			util.ResultPrintf(&fnResults, fn.Info, "package %v; disabled", p.Name)
-			continue
+	outPackages := fleet.CollectOutputPackages(sources, packages, pkgsBasePath)
+
+	for idx := range outPackages {
+		p := &outPackages[idx]
+
+		d := filepath.Join(dstBaseDir, p.dstAbsPath)
+		u := UpstreamLookup(fleet, p.Upstream)
+		if u == nil {
+			return fnResults, fmt.Errorf("unknown upstream: %v", p.Upstream)
 		}
-		pkgDstPath := filepath.Join(pkgsBasePath, p.dstRelPath)
-		d := filepath.Join(dstBaseDir, pkgDstPath)
-		if *p.Stub {
-			util.ResultPrintf(&fnResults, fn.Info, "package %v; stub package at %v", p.Name, p.dstRelPath)
-		} else {
-			u := UpstreamLookup(fleet, p.Upstream)
-			if u == nil {
-				return fnResults, fmt.Errorf("unknown upstream: %v", p.Upstream)
-			}
-			src := PackageSourceLookup(sources, u)
-			if src == nil {
-				return fnResults, fmt.Errorf("unknown upstream source: %v", p.Upstream)
-			}
-			fnRes, err := SourceEnsureVersion(src, p.Ref)
-			fnResults = append(fnResults, fnRes...)
-			if err != nil {
-				return fnResults, err
-			}
-			util.ResultPrintf(&fnResults, fn.Info, "package %v; %v --> %v", p.Name, p.SrcPath, p.dstRelPath)
-			s := filepath.Join(src.Path, p.SrcPath)
-			err = os.CopyFS(d, os.DirFS(s))
-			if err != nil {
-				return fnResults, fmt.Errorf("copying package %v dir (%v --> %v): %v", p.Name, p.SrcPath, p.dstRelPath, err)
-			}
-			// FIXME: assumes git upstream
-			err = p.renderTemplateMeta(src, pkgDstPath)
-			if err != nil {
-				return fnResults, fmt.Errorf("rendering package %v metadata: %v", p.Name, err)
-			}
-			err = kpt.UpdateKptMetadata(d, p.Name, p.Metadata.mergedSpec, p.SrcPath, src.Git.URI, src.Git.CurrentRevision, src.Git.CurrentHash)
-			if err != nil {
-				return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
-			}
+		src := PackageSourceLookup(sources, u)
+		if src == nil {
+			return fnResults, fmt.Errorf("unknown upstream source: %v", p.Upstream)
 		}
-		fnRes, err := fleet.TossFiles(sources, p.Packages, dstBaseDir, pkgDstPath)
+		fnRes, err := SourceEnsureVersion(src, p.Ref)
+		fnResults = append(fnResults, fnRes...)
 		if err != nil {
-			return fnResults, fmt.Errorf("tossing child packages for %v: %v", p.Name, err)
+			return fnResults, err
+		}
+		util.ResultPrintf(&fnResults, fn.Info, "package %v; %v --> %v", p.Name, p.SrcPath, p.dstRelPath)
+		s := filepath.Join(src.Path, p.SrcPath)
+		err = os.CopyFS(d, os.DirFS(s))
+		if err != nil {
+			return fnResults, fmt.Errorf("copying package %v dir (%v --> %v): %v", p.Name, p.SrcPath, p.dstRelPath, err)
+		}
+		// TODO: assumes git upstream
+		err = p.renderTemplateMeta(src, p.dstAbsPath)
+		if err != nil {
+			return fnResults, fmt.Errorf("rendering package %v metadata: %v", p.Name, err)
+		}
+		err = kpt.UpdateKptMetadata(d, p.Name, p.Metadata.mergedSpec, p.SrcPath, src.Git.URI, src.Git.CurrentRevision, src.Git.CurrentHash)
+		if err != nil {
+			return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
 		}
 		fnResults = append(fnResults, fnRes...)
 	}
 	return fnResults, nil
 }
 
-// ComputeRevisions will look through all packages and collect all references used by packages
-func (fleet *Fleet) ComputeReferences(sources []PackageSource, packages PackageSlice) (error) {
+// CollectOutputPackages will precompute package paths and return a list of packages that should
+// be output, i.e. ignoring stubs and disabled packages
+func (fleet *Fleet) CollectOutputPackages(sources []PackageSource, packages PackageSlice, pkgsBasePath string) PackageSlice {
+	var outPackages PackageSlice
+	for idx := range packages {
+		p := &packages[idx]
+		p.dstAbsPath = filepath.Join(pkgsBasePath, p.dstRelPath)
+		if !*p.Enabled {
+			continue
+		}
+		if !*p.Stub {
+			outPackages = append(outPackages, *p)
+		}
+		pkgs := fleet.CollectOutputPackages(sources, p.Packages, p.dstAbsPath)
+		outPackages = append(outPackages, pkgs...)
+	}
+	return outPackages
+}
+
+// ComputeReferences loops through all packages and collect all references used by packages
+func (fleet *Fleet) ComputeReferences(sources []PackageSource, packages PackageSlice) error {
 	for idx := range packages {
 		p := &packages[idx]
 		if !*p.Enabled {
 			continue
 		}
-		if ! *p.Stub {
-			//u := UpstreamLookup(fleet, p.Upstream)
-			//src := PackageSourceLookup(sources, u)
-			fmt.Fprintf(os.Stderr, ">> %+v, rev %v\n", p.Name, p.Ref)
+		if !*p.Stub {
+			u := UpstreamLookup(fleet, p.Upstream)
+			src := PackageSourceLookup(sources, u)
+			if !slices.Contains(src.refs, p.Ref) {
+				src.refs = append(src.refs, p.Ref)
+			}
 		}
 		err := fleet.ComputeReferences(sources, p.Packages)
 		if err != nil {
