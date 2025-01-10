@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"text/template"
 	"time"
 
@@ -45,6 +46,11 @@ type FleetSpec struct {
 }
 
 type PackageSlice []Package
+
+// PackageSlice implements sort.Interface
+func (p PackageSlice) Len() int           { return len(p) }
+func (p PackageSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p PackageSlice) Less(i, j int) bool { return p[i].sortKey < p[j].sortKey }
 
 type UpstreamID string
 
@@ -88,6 +94,8 @@ type Package struct {
 	dstRelPath string
 	// hierarchical path, i.e. including parent package paths
 	dstAbsPath string
+	// combination of source (repo) and ref. Used to sort and optimize git operations
+	sortKey string
 }
 
 type Metadata struct {
@@ -342,9 +350,22 @@ func SourceEnsureVersion(src *PackageSource, ref SourceRef) (fn.Results, error) 
 func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, dstBaseDir, pkgsBasePath string) (fn.Results, error) {
 	var fnResults fn.Results
 
-	fleet.ComputeReferences(sources, packages)
-
 	outPackages := fleet.CollectOutputPackages(sources, packages, pkgsBasePath)
+
+	fleet.ComputeReferences(sources, outPackages)
+
+	// Pre-create dirs to allow out-of-order tossing of packages
+	for idx := range outPackages {
+		p := &outPackages[idx]
+		d := filepath.Join(dstBaseDir, p.dstAbsPath)
+		err := os.MkdirAll(d, 0700)
+		if err != nil {
+			return fnResults, err
+		}
+	}
+
+	// Sort packages against repo and repo ref to optimize git operations
+	sort.Sort(outPackages)
 
 	for idx := range outPackages {
 		p := &outPackages[idx]
@@ -406,20 +427,12 @@ func (fleet *Fleet) CollectOutputPackages(sources []PackageSource, packages Pack
 func (fleet *Fleet) ComputeReferences(sources []PackageSource, packages PackageSlice) error {
 	for idx := range packages {
 		p := &packages[idx]
-		if !*p.Enabled {
-			continue
+		u := UpstreamLookup(fleet, p.Upstream)
+		src := PackageSourceLookup(sources, u)
+		if !slices.Contains(src.refs, p.Ref) {
+			src.refs = append(src.refs, p.Ref)
 		}
-		if !*p.Stub {
-			u := UpstreamLookup(fleet, p.Upstream)
-			src := PackageSourceLookup(sources, u)
-			if !slices.Contains(src.refs, p.Ref) {
-				src.refs = append(src.refs, p.Ref)
-			}
-		}
-		err := fleet.ComputeReferences(sources, p.Packages)
-		if err != nil {
-			return err
-		}
+		p.sortKey = u.Git.Repo + string(p.Ref)
 	}
 	return nil
 }
