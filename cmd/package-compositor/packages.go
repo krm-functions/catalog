@@ -48,9 +48,9 @@ type FleetSpec struct {
 type PackageSlice []Package
 
 // PackageSlice implements sort.Interface
-func (p PackageSlice) Len() int           { return len(p) }
-func (p PackageSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-func (p PackageSlice) Less(i, j int) bool { return p[i].sortKey < p[j].sortKey }
+func (packages PackageSlice) Len() int           { return len(packages) }
+func (packages PackageSlice) Swap(i, j int)      { packages[i], packages[j] = packages[j], packages[i] }
+func (packages PackageSlice) Less(i, j int) bool { return packages[i].sortKey < packages[j].sortKey }
 
 type UpstreamID string
 
@@ -172,6 +172,13 @@ func (fleet *Fleet) Validate() error {
 	}
 	if _, found := fleet.Spec.Defaults.Metadata.Spec["name"]; found {
 		return fmt.Errorf("defaults.metadata.spec cannot have 'name' field")
+	}
+	for idx := range fleet.Spec.Packages {
+		p := &fleet.Spec.Packages[idx]
+		u := UpstreamLookup(fleet, p.Upstream)
+		if u == nil {
+			return fmt.Errorf("upstream names must be unique")
+		}
 	}
 	return fleet.Spec.Packages.Validate()
 }
@@ -350,7 +357,7 @@ func SourceEnsureVersion(src *PackageSource, ref SourceRef) (fn.Results, error) 
 func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, dstBaseDir, pkgsBasePath string) (fn.Results, error) {
 	var fnResults fn.Results
 
-	outPackages := fleet.CollectOutputPackages(sources, packages, pkgsBasePath)
+	outPackages := fleet.CollectOutputPackages(packages, pkgsBasePath)
 
 	fleet.ComputeReferences(sources, outPackages)
 
@@ -358,7 +365,7 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 	for idx := range outPackages {
 		p := &outPackages[idx]
 		d := filepath.Join(dstBaseDir, p.dstAbsPath)
-		err := os.MkdirAll(d, 0700)
+		err := os.MkdirAll(d, 0o700)
 		if err != nil {
 			return fnResults, err
 		}
@@ -405,7 +412,7 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 
 // CollectOutputPackages will precompute package paths and return a list of packages that should
 // be output, i.e. ignoring stubs and disabled packages
-func (fleet *Fleet) CollectOutputPackages(sources []PackageSource, packages PackageSlice, pkgsBasePath string) PackageSlice {
+func (fleet *Fleet) CollectOutputPackages(packages PackageSlice, pkgsBasePath string) PackageSlice {
 	var outPackages PackageSlice
 	for idx := range packages {
 		p := &packages[idx]
@@ -416,14 +423,14 @@ func (fleet *Fleet) CollectOutputPackages(sources []PackageSource, packages Pack
 		if !*p.Stub {
 			outPackages = append(outPackages, *p)
 		}
-		pkgs := fleet.CollectOutputPackages(sources, p.Packages, p.dstAbsPath)
+		pkgs := fleet.CollectOutputPackages(p.Packages, p.dstAbsPath)
 		outPackages = append(outPackages, pkgs...)
 	}
 	return outPackages
 }
 
 // ComputeReferences loops through all packages and collect all references used by packages
-func (fleet *Fleet) ComputeReferences(sources []PackageSource, packages PackageSlice) error {
+func (fleet *Fleet) ComputeReferences(sources []PackageSource, packages PackageSlice) {
 	for idx := range packages {
 		p := &packages[idx]
 		u := UpstreamLookup(fleet, p.Upstream)
@@ -433,7 +440,6 @@ func (fleet *Fleet) ComputeReferences(sources []PackageSource, packages PackageS
 		}
 		p.sortKey = u.Git.Repo + string(p.Ref)
 	}
-	return nil
 }
 
 func FilesystemToObjects(path string) ([]*yaml.RNode, error) {
