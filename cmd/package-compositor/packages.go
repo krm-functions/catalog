@@ -399,7 +399,6 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 		if err != nil {
 			return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
 		}
-		fnResults = append(fnResults, fnRes...)
 	}
 	return fnResults, nil
 }
