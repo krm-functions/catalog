@@ -92,7 +92,7 @@ spec:
   - name: foo
     sourcePath: examples/package-composer/pkg1
 `,
-	// Defaults cannot hanve metadata 'name'
+	// Defaults cannot have metadata 'name'
 	`apiVersion: fn.kpt.dev/v1alpha1
 kind: Fleet
 metadata:
@@ -109,6 +109,23 @@ spec:
         name: cannot-have-name-key
   packages:
   - name: foo
+    sourcePath: examples/package-composer/pkg1
+    ref: main
+`,
+	// Undefined upstream
+	`apiVersion: fn.kpt.dev/v1alpha1
+kind: Fleet
+metadata:
+  name: example-fleet
+spec:
+  upstreams:
+  - name: example-foo
+    type: git
+    git:
+      repo: https://github.com/krm-functions/catalog.git
+  packages:
+  - name: foo
+    upstream: example-bar
     sourcePath: examples/package-composer/pkg1
     ref: main
 `,

@@ -35,7 +35,8 @@ func Clone(uri, authMethod, username, password, fileBase string) (*Repository, e
 	var err error
 	var auth ssh.AuthMethod
 	opts := &gogit.CloneOptions{
-		URL: uri,
+		URL:   uri,
+		Depth: 1,
 	}
 	if authMethod == "sshAgent" {
 		auth, err = ssh.NewSSHAgentAuth(username)

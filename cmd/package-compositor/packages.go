@@ -20,6 +20,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"text/template"
 	"time"
 
@@ -44,6 +46,11 @@ type FleetSpec struct {
 }
 
 type PackageSlice []Package
+
+// PackageSlice implements sort.Interface
+func (packages PackageSlice) Len() int           { return len(packages) }
+func (packages PackageSlice) Swap(i, j int)      { packages[i], packages[j] = packages[j], packages[i] }
+func (packages PackageSlice) Less(i, j int) bool { return packages[i].sortKey < packages[j].sortKey }
 
 type UpstreamID string
 
@@ -85,6 +92,10 @@ type Package struct {
 	Packages PackageSlice `yaml:"packages,omitempty" json:"packages,omitempty"`
 	// Relative path of where to store package. Generally identical to 'Name'
 	dstRelPath string
+	// hierarchical path, i.e. including parent package paths
+	dstAbsPath string
+	// combination of source (repo) and ref. Used to sort and optimize git operations
+	sortKey string
 }
 
 type Metadata struct {
@@ -104,6 +115,7 @@ type PackageSource struct {
 	Username string
 	Password string
 	Path     string // Local absolute path to repo files
+	refs     []SourceRef
 }
 
 func (packages PackageSlice) Validate() error {
@@ -160,6 +172,13 @@ func (fleet *Fleet) Validate() error {
 	}
 	if _, found := fleet.Spec.Defaults.Metadata.Spec["name"]; found {
 		return fmt.Errorf("defaults.metadata.spec cannot have 'name' field")
+	}
+	for idx := range fleet.Spec.Packages {
+		p := &fleet.Spec.Packages[idx]
+		u := UpstreamLookup(fleet, p.Upstream)
+		if u == nil {
+			return fmt.Errorf("upstream names must be unique")
+		}
 	}
 	return fleet.Spec.Packages.Validate()
 }
@@ -284,7 +303,8 @@ func NewPackageSource(u *Upstream, fileBase, username, password string) (*Packag
 			Git:      r,
 			Username: username,
 			Password: password,
-			Path:     localPath}, fnResults, nil
+			Path:     localPath,
+			refs:     []SourceRef{}}, fnResults, nil
 	}
 	return nil, fnResults, nil
 }
@@ -336,53 +356,90 @@ func SourceEnsureVersion(src *PackageSource, ref SourceRef) (fn.Results, error) 
 // TossFiles copies package files
 func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, dstBaseDir, pkgsBasePath string) (fn.Results, error) {
 	var fnResults fn.Results
-	for idx := range packages {
-		p := &packages[idx]
-		if !*p.Enabled {
-			util.ResultPrintf(&fnResults, fn.Info, "package %v; disabled", p.Name)
-			continue
-		}
-		pkgDstPath := filepath.Join(pkgsBasePath, p.dstRelPath)
-		d := filepath.Join(dstBaseDir, pkgDstPath)
-		if *p.Stub {
-			util.ResultPrintf(&fnResults, fn.Info, "package %v; stub package at %v", p.Name, p.dstRelPath)
-		} else {
-			u := UpstreamLookup(fleet, p.Upstream)
-			if u == nil {
-				return fnResults, fmt.Errorf("unknown upstream: %v", p.Upstream)
-			}
-			src := PackageSourceLookup(sources, u)
-			if src == nil {
-				return fnResults, fmt.Errorf("unknown upstream source: %v", p.Upstream)
-			}
-			fnRes, err := SourceEnsureVersion(src, p.Ref)
-			fnResults = append(fnResults, fnRes...)
-			if err != nil {
-				return fnResults, err
-			}
-			util.ResultPrintf(&fnResults, fn.Info, "package %v; %v --> %v", p.Name, p.SrcPath, p.dstRelPath)
-			s := filepath.Join(src.Path, p.SrcPath)
-			err = os.CopyFS(d, os.DirFS(s))
-			if err != nil {
-				return fnResults, fmt.Errorf("copying package %v dir (%v --> %v): %v", p.Name, p.SrcPath, p.dstRelPath, err)
-			}
-			// FIXME: assumes git upstream
-			err = p.renderTemplateMeta(src, pkgDstPath)
-			if err != nil {
-				return fnResults, fmt.Errorf("rendering package %v metadata: %v", p.Name, err)
-			}
-			err = kpt.UpdateKptMetadata(d, p.Name, p.Metadata.mergedSpec, p.SrcPath, src.Git.URI, src.Git.CurrentRevision, src.Git.CurrentHash)
-			if err != nil {
-				return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
-			}
-		}
-		fnRes, err := fleet.TossFiles(sources, p.Packages, dstBaseDir, pkgDstPath)
+
+	outPackages := fleet.CollectOutputPackages(packages, pkgsBasePath)
+
+	fleet.ComputeReferences(sources, outPackages)
+
+	// Pre-create dirs to allow out-of-order tossing of packages
+	for idx := range outPackages {
+		p := &outPackages[idx]
+		d := filepath.Join(dstBaseDir, p.dstAbsPath)
+		err := os.MkdirAll(d, 0o700)
 		if err != nil {
-			return fnResults, fmt.Errorf("tossing child packages for %v: %v", p.Name, err)
+			return fnResults, err
 		}
+	}
+
+	// Sort packages against repo and repo ref to optimize git operations
+	sort.Sort(outPackages)
+
+	for idx := range outPackages {
+		p := &outPackages[idx]
+
+		d := filepath.Join(dstBaseDir, p.dstAbsPath)
+		u := UpstreamLookup(fleet, p.Upstream)
+		if u == nil {
+			return fnResults, fmt.Errorf("unknown upstream: %v", p.Upstream)
+		}
+		src := PackageSourceLookup(sources, u)
+		if src == nil {
+			return fnResults, fmt.Errorf("unknown upstream source: %v", p.Upstream)
+		}
+		fnRes, err := SourceEnsureVersion(src, p.Ref)
 		fnResults = append(fnResults, fnRes...)
+		if err != nil {
+			return fnResults, err
+		}
+		util.ResultPrintf(&fnResults, fn.Info, "package %v; %v --> %v", p.Name, p.SrcPath, p.dstRelPath)
+		s := filepath.Join(src.Path, p.SrcPath)
+		err = os.CopyFS(d, os.DirFS(s))
+		if err != nil {
+			return fnResults, fmt.Errorf("copying package %v dir (%v --> %v): %v", p.Name, p.SrcPath, p.dstRelPath, err)
+		}
+		// TODO: assumes git upstream
+		err = p.renderTemplateMeta(src, p.dstAbsPath)
+		if err != nil {
+			return fnResults, fmt.Errorf("rendering package %v metadata: %v", p.Name, err)
+		}
+		err = kpt.UpdateKptMetadata(d, p.Name, p.Metadata.mergedSpec, p.SrcPath, src.Git.URI, src.Git.CurrentRevision, src.Git.CurrentHash)
+		if err != nil {
+			return fnResults, fmt.Errorf("mutating package %v metadata: %v", p.Name, err)
+		}
 	}
 	return fnResults, nil
+}
+
+// CollectOutputPackages will precompute package paths and return a list of packages that should
+// be output, i.e. ignoring stubs and disabled packages
+func (fleet *Fleet) CollectOutputPackages(packages PackageSlice, pkgsBasePath string) PackageSlice {
+	var outPackages PackageSlice
+	for idx := range packages {
+		p := &packages[idx]
+		p.dstAbsPath = filepath.Join(pkgsBasePath, p.dstRelPath)
+		if !*p.Enabled {
+			continue
+		}
+		if !*p.Stub {
+			outPackages = append(outPackages, *p)
+		}
+		pkgs := fleet.CollectOutputPackages(p.Packages, p.dstAbsPath)
+		outPackages = append(outPackages, pkgs...)
+	}
+	return outPackages
+}
+
+// ComputeReferences loops through all packages and collect all references used by packages
+func (fleet *Fleet) ComputeReferences(sources []PackageSource, packages PackageSlice) {
+	for idx := range packages {
+		p := &packages[idx]
+		u := UpstreamLookup(fleet, p.Upstream)
+		src := PackageSourceLookup(sources, u)
+		if !slices.Contains(src.refs, p.Ref) {
+			src.refs = append(src.refs, p.Ref)
+		}
+		p.sortKey = u.Git.Repo + string(p.Ref)
+	}
 }
 
 func FilesystemToObjects(path string) ([]*yaml.RNode, error) {
