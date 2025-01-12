@@ -138,7 +138,7 @@ Note, that no package merge strategies are supported.
 ## Example Usage
 
 ```shell
-export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/package-compositor@sha256:53c8452ed490b379b54067010697b436987ac984a7dc2f303a16ca59c7af7461
+export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/package-compositor@sha256:b5f0074ced2f24286dd4962c1e2c150364f1bf6c50f615497bd53fd5f7d506a4
 
 kpt fn source examples/package-compositor/specs | \
   kpt fn eval - --network -i $(SOURCE_PACKAGES_IMAGE) | \
@@ -163,7 +163,7 @@ upstreams:
 The SSH-agent socket must be mounted into the container:
 
 ```shell
-export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/package-compositor@sha256:53c8452ed490b379b54067010697b436987ac984a7dc2f303a16ca59c7af7461
+export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/package-compositor@sha256:b5f0074ced2f24286dd4962c1e2c150364f1bf6c50f615497bd53fd5f7d506a4
 
 kpt fn source examples/package-compositor/specs | \
   kpt fn eval - -e SSH_AUTH_SOCK --mount type=bind,src="$SSH_AUTH_SOCK",target="$SSH_AUTH_SOCK",rw=true --as-current-user --network -i $(SOURCE_PACKAGES_IMAGE) | \
