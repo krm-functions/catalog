@@ -17,14 +17,14 @@
             golangci-lint
           ];
         };
-        # packages.default = self.packages.krm-package-compositor;
-        packages.default = pkgs.buildGoModule {
-          pname = "package-compositor";
+        packages.default = self.packages.${system}.krm-package-compositor;
+        packages.krm-package-compositor = pkgs.buildGoModule {
+          pname = "krm-package-compositor";
           version = "0.1.0";
           src = ./.;
           subPackages = [ "cmd/package-compositor" ];
-          vendorHash = "sha256-wWOchYWReHnYqGaEk43RDNcxOTL6RWSL1US+6uA/kbg=";
-          #vendorHash = nixpkgs.lib.fakeHash;
+          vendorHash = "sha256-LehyDOtDGh98T6iw9ihDMiVjdiBBzb31LscedYYrgQo=";
+          # vendorHash = nixpkgs.lib.fakeHash;
           buildInputs = [
             # ...
           ];
