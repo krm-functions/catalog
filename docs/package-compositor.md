@@ -170,6 +170,8 @@ kpt fn source examples/package-compositor/specs | \
   kpt fn sink fn-output
 ```
 
+An alternative to mounting the SSH-agent socket into the container is to use the `--exec` form together with e.g. a [devbox](https://www.jetify.com/devbox) and the provided Nix [flake.nix](flake.nix).
+
 Private keys can also be used by referencing a `Secret` resource:
 
 ```yaml

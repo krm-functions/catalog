@@ -23,11 +23,14 @@
           version = "0.1.0";
           src = ./.;
           subPackages = [ "cmd/package-compositor" ];
-          vendorHash = "sha256-LehyDOtDGh98T6iw9ihDMiVjdiBBzb31LscedYYrgQo=";
+          vendorHash = "sha256-EoXw2eWuoUimlH1vCgE02CExvB48l0nMfJrU8dpe2Zs=";
           # vendorHash = nixpkgs.lib.fakeHash;
           buildInputs = [
             # ...
           ];
+          postInstall = ''
+            mv $out/bin/package-compositor $out/bin/krm-package-compositor
+          '';
         };
       }
     );
