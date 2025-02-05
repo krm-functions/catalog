@@ -52,7 +52,7 @@ kind: ConfigMap
 metadata:
   name: my-kubeconform-config
 data:
-  kubernetes_version: "1.30.0"   # Must be one from https://github.com/instrumenta/kubernetes-json-schema without leading `v` e.g. `1.29.1`.
+  kubernetes_version: "1.30.0"   # Must be one from https://github.com/yannh/kubeconfor without leading `v` e.g. `1.29.1`.
                                  # Defaults to `master`, which work with built-in schemas
   ignore_missing_schemas: "true" # Do not fail on missing schemas, only warn
   strict: "true"                 # Do not allow properties not defined in the schema
