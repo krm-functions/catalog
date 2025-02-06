@@ -124,17 +124,18 @@ func (packages PackageSlice) Validate() error {
 		if p.Name == "" {
 			return fmt.Errorf("packages must have 'name' (index %v)", idx)
 		}
-		if p.SrcPath == "" && !*p.Stub {
-			return fmt.Errorf("Package %q needs 'path'", p.Name)
-		}
-		if p.SrcPath != "" && *p.Stub {
-			return fmt.Errorf("Package %q cannot be a stub and have 'path'", p.Name)
+		if !*p.Stub {
+			if p.Ref == "" {
+				return fmt.Errorf("Package %q has no 'ref'", p.Name)
+			}
+			if p.SrcPath == "" {
+				return fmt.Errorf("Package %q needs 'sourcePath'", p.Name)
+			}
+		} else if p.SrcPath != "" {
+			return fmt.Errorf("Package %q cannot be a stub and have 'sourcePath'", p.Name)
 		}
 		if p.Upstream == "" {
 			return fmt.Errorf("Package %q has no upstream", p.Name)
-		}
-		if p.Ref == "" {
-			return fmt.Errorf("Package %q has no ref", p.Name)
 		}
 		if err := p.Packages.Validate(); err != nil { // Recursively validate packages
 			return err
