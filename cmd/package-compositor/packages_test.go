@@ -30,15 +30,16 @@ spec:
     git:
       repo: https://github.com/krm-functions/catalog.git
   defaults:
-    ref: main
     metadata:
       spec:
         k1: v1
         k2: v2
   packages:
   - name: foo
+    ref: main
     sourcePath: examples/package-composer/pkg1
   - name: bar
+    ref: main
     sourcePath: examples/package-composer/pkg2
     metadata:
       spec:
@@ -46,6 +47,7 @@ spec:
         k3: v3
     packages:
     - name: bar1
+      ref: main
       sourcePath: examples/package-composer/pkg3
       metadata:
         spec:
@@ -59,12 +61,14 @@ spec:
         k5: v5
     packages:
     - name: zap1
+      ref: main
       sourcePath: examples/package-composer/pkg4
       metadata:
         spec:
           k5-2: v5-2
           k6-2: v6-2
     - name: zap2
+      ref: main
       sourcePath: examples/package-composer/pkg4
       metadata:
         inheritFromParent: false
