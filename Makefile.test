@@ -10,6 +10,7 @@ HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:1a1d4acbe030
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:62659f1de87537b51b99419e6e64fa540b16e699a77e9f7b2f5282c5a2e65f04
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:c41653293c6075c94eee05df4194d0911bf53bd7d057dc368d34f995e6ac5dbb
 PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:b5f0074ced2f24286dd4962c1e2c150364f1bf6c50f615497bd53fd5f7d506a4
+SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:123abc
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
@@ -18,6 +19,7 @@ HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart:$(CONTAINER_TAG)
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader:$(CONTAINER_TAG)
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform:$(CONTAINER_TAG)
 PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor:$(CONTAINER_TAG)
+SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels:$(CONTAINER_TAG)
 endif
 
 ifeq ($(FN_MODE),exec)
@@ -29,6 +31,7 @@ HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
 KUBECONFORM := --exec bin/linux_amd64/kubeconform
 TEMPLATE_KYAML := --exec bin/linux_amd64/template-kyaml
 PACKAGE_COMPOSITOR := --exec bin/linux_amd64/package-compositor
+SET_LABELS := --exec bin/linux_amd64/set-labels
 else
 APPLY_SETTERS := --image $(APPLY_SETTERS_IMAGE)
 DIGESTER := --network --image $(DIGESTER_IMAGE)
@@ -37,6 +40,7 @@ HELM_SOURCE := --network --image $(HELM_SOURCE_IMAGE)
 HELM_UPGRADER := --network --image $(HELM_UPGRADER_IMAGE)
 KUBECONFORM := --network --image $(KUBECONFORM_IMAGE)
 PACKAGE_COMPOSITOR := --network --image $(PACKAGE_COMPOSITOR_IMAGE)
+SET_LABELS := --network --image $(SET_LABELS_IMAGE)
 endif
 
 BASELINE_RENDER_HELM_CHART := gcr.io/kpt-fn/render-helm-chart:v0.2.2
@@ -234,6 +238,18 @@ test-package-compositor-ref:
 	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-compositor/pkg3 example-fleet-ref/bar/baz1 --for-deployment
 	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-compositor/pkg1 example-fleet-ref/bar/baz2 --for-deployment
 	kpt pkg get https://github.com/krm-functions/catalog.git/examples/package-compositor/pkg4 example-fleet-ref/olo/baz --for-deployment
+
+.PHONY: test-set-labels
+test-set-labels:
+	rm -rf tmp-results fn-output
+	kpt fn source examples/set-labels | kpt fn eval - --truncate-output=false $(SET_LABELS) -- l1=v1 l2=v2 | kpt fn sink fn-output
+	if [ $(shell cat fn-output/deployment.yaml | yq '.metadata.labels.l1|contains("v1")') != "true" ]; then exit1; fi
+	rm -rf tmp-results fn-output
+	kpt fn source examples/set-labels | kpt fn eval - --truncate-output=false $(SET_LABELS) --fn-config example-function-configs/set-labels/configmap.yaml | kpt fn sink fn-output
+	if [ $(shell cat fn-output/deployment.yaml | yq '.metadata.labels.foo|contains("bar")') != "true" ]; then exit1; fi
+	rm -rf tmp-results fn-output
+	kpt fn source examples/set-labels | kpt fn eval - --truncate-output=false $(SET_LABELS) --fn-config example-function-configs/set-labels/setlabels.yaml | kpt fn sink fn-output
+	if [ $(shell cat fn-output/deployment.yaml | yq '.metadata.labels.baz|contains("olo")') != "true" ]; then exit1; fi
 
 .PHONY: test-template-kyaml
 test-template-kyaml:

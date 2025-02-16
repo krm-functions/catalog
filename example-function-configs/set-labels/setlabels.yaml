@@ -1,0 +1,8 @@
+apiVersion: fn.kpt.dev/v1alpha1
+kind: SetLabels
+metadata:
+  name: test-set-labels
+labels:
+  foo: bar
+  baz: olo
+setSelectorLabels: false
