@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm1
+data:
+  foo1: bar1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm2
+  annotations:
+    config.kubernetes.io/local-config: true
+data:
+  foo2: bar2

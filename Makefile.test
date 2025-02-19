@@ -12,6 +12,7 @@ HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:1a1d4acbe030
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:62659f1de87537b51b99419e6e64fa540b16e699a77e9f7b2f5282c5a2e65f04
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:c41653293c6075c94eee05df4194d0911bf53bd7d057dc368d34f995e6ac5dbb
 PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:b5f0074ced2f24286dd4962c1e2c150364f1bf6c50f615497bd53fd5f7d506a4
+REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources@sha256:b5f0074ced2f24286dd4962c1e2c150364f1bf6c50f615497bd53fd5f7d506a4
 SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations@sha256:123abc
 SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:123abc
 else
@@ -22,6 +23,7 @@ HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart:$(CONTAINER_TAG)
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader:$(CONTAINER_TAG)
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform:$(CONTAINER_TAG)
 PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor:$(CONTAINER_TAG)
+REMOVE_LOCAL_CONFIG_RESOURCES := ghcr.io/krm-functions/remove-local-config-resources:$(CONTAINER_TAG)
 SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations:$(CONTAINER_TAG)
 SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels:$(CONTAINER_TAG)
 endif
@@ -35,6 +37,7 @@ HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
 KUBECONFORM := --exec bin/linux_amd64/kubeconform
 TEMPLATE_KYAML := --exec bin/linux_amd64/template-kyaml
 PACKAGE_COMPOSITOR := --exec bin/linux_amd64/package-compositor
+REMOVE_LOCAL_CONFIG_RESOURCES := --exec bin/linux_amd64/remove-local-config-resources
 SET_ANNOTATIONS := --exec bin/linux_amd64/set-annotations
 SET_LABELS := --exec bin/linux_amd64/set-labels
 else
@@ -45,24 +48,26 @@ HELM_SOURCE := --network --image $(HELM_SOURCE_IMAGE)
 HELM_UPGRADER := --network --image $(HELM_UPGRADER_IMAGE)
 KUBECONFORM := --network --image $(KUBECONFORM_IMAGE)
 PACKAGE_COMPOSITOR := --network --image $(PACKAGE_COMPOSITOR_IMAGE)
+REMOVE_LOCAL_CONFIG_RESOURCES := --network --image $(REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE)
 SET_ANNOTATIONS := --network --image $(SET_ANNOTATIONS_IMAGE)
 SET_LABELS := --network --image $(SET_LABELS_IMAGE)
 endif
 
 BASELINE_RENDER_HELM_CHART := gcr.io/kpt-fn/render-helm-chart:v0.2.2
 
-e2e-tests: test-render-helm-chart \
-	   render-helm-chart-example \
+e2e-tests: render-helm-chart-example \
 	   render-helm-chart-example2 \
 	   render-with-kube-version \
-	   test-set-annotations \
-	   test-set-labels \
-	   test-source-helm-chart \
-	   test-helm-upgrader \
 	   test-apply-setters \
 	   test-digester \
+	   test-helm-upgrader \
 	   test-kubeconform \
-	   test-package-compositor-e2e
+	   test-package-compositor-e2e \
+	   test-remove-local-config-resources \
+	   test-render-helm-chart \
+	   test-set-annotations \
+	   test-set-labels \
+	   test-source-helm-chart
 
 # BEWARE: These tests are fragile - we want to test upgrades, but without upgrade-constraints tests might fail when charts are updated
 .PHONY: test-helm-upgrader
@@ -229,6 +234,14 @@ LOCAL_PACKAGES_DIR ?= /tmp/package-compositor
 test-package-compositor-e2e: test-package-compositor test-package-compositor-ref
 	# We don't set all annotations and comments exactly as kpt
 	if [ "$(shell diff -rw fn-output/fleet-1/example-fleet example-fleet-ref | wc -l)" != "40" ]; then echo "*** source-package diff not as expected"; exit 1; fi
+
+.PHONY: test-remove-local-config-resources
+test-remove-local-config-resources:
+	rm -rf tmp-results fn-output
+	kpt fn source examples/remove-local-config-resources | kpt fn eval - --results-dir tmp-results --truncate-output=false $(REMOVE_LOCAL_CONFIG_RESOURCES) | kpt fn sink fn-output
+	kpt pkg tree fn-output
+	tree fn-output
+	if grep -q 'name: cm2' fn-output/*; then echo "*** found resource that should have been removed"; exit 1; fi
 
 .PHONY: test-package-compositor
 test-package-compositor:
