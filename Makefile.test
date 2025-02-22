@@ -5,16 +5,16 @@ SHELL=/bin/bash -o pipefail
 FN_MODE ?= exec
 
 ifeq ($(CONTAINER_TAG),)
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:88b3c3d1a02b7ddb791fb3c868d69b3c35a9969794da6f76be9678f8e6673fe7
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:1402287ad022b5922271f72ada13fab75addd79d2a3dcbadd22daea762b1b029
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:f559896b26240ddea78db207e2842940b70de750dc9f676a0332433f9b3ec4c4
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:1a1d4acbe03050f949c2921ef358a98b07b6325af9ff8632a013a3a0cb8ed157
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:62659f1de87537b51b99419e6e64fa540b16e699a77e9f7b2f5282c5a2e65f04
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:c41653293c6075c94eee05df4194d0911bf53bd7d057dc368d34f995e6ac5dbb
-PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:b5f0074ced2f24286dd4962c1e2c150364f1bf6c50f615497bd53fd5f7d506a4
-REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources@sha256:b5f0074ced2f24286dd4962c1e2c150364f1bf6c50f615497bd53fd5f7d506a4
-SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations@sha256:123abc
-SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:123abc
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:b8bbe62db2bc9957b1e59eedafbd651823f34366fb8ad6527ade9a1c36c6f338
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:c3f3f61c2a42c847b602a473fc2aaaea6c2878992a9ab10e0ecf98c622d339ed
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:3562c966122aae452eb7f364d588c69fc3245cef8d8eb1dee0f6bca3f1c88387
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:ae3a2b983804ac5476b6f69e8e31cd9e48cb20a117a9368571da0ee4aea81517
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:8c56081163a70c68b0b3b9ad4096478923b3f2ce9e571341137322c99de5686b
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:982fa54ed92fc794be37b44dab6a295a43487d1fa2fc775b2995be5322072d09
+PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:e22223ac64c0bd8a2491bb3c09e65509fc60e73125fb0c2ef07e1b8c6304ac49
+REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources@sha256:081b5573300121efb9191cb5cef4a5d6d0c273f53d2a5ab6f889922f49607565
+SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations@sha256:fa9b9c1fdb16ed29c7fe2ce560807957c532e9cc71d085c9dc24132269b782f8
+SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:8c320a531d29ddffaa0ceffa7ce96ae2f8a2bea8c92a0b1eb7ce41d8d5c67f98
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
@@ -144,7 +144,7 @@ test-apply-setters: test-apply-setters1 test-apply-setters2
 
 .PHONY: test-apply-setters1
 test-apply-setters1:
-	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/cm-setters.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.txt
+	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/cm-setters.yaml | kpt fn eval - -i $(REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE) -o unwrap > test-out.txt
 	grep -e 'foo: "valueFoo"' test-out.txt
 	grep -e 'bar: "valueBar"' test-out.txt
 	grep -e 'baz: "valueBaz"' test-out.txt
@@ -155,7 +155,7 @@ test-apply-setters1:
 
 .PHONY: test-apply-setters2
 test-apply-setters2:
-	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/apply-setters-fn-config.yaml | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap > test-out.txt
+	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/apply-setters-fn-config.yaml | kpt fn eval - -i $(REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE) -o unwrap > test-out.txt
 	grep -e 'foo: ""' test-out.txt
 	grep -e 'bar: "valueBar2"' test-out.txt
 	grep -e 'baz: "valueBaz2"' test-out.txt

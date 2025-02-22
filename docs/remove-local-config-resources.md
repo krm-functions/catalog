@@ -28,7 +28,7 @@ data:
 Apply the `remove-local-config-resources` function:
 
 ```shell
-export REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE=ghcr.io/krm-functions/remove-local-config-resources@sha256:88b3c3d1a02b7ddb791fb3c868d69b3c35a9969794da6f76be9678f8e6673fe7
+export REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE=ghcr.io/krm-functions/remove-local-config-resources@sha256:081b5573300121efb9191cb5cef4a5d6d0c273f53d2a5ab6f889922f49607565
 
 kpt fn source examples/remove-local-config-resources | \
     kpt fn eval - --results-dir tmp-results --truncate-output=false --i $REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE -o unwrap
