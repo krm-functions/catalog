@@ -13,7 +13,7 @@ apply-setters](https://catalog.kpt.dev/apply-setters/v0.2/) function:
 The example `ApplySetters` resource below illustrates this:
 
 ```yaml
-apiVersion: experimental.fn.kpt.dev/v1alpha1
+apiVersion: fn.kpt.dev/v1alpha1
 kind: ApplySetters
 metadata:
   name: inline-setters-spec
@@ -29,17 +29,16 @@ setters:
   # data into a setters value . This is similar to the
   # apply-replacements KRM function.
   references:
+    - setterName: deployReplicas # Use the value from source below as setter with this name
+      source:
+        kind: Deployment # A resource to locate
+        name: my-nginx
+        fieldPath: spec.replicas # Read this field from resource
 
-  - setterName: deployReplicas   # Use the value from source below as setter with this name
-    source:
-      kind: Deployment           # A resource to locate
-      name: my-nginx
-      fieldPath: spec.replicas   # Read this field from resource
-
-  - setterName: kptGitSha
-    source:
-      kind: Kptfile
-      fieldPath: upstream.git.ref
+    - setterName: kptGitSha
+      source:
+        kind: Kptfile
+        fieldPath: upstream.git.ref
 ```
 
 ## Configuration Management
@@ -87,7 +86,7 @@ a render pipeline, but it still suffers from the disadvantages of the
 ## Example Usage
 
 ```shell
-export APPLY_SETTERS_IMAGE=ghcr.io/krm-functions/apply-setters@sha256:88b3c3d1a02b7ddb791fb3c868d69b3c35a9969794da6f76be9678f8e6673fe7
+export APPLY_SETTERS_IMAGE=ghcr.io/krm-functions/apply-setters@sha256:b8bbe62db2bc9957b1e59eedafbd651823f34366fb8ad6527ade9a1c36c6f338
 
 kpt fn source examples/apply-setters \
  | kpt fn eval - --truncate-output=false -i $APPLY_SETTERS_IMAGE --fn-config example-function-configs/apply-setters/cm-setters.yaml \

@@ -1,4 +1,4 @@
-apiVersion: experimental.fn.kpt.dev/v1alpha1
+apiVersion: fn.kpt.dev/v1alpha1
 kind: ApplySetters
 metadata:
   name: inline-setters-spec
