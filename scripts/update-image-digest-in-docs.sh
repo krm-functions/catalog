@@ -59,18 +59,18 @@ sed -i -E "s#(.*?ghcr.io/krm-functions/package-compositor.*@).*#\1$DIGEST#" Make
 
 IMAGE=ghcr.io/krm-functions/set-annotations
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
-echo "package-compositor digest: $DIGEST"
+echo "set-annotations digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/set-annotations.*@).*#\1$DIGEST#" docs/*.md
 sed -i -E "s#(.*?ghcr.io/krm-functions/set-annotations.*@).*#\1$DIGEST#" Makefile.test
 
 IMAGE=ghcr.io/krm-functions/set-labels
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
-echo "package-compositor digest: $DIGEST"
+echo "set-labels digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/set-labels.*@).*#\1$DIGEST#" docs/*.md
 sed -i -E "s#(.*?ghcr.io/krm-functions/set-labels.*@).*#\1$DIGEST#" Makefile.test
 
 IMAGE=ghcr.io/krm-functions/remove-local-config-resources
 DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
-echo "package-compositor digest: $DIGEST"
+echo "remove-local-config-resources digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/remove-local-config-resources.*@).*#\1$DIGEST#" docs/*.md
 sed -i -E "s#(.*?ghcr.io/krm-functions/remove-local-config-resources.*@).*#\1$DIGEST#" Makefile.test
