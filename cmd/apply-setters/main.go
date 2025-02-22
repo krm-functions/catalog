@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	configAPIVersion = "experimental.fn.kpt.dev/v1alpha1"
+	configAPIVersion = "fn.kpt.dev/v1alpha1"
 	configKind       = "ApplySetters"
 )
 
