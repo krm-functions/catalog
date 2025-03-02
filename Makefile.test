@@ -7,6 +7,7 @@ FN_MODE ?= exec
 ifeq ($(CONTAINER_TAG),)
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:c62bd0fdbd0123b37bb9718b17be46af5122135649ffe0f04b4dd053a5636c13
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:9a5dbd530cfdcff09dc0088719bc3fbd6a3e610148419ddd793106a28398da3b
+GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := ghcr.io/krm-functions/gatekeeper-set-enforcement-action@sha256:cd2
 HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:3a9bb178644939a651902b0cfe3f74df0a7533ffbbcf8769983d8ed3ba763bcd
 HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:2d4a075df6104e83b9604a8b2ddad5e7c082dbabcdbd3f64e98c67f48897357a
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:cd28b5a163b9c9a8126d8192749ac023729217372acef98bec32f7ed0d19516c
@@ -18,6 +19,7 @@ SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:1ea1c0a48988bdae3cf0
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
+GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := ghcr.io/krm-functions/gatekeeper-set-enforcement-action:$(CONTAINER_TAG)
 HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart:$(CONTAINER_TAG)
 HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart:$(CONTAINER_TAG)
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader:$(CONTAINER_TAG)
@@ -31,6 +33,7 @@ endif
 ifeq ($(FN_MODE),exec)
 APPLY_SETTERS := --exec bin/linux_amd64/apply-setters
 DIGESTER := --exec bin/linux_amd64/digester
+GATEKEEPER_SET_ENFORCEMENT_ACTION := --exec bin/linux_amd64/gatekeeper-set-enforcement-action
 HELM_RENDER := --exec bin/linux_amd64/render-helm-chart
 HELM_SOURCE := --exec bin/linux_amd64/source-helm-chart
 HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
@@ -43,6 +46,7 @@ SET_LABELS := --exec bin/linux_amd64/set-labels
 else
 APPLY_SETTERS := --image $(APPLY_SETTERS_IMAGE)
 DIGESTER := --network --image $(DIGESTER_IMAGE)
+GATEKEEPER_SET_ENFORCEMENT_ACTION := --image $(GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE)
 HELM_RENDER := --network --image $(HELM_RENDER_IMAGE)
 HELM_SOURCE := --network --image $(HELM_SOURCE_IMAGE)
 HELM_UPGRADER := --network --image $(HELM_UPGRADER_IMAGE)
@@ -60,6 +64,7 @@ e2e-tests: render-helm-chart-example \
 	   render-with-kube-version \
 	   test-apply-setters \
 	   test-digester \
+	   test-gatekeeper-set-enforcement-constraint \
 	   test-helm-upgrader \
 	   test-kubeconform \
 	   test-package-compositor-e2e \
@@ -204,6 +209,11 @@ test-digester-w-containers2:
 	echo "** rendering using pipeline in Ktfile"
 	rm -rf cert-manager-rendered
 	kpt fn render cert-manager-package -o stdout | kpt fn sink cert-manager-rendered
+
+PHONY: test-gatekeeper-set-enforcement-action
+test-gatekeeper-set-enforcement-action:
+	kpt fn source examples/gatekeeper-set-enforcement-action | kpt fn eval - --truncate-output=false $(GATEKEEPER_SET_ENFORCEMENT_ACTION) -o unwrap -- enforcementAction=deny > test-out.yaml
+	if [ "$(shell grep 'enforcementAction: deny' test-out.yaml | wc -l)" != "2" ]; then echo "*** error setting enforcementAction"; exit 1; fi
 
 #KUBECONFORM_SCHEMA_LOCATIONS ?= "default"
 KUBECONFORM_SCHEMA_LOCATIONS ?= 'examples/kubeconform/schema-bundle/,examples/kubeconform/schema-bundle/CRDs-catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'

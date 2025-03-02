@@ -25,7 +25,7 @@ else
 endif
 
 # The binaries to build (just the basenames)
-BINS ?= apply-setters digester helm-upgrader kubeconform remove-local-config-resources render-helm-chart set-annotations set-labels source-helm-chart package-compositor # template-kyaml
+BINS ?= apply-setters digester gatekeeper-set-enforcement-action helm-upgrader kubeconform remove-local-config-resources render-helm-chart set-annotations set-labels source-helm-chart package-compositor # template-kyaml
 
 # The platforms we support
 #ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64 linux/ppc64le linux/s390x
