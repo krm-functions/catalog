@@ -28,7 +28,7 @@ import (
 
 const (
 	enforcementActionKey = "enforcementAction"
-	constraintApiVersion = "constraints.gatekeeper.sh/v1beta1"
+	constraintAPIVersion = "constraints.gatekeeper.sh/v1beta1"
 )
 
 type FilterState struct {
@@ -36,17 +36,17 @@ type FilterState struct {
 	Results           framework.Results
 }
 
-func (fnCfg *FilterState) LoadFunctionConfig(o *yaml.RNode) error {
+func (f *FilterState) LoadFunctionConfig(o *yaml.RNode) error {
 	if o.GetKind() == "ConfigMap" && o.GetApiVersion() == "v1" {
 		var cm corev1.ConfigMap
 		if err := yaml.Unmarshal([]byte(o.MustString()), &cm); err != nil {
 			return err
 		}
-		fnCfg.enforcementAction = cm.Data[enforcementActionKey]
-		if fnCfg.enforcementAction != "deny" &&
-			fnCfg.enforcementAction != "warn" &&
-			fnCfg.enforcementAction != "dryrun" {
-			return fmt.Errorf("unknown enforcementAction: %v", fnCfg.enforcementAction)
+		f.enforcementAction = cm.Data[enforcementActionKey]
+		if f.enforcementAction != "deny" &&
+			f.enforcementAction != "warn" &&
+			f.enforcementAction != "dryrun" {
+			return fmt.Errorf("unknown enforcementAction: %v", f.enforcementAction)
 		}
 		return nil
 	}
@@ -66,7 +66,7 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not read object metadata: %v", err)
 	}
-	if meta.APIVersion != constraintApiVersion {
+	if meta.APIVersion != constraintAPIVersion {
 		return object, nil
 	}
 	err = object.SetMapField(yaml.NewScalarRNode(f.enforcementAction), "spec", "enforcementAction")
