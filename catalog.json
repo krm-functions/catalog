@@ -16,6 +16,13 @@
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
+      "description": "Set enforcement action on GateKeeper constraint resources",
+      "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/gatekeeper-set-enforcement-action.md",
+      "image": "ghcr.io/krm-functions/gatekeeper-set-enforcement-action",
+      "digest": "sha256:abc123",
+      "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
+    },
+    {
       "description": "Lookup Helm chart upgrades and upgrade according to upgrade constraints",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/helm-upgrader.md",
       "image": "ghcr.io/krm-functions/helm-upgrader",

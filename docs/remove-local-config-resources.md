@@ -31,7 +31,7 @@ Apply the `remove-local-config-resources` function:
 export REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE=ghcr.io/krm-functions/remove-local-config-resources@sha256:6a47d6ebcf626e1666e0a301ff7be0b6b3997edce60d729b3c9a576464f34d6d
 
 kpt fn source examples/remove-local-config-resources | \
-    kpt fn eval - --results-dir tmp-results --truncate-output=false --i $REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE -o unwrap
+    kpt fn eval - --results-dir tmp-results --truncate-output=false -i $REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE -o unwrap
 [RUNNING] "remove-local-config-resources"
 [PASS] "remove-local-config-resources" in 100ms
   Results:
