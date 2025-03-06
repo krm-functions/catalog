@@ -64,7 +64,7 @@ e2e-tests: render-helm-chart-example \
 	   render-with-kube-version \
 	   test-apply-setters \
 	   test-digester \
-	   test-gatekeeper-set-enforcement-constraint \
+	   test-gatekeeper-set-enforcement-action \
 	   test-helm-upgrader \
 	   test-kubeconform \
 	   test-package-compositor-e2e \
@@ -213,7 +213,7 @@ test-digester-w-containers2:
 PHONY: test-gatekeeper-set-enforcement-action
 test-gatekeeper-set-enforcement-action:
 	kpt fn source examples/gatekeeper-set-enforcement-action | kpt fn eval - --truncate-output=false $(GATEKEEPER_SET_ENFORCEMENT_ACTION) -o unwrap -- enforcementAction=deny > test-out.yaml
-	if [ "$(shell grep 'enforcementAction: deny' test-out.yaml | wc -l)" != "2" ]; then echo "*** error setting enforcementAction"; exit 1; fi
+	if [ "$$(grep 'enforcementAction: deny' test-out.yaml | wc -l)" != "2" ]; then echo "*** error setting enforcementAction"; exit 1; fi
 
 #KUBECONFORM_SCHEMA_LOCATIONS ?= "default"
 KUBECONFORM_SCHEMA_LOCATIONS ?= 'examples/kubeconform/schema-bundle/,examples/kubeconform/schema-bundle/CRDs-catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
