@@ -78,13 +78,13 @@ e2e-tests: render-helm-chart-example \
 .PHONY: test-helm-upgrader
 test-helm-upgrader:
 	rm -rf tmp-results
-	kpt fn source examples/helm-upgrader | kpt fn eval - --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml --truncate-output=false --results-dir tmp-results $(HELM_UPGRADER) > test-out.txt
-	grep -e '.*upgrade-available: .*cert-manager:v1.8.2' test-out.txt
-	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.txt
-	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.txt
-	grep -e '.*upgrade-available.0: .*karpenter:0.35.0' test-out.txt
-	grep -e '.*upgrade-available.1: .*/external-secrets:0.14.2' test-out.txt
-	rm test-out.txt
+	kpt fn source examples/helm-upgrader | kpt fn eval - --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml --truncate-output=false --results-dir tmp-results $(HELM_UPGRADER) > test-out.yaml
+	grep -e '.*upgrade-available: .*cert-manager:v1.8.2' test-out.yaml
+	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.yaml
+	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.yaml
+	grep -e '.*upgrade-available.0: .*karpenter:0.35.0' test-out.yaml
+	grep -e '.*upgrade-available.1: .*/external-secrets:0.14.3' test-out.yaml
+	rm test-out.yaml
 	rm -rf tmp-results
 
 .PHONY: test-render-helm-chart
