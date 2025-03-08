@@ -333,6 +333,7 @@ manifest-list: all-push manifest-tool
 	        push from-args                                    \
 	        --platforms "$$platforms"                         \
 	        --template $(REGISTRY)/$$bin:$(VERSION)__OS_ARCH  \
+		--tags latest                                     \
 	        --target $(REGISTRY)/$$bin:$(VERSION);            \
 	done
 
