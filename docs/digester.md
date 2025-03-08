@@ -166,8 +166,8 @@ helmCharts:
 Full example:
 
 ```shell
-export SOURCE_HELM_CHART_IMAGE=ghcr.io/krm-functions/source-helm-chart@sha256:2d4a075df6104e83b9604a8b2ddad5e7c082dbabcdbd3f64e98c67f48897357a
-export DIGESTER_IMAGE=ghcr.io/krm-functions/digester@sha256:9a5dbd530cfdcff09dc0088719bc3fbd6a3e610148419ddd793106a28398da3b
+export SOURCE_HELM_CHART_IMAGE=ghcr.io/krm-functions/source-helm-chart@sha256:1e90d713e103b91ca65d19a6b2efd67413c4ca90dcd66cfd2fc2cf45389acb6d
+export DIGESTER_IMAGE=ghcr.io/krm-functions/digester@sha256:5fb15707649bb9c7f2da140346ca076aea95c2fcfc0a7e7d68ffb1358df56647
 
 echo "### Sourcing step - fetches chart and resolves digests, stores immutable package in 'cert-manager-package'"
 kpt fn source examples/digester \

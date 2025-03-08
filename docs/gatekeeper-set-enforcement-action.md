@@ -11,5 +11,8 @@ grep enforcementAction examples/gatekeeper-set-enforcement-action/*
 kpt fn source examples/gatekeeper-set-enforcement-action | \
     kpt fn eval - -i ghcr.io/krm-functions/gatekeeper-set-enforcement-action -o unwrap -- enforcementAction=deny > out.yaml
 
+# Observe that both constraints have enforcementAction set:
 grep enforcementAction out.yaml
+  enforcementAction: deny
+  enforcementAction: deny
 ```

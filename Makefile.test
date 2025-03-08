@@ -5,17 +5,17 @@ SHELL=/bin/bash -o pipefail
 FN_MODE ?= exec
 
 ifeq ($(CONTAINER_TAG),)
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:c62bd0fdbd0123b37bb9718b17be46af5122135649ffe0f04b4dd053a5636c13
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:9a5dbd530cfdcff09dc0088719bc3fbd6a3e610148419ddd793106a28398da3b
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:53aee0c43937b72405a694da26a7aa5f5f0fff459437f6c5ffada479f8b17817
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:5fb15707649bb9c7f2da140346ca076aea95c2fcfc0a7e7d68ffb1358df56647
 GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := ghcr.io/krm-functions/gatekeeper-set-enforcement-action@sha256:cd2
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:3a9bb178644939a651902b0cfe3f74df0a7533ffbbcf8769983d8ed3ba763bcd
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:2d4a075df6104e83b9604a8b2ddad5e7c082dbabcdbd3f64e98c67f48897357a
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:cd28b5a163b9c9a8126d8192749ac023729217372acef98bec32f7ed0d19516c
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:2a992e13491a32c5b4c8525b20a9de47de1f342599c1a7ab80168de526d60e4c
-PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:ce99dce59fb669c989c7636549ac413df209bf36f498d22b29288db9471b0be3
-REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources@sha256:6a47d6ebcf626e1666e0a301ff7be0b6b3997edce60d729b3c9a576464f34d6d
-SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations@sha256:d7a6e7090aad1179b7c713d1a6aa8fbdee1523b651e198b2357c6c854e3f519b
-SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:1ea1c0a48988bdae3cf0248d83e9551d714b258e4b95aedf4ce6ac0fd6f90ff2
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:733271d180c20f368d406e165b161ff196686b8e6c5d2f299e357cfc2a84cc99
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:1e90d713e103b91ca65d19a6b2efd67413c4ca90dcd66cfd2fc2cf45389acb6d
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:eed131e0ef5433e8a805c98c2d9ad673f480a3034db9e5d14c71f242a0397614
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:1c50e8114b2f2ded0afc7d161b5fec0420d9cb47b766717ed474bb1350d29d9d
+PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:820c12e85908384cd6468e4dbda33908614a2f1d6680e2370d1ea7041260f895
+REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources@sha256:0adbe7c2bdac67a06384ef706a5e77008e19a0416465305fe8f3386fa713183a
+SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations@sha256:b2e7e1b7937c7731f8e3452951a86f073d567a425efd2cea98ee8309a555407a
+SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:857f717953b5f22a249a18ea1f6d8845fb0ac0efe13eaa9867a0d72e3bc141e9
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)

@@ -8,9 +8,10 @@ SCRIPT=$(readlink -f $0)
 SCRIPTPATH=`dirname $SCRIPT`
 
 if [ -z "$TAG" ]; then
-    SHA=`git rev-parse --short HEAD`
-    TAG="$SHA"
-    echo "No image tag specified, using HEAD: $TAG"
+    # SHA=`git rev-parse --short HEAD`
+    # TAG="$SHA"
+    TAG=latest
+    echo "No image tag specified, using: $TAG"
 fi
 
 IMAGE=ghcr.io/krm-functions/helm-upgrader
@@ -83,4 +84,9 @@ DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .
 echo "remove-local-config-resources digest: $DIGEST"
 sed -i -E "s#(.*?ghcr.io/krm-functions/remove-local-config-resources.*@).*#\1$DIGEST#" docs/*.md
 sed -i -E "s#(.*?ghcr.io/krm-functions/remove-local-config-resources.*@).*#\1$DIGEST#" Makefile.test
+$SCRIPTPATH/update-catalog.sh $IMAGE $DIGEST
+
+IMAGE=ghcr.io/krm-functions/gatekeeper-set-enforcement-action
+DIGEST=$($SCRIPTPATH/../scripts/skopeo.sh inspect docker://$IMAGE:$TAG | jq -r .Digest)
+echo "gatekeeper-set-enforcement-action digest: $DIGEST"
 $SCRIPTPATH/update-catalog.sh $IMAGE $DIGEST

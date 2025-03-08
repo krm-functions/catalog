@@ -38,21 +38,7 @@ jobs:
     - name: Push containers
       run: make manifest-list | tee manifest.log
 
-    # - name: Container meta
-    #   id: meta
-    #   run: |
-    #     # manifest-list outputs digest last
-    #     DIGEST=$(cat manifest.log | tail -n1 | grep 'Digest:' | cut -c9- | cut -d' ' -f1)
-    #     echo "digest=$DIGEST" >> $GITHUB_OUTPUT
-    #     GITSHA=$(make version | tail -n1)
-    #     echo "sha=$GITSHA" >> $GITHUB_OUTPUT
-    #     IMAGE=$(echo ghcr.io/${{ github.repository }} | tr '[:upper:]' '[:lower:]')
-    #     echo "image=$IMAGE@$DIGEST" >> $GITHUB_OUTPUT
-
     - uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # tag=v3.7.0
 
     - name: Sign container
       run: make manifest-list-sign
-
-    # - name: Verify signature
-    #   run: cosign verify --certificate-identity 'https://github.com/${{ github.repository }}/.github/workflows/build.yaml@refs/heads/main' --certificate-oidc-issuer https://token.actions.githubusercontent.com ${{ needs.build.outputs.image }}
