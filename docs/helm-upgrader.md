@@ -10,7 +10,7 @@ format](https://catalog.kpt.dev/render-helm-chart/v0.2/).
 E.g. an ArgoCD Helm chart specification deploying the `cert-manager` Helm chart
 may look like:
 
-```
+```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -22,7 +22,7 @@ spec:
     targetRevision: v1.8.1
 ```
 
-Similarly, the *kpt render-helm-chart* format may look like this:
+Similarly, the _kpt render-helm-chart_ format may look like this:
 
 ```yaml
 apiVersion: fn.kpt.dev/v1alpha1
@@ -30,12 +30,12 @@ kind: RenderHelmChart
 metadata:
   name: cert-manager
 helmCharts:
-- chartArgs:
-    name: cert-manager
-    version: v1.8.1
-    repo: https://charts.jetstack.io
-  templateOptions:
-    releaseName: cert-manager
+  - chartArgs:
+      name: cert-manager
+      version: v1.8.1
+      repo: https://charts.jetstack.io
+    templateOptions:
+      releaseName: cert-manager
 ```
 
 The chart version specified here `v1.8.1` is not the most recent
@@ -72,30 +72,28 @@ cd krm-functions
 
 Run the `helm-upgrader` function using `kpt`:
 
-```
-export HELM_UPGRADER_IMG=ghcr.io/krm-functions/helm-upgrader@sha256:eed131e0ef5433e8a805c98c2d9ad673f480a3034db9e5d14c71f242a0397614
-
+```shell
 kpt fn source examples/helm-upgrader | \
   kpt fn eval - \
-    --image $HELM_UPGRADER_IMG \
+    --image ghcr.io/krm-functions/helm-upgrader \
     --network --truncate-output=false \
-	--fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | \
+    --fn-config example-function-configs/config-upgrade-helm-version-inline.yaml | \
   kpt fn sink examples-upgraded
 ```
 
 The command above will process the manifests in the `examples/helm-upgrader` folder, run the
-`helm-upgrader` KRM function and write-back the Kubernetes manifests into
+`helm-upgrader` KRM function and write-back the manifests into
 `examples-upgraded`.
 
 Run `diff` to see the upgraded Helm charts:
 
-```
+```shell
 diff -r examples/helm-upgrader examples-upgraded
 ```
 
 The output will contain lines like:
 
-```
+```shell
 diff -r examples/helm-upgrader/argo-app-cert-manager.yaml examples-upgraded/argo-app-cert-manager.yaml
 15c16
 <     targetRevision: v1.8.1
@@ -109,7 +107,7 @@ which shows that the function upgraded a chart.
 
 ### Upgrade Constraints
 
-```
+```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -122,7 +120,7 @@ See also [supported upgrade constraints format](https://github.com/Masterminds/s
 
 ### Annotate Instead of Upgrade
 
-```
+```yaml
 metadata:
   annotations:
     experimental.helm.sh/upgrade-available: https://charts.jetstack.io/cert-manager:v1.8.2
@@ -140,7 +138,7 @@ repositories. See the example [`examples/krm-metacontroller.yaml`](examples/krm-
 Upgrading [semantic versions](https://semver.org/) require that we can
 reliably order the versions. If a mixed versioning scheme is used,
 e.g. a mix of semver and date-based versions (e.g. '2023-11-11'), then
-ordering versions without heuristics is impossible. To handle this we
+ordering versions without heuristics is impossible. To handle this the function
 only accept semver v2.0.0 versions with the only exception being a
 leading 'v'.
 
@@ -177,5 +175,5 @@ is found, hence the 'minor' version in this example.
 ## Dependencies
 
 This function use [helm](https://helm.sh/) and
-[skopeo](https://github.com/containers/skopeo) to retreive available
+[skopeo](https://github.com/containers/skopeo) to retrieve available
 chart versions.
