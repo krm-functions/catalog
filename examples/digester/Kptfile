@@ -8,9 +8,9 @@ info:
   description: sample description
 pipeline:
   mutators:
-  - image: gcr.io/kpt-fn/apply-setters:v0.2.0
+  - image: ghcr.io/krm-functions/apply-setters
     configMap:
       teamName: blue-team
-  - image: ghcr.io/krm-functions/render-helm-chart@sha256:733271d180c20f368d406e165b161ff196686b8e6c5d2f299e357cfc2a84cc99
-  - image: ghcr.io/krm-functions/gatekeeper@sha256:6290029e18c2e8a5f1065f9ec90f6e79e1d83b60c260256b17655ab5b57b8f5f
-  - image: gcr.io/kpt-fn/remove-local-config-resources:v0.1.0
+  - image: ghcr.io/krm-functions/render-helm-chart
+  - image: ghcr.io/krm-functions/gatekeeper
+  - image: ghcr.io/krm-functions/remove-local-config-resources

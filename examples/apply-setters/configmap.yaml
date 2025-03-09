@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: apply-setters-fn-config
+  name: a-configmap
 data:
   foo: "" # kpt-set: ${foo}
   bar: "" # kpt-set: ${bar}
   baz: "" # kpt-set: ${baz}
   replicas: "" # kpt-set: ${deployReplicas}
-  combined: "" # kpt-set: ${setter1}-${setter2}
+  combined: "" # kpt-set: ${bar}-${baz}

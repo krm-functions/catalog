@@ -1,6 +1,6 @@
 # Apply-Setters Function
 
-TL;DR - this `apply-setters` KRM function provides two extensions to
+The `apply-setters` KRM function provides two extensions to
 the [baseline
 apply-setters](https://catalog.kpt.dev/apply-setters/v0.2/) function:
 
@@ -32,7 +32,7 @@ setters:
     - setterName: deployReplicas # Use the value from source below as setter with this name
       source:
         kind: Deployment # A resource to locate
-        name: my-nginx
+        name: a-deployment
         fieldPath: spec.replicas # Read this field from resource
 
     - setterName: kptGitSha
@@ -86,11 +86,10 @@ a render pipeline, but it still suffers from the disadvantages of the
 ## Example Usage
 
 ```shell
-export APPLY_SETTERS_IMAGE=ghcr.io/krm-functions/apply-setters@sha256:53aee0c43937b72405a694da26a7aa5f5f0fff459437f6c5ffada479f8b17817
-
 kpt fn source examples/apply-setters \
- | kpt fn eval - --truncate-output=false -i $APPLY_SETTERS_IMAGE --fn-config example-function-configs/apply-setters/cm-setters.yaml \
- | kpt fn eval - -i gcr.io/kpt-fn/remove-local-config-resources:v0.1.0 -o unwrap
+ | kpt fn eval - --truncate-output=false --image ghcr.io/krm-functions/apply-setters \
+    --fn-config example-function-configs/apply-setters/apply-setters-fn-config.yaml \
+ | kpt fn eval - --image ghcr.io/krm-functions/remove-local-config-resources -o unwrap
 ```
 
 Notice, how the `replicas` field from the `Deployment` is inserted
@@ -109,7 +108,7 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-nginx
+  name: a-deployment
   namespace: olo
   labels:
     app.kubernetes.io/version: "a1b2c3d4e5e6" # kpt-set: ${kptGitSha}

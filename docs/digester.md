@@ -17,16 +17,16 @@ operate on the final resources** and thus do not keep Helm charts
 renderable.
 
 This `digester` function particularly support a process where
-third-party Helm charts are in-sourced into an organisation and
+third-party Helm charts are sourced into an organisation and
 configured with organisation-specific settings, thereby producing
-curated Helm-based components:
+curated Helm-based components. I.e. the following process:
 
-1. In-source Helm chart using [`source-helm-chart`](source-helm-chart.md).
+1. Source Helm chart using [`source-helm-chart`](source-helm-chart.md).
 2. Lookup digests and update Helm image references using this `digester` function. Store the result as a 'curated component'.
 3. As needed, post-configure and render Helm chart using [`render-helm-chart`](render-helm-chart.md).
 
-With this process, both the Helm chart and container images are kept
-immutable.
+**With this process, both the Helm chart and container images are kept
+immutable.**
 
 The consideration made during the design of `digester` can be found in
 the [digester-design document](digester-design.md).
@@ -47,18 +47,18 @@ metadata:
   annotations:
     config.kubernetes.io/local-config: "true"
 helmCharts:
-- chartArgs:
-    name: cert-manager
-    version: v1.12.2
-    repo: https://charts.jetstack.io
-  templateOptions:
-    releaseName: cert-managerrel
-    namespace: cert-managerns
-    values:
-      valuesInline:
-        global:
-          commonLabels:
-            team-name: dev  # kpt-set: ${teamName}
+  - chartArgs:
+      name: cert-manager
+      version: v1.12.2
+      repo: https://charts.jetstack.io
+    templateOptions:
+      releaseName: cert-managerrel
+      namespace: cert-managerns
+      values:
+        valuesInline:
+          global:
+            commonLabels:
+              team-name: dev # kpt-set: ${teamName}
 ```
 
 If we rendered the chart as-is, all container images would be
@@ -98,21 +98,21 @@ should be used to lookup a given digest based on the images the chart
 references.
 
 ```yaml
-      valuesInline:
-        global:
-          commonLabels:
-            team-name: dev  # kpt-set: ${teamName}
-        image:
-          digest: ""   # digester: quay.io/jetstack/cert-manager-controller:.*
-        webhook:
-          image:
-            digest: "" # digester: quay.io/jetstack/cert-manager-webhook:.*
-        cainjector:
-          image:
-            digest: "" # digester: quay.io/jetstack/cert-manager-cainjector:.*
-        startupapicheck:
-          image:
-            digest: "" # digester: quay.io/jetstack/cert-manager-ctl:.*
+valuesInline:
+  global:
+    commonLabels:
+      team-name: dev # kpt-set: ${teamName}
+  image:
+    digest: "" # digester: quay.io/jetstack/cert-manager-controller:.*
+  webhook:
+    image:
+      digest: "" # digester: quay.io/jetstack/cert-manager-webhook:.*
+  cainjector:
+    image:
+      digest: "" # digester: quay.io/jetstack/cert-manager-cainjector:.*
+  startupapicheck:
+    image:
+      digest: "" # digester: quay.io/jetstack/cert-manager-ctl:.*
 ```
 
 The process for using `digester` could be:
@@ -123,7 +123,7 @@ The process for using `digester` could be:
    - Inspect all rendered resources for fields ending with `containers[].image` or `initContainers[].images`
    - For all container images not already using digests, resolve tags to digests. This implements 'trust on first use'.
    - Re-visit the `RenderHelmChart` resource and update values in `apply-setter` style, using the regular expression given in comments for lookup of digests identified above.
-  e. Output of `digester` function is the input resources with `RenderHelmChart` resource(s) updated accordingly. Rendered resources are only used to implement image digest lookup and discarded.
+     e. Output of `digester` function is the input resources with `RenderHelmChart` resource(s) updated accordingly. Rendered resources are only used to implement image digest lookup and discarded.
 
 The output of the process above may result in a `RenderHelmChart`
 resource that looks like (abbreviated slightly for clarity):
@@ -137,42 +137,39 @@ metadata:
     config.kubernetes.io/local-config: "true"
     experimental.helm.sh/chart-sum/cert-manager: sha256:552561ed2dfd3b36553934327034d1dd58ead06b0166eb3eb29c7ad3ca0b8248
 helmCharts:
-- chartArgs:
-    name: cert-manager
-    version: v1.12.2
-    repo: https://charts.jetstack.io
-  templateOptions:
-    releaseName: cert-managerrel
-    namespace: cert-managerns
-    values:
-      valuesInline:
-        global:
-          commonLabels:
-            team_name: dev # kpt-set: ${teamName}
-        image:
-          digest: "sha256:5e38e4d06c412e8e3500c857adfe636463aba7261e262b386e12dc4333109a63" # digester: quay.io/jetstack/cert-manager-controller:.*
-        webhook:
+  - chartArgs:
+      name: cert-manager
+      version: v1.12.2
+      repo: https://charts.jetstack.io
+    templateOptions:
+      releaseName: cert-managerrel
+      namespace: cert-managerns
+      values:
+        valuesInline:
+          global:
+            commonLabels:
+              team_name: dev # kpt-set: ${teamName}
           image:
-            digest: "sha256:78d5d4f21b1daba91ce38918149a9420895daeef15884bb2dccc9ea3178fac78" # digester: quay.io/jetstack/cert-manager-webhook:.*
-        cainjector:
-          image:
-            digest: "sha256:bee98e39e7d5b421c41507665779e816ce8dacf69e9feb3e28b1110391c710c6" # digester: quay.io/jetstack/cert-manager-cainjector:.*
-        startupapicheck:
-          image:
-            digest: "sha256:74023f3ad71915c3d4d249c5a20c7384e377558a030055215e8aeff5112aab4b" # digester: quay.io/jetstack/cert-manager-ctl:.*
-  chart: H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxtAOz9...OY8SOAB6CAA=
+            digest: "sha256:5e38e4d06c412e8e3500c857adfe636463aba7261e262b386e12dc4333109a63" # digester: quay.io/jetstack/cert-manager-controller:.*
+          webhook:
+            image:
+              digest: "sha256:78d5d4f21b1daba91ce38918149a9420895daeef15884bb2dccc9ea3178fac78" # digester: quay.io/jetstack/cert-manager-webhook:.*
+          cainjector:
+            image:
+              digest: "sha256:bee98e39e7d5b421c41507665779e816ce8dacf69e9feb3e28b1110391c710c6" # digester: quay.io/jetstack/cert-manager-cainjector:.*
+          startupapicheck:
+            image:
+              digest: "sha256:74023f3ad71915c3d4d249c5a20c7384e377558a030055215e8aeff5112aab4b" # digester: quay.io/jetstack/cert-manager-ctl:.*
+    chart: H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxtAOz9...OY8SOAB6CAA=
 ```
 
 Full example:
 
 ```shell
-export SOURCE_HELM_CHART_IMAGE=ghcr.io/krm-functions/source-helm-chart@sha256:1e90d713e103b91ca65d19a6b2efd67413c4ca90dcd66cfd2fc2cf45389acb6d
-export DIGESTER_IMAGE=ghcr.io/krm-functions/digester@sha256:5fb15707649bb9c7f2da140346ca076aea95c2fcfc0a7e7d68ffb1358df56647
-
 echo "### Sourcing step - fetches chart and resolves digests, stores immutable package in 'cert-manager-package'"
 kpt fn source examples/digester \
-  | kpt fn eval - --network --image $SOURCE_HELM_CHART_IMAGE \
-  | kpt fn eval - --network --truncate-output=false --image $DIGESTER_IMAGE \
+  | kpt fn eval - --network --image ghcr.io/krm-functions/source-helm-chart \
+  | kpt fn eval - --network --truncate-output=false --image ghcr.io/krm-functions/digester \
   | kpt fn sink cert-manager-package
 
 echo "### Rendering step - using a declarative pipeline defined in Kptfile which applies gatekeeper policy to check for missing image digests"
