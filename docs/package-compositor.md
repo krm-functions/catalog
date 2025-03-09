@@ -163,14 +163,20 @@ upstreams:
 The SSH-agent socket must be mounted into the container:
 
 ```shell
-export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/package-compositor@sha256:820c12e85908384cd6468e4dbda33908614a2f1d6680e2370d1ea7041260f895
-
 kpt fn source examples/package-compositor/specs | \
-  kpt fn eval - -e SSH_AUTH_SOCK --mount type=bind,src="$SSH_AUTH_SOCK",target="$SSH_AUTH_SOCK",rw=true --as-current-user --network -i $(SOURCE_PACKAGES_IMAGE) | \
+  kpt fn eval - -e SSH_AUTH_SOCK --mount type=bind,src="$SSH_AUTH_SOCK",target="$SSH_AUTH_SOCK",rw=true --as-current-user --network \
+    --image ghcr.io/krm-functions/package-compositor| \
   kpt fn sink fn-output
 ```
 
-An alternative to mounting the SSH-agent socket into the container is to use the `--exec` form together with e.g. a [devbox](https://www.jetify.com/devbox) and the provided Nix [flake.nix](flake.nix).
+An alternative to mounting the SSH-agent socket into the container is to use the `--exec` form together with e.g. a [devbox](https://www.jetify.com/devbox) and the provided Nix [flake.nix](flake.nix). The `devbox.json` file may look like:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.6/.schema/devbox.schema.json",
+  "packages": ["github:krm-functions/catalog/04dd3ae"]
+}
+```
 
 Private keys can also be used by referencing a `Secret` resource:
 

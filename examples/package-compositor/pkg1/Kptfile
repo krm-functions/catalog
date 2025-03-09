@@ -5,8 +5,8 @@ metadata:
   namespace: will-be-removed
 pipeline:
   mutators:
-    - image: gcr.io/kpt-fn/set-labels:v0.1
+    - image: ghcr.io/krm-functions/set-labels
       configMap:
         app: pkg1
   validators:
-    - image: gcr.io/kpt-fn/kubeval:v0.1
+    - image: ghcr.io/krm-functions/kubeconform

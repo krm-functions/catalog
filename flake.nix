@@ -23,7 +23,7 @@
           version = "0.1.0";
           src = ./.;
           subPackages = [ "cmd/package-compositor" ];
-          vendorHash = "sha256-9KlK4fAXETSGs1Q4xnlIEx4hT4m5IJS96Nzvz6tQzz0=";
+          vendorHash = "sha256-j5hyy36vMwMjDg1JwJgCFERKBg8Q/h1jWXfiamxqgYM=";
           # vendorHash = nixpkgs.lib.fakeHash;
           buildInputs = [
             # ...
