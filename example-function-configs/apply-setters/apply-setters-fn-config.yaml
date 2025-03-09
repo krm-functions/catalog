@@ -7,7 +7,6 @@ metadata:
 setters:
   # These work like traditional ConfigMap-based apply-setters function-config
   data:
-    foo: valueFoo
     bar: valueBar
     baz: valueBaz
 
