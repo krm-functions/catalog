@@ -8,15 +8,13 @@ declaratively. When run declaratively, the built-in schemas are used.
 Example
 
 ```shell
-export KUBECONFORM_IMAGE=ghcr.io/krm-functions/kubeconform@sha256:1c50e8114b2f2ded0afc7d161b5fec0420d9cb47b766717ed474bb1350d29d9d
-
 kpt fn source examples/kubeconform \
-  | kpt fn eval - --truncate-output=false --image $KUBECONFORM_IMAGE -- ignore_missing_schemas=true
+  | kpt fn eval - --truncate-output=false --image ghcr.io/krm-functions/kubeconform -- ignore_missing_schemas=true
 ```
 
 This command generates output like:
 
-```
+```shell
   Results:
     [info]: ConfigMap/valid
     [error] v1/ConfigMap/invalid-nested-dict configmap.yaml: /data/nested: expected string or null, but got object
@@ -52,13 +50,14 @@ kind: ConfigMap
 metadata:
   name: my-kubeconform-config
 data:
-  kubernetes_version: "1.30.0"   # Kubernetes version without leading `v` e.g. `1.29.1`.
-                                 # Defaults to `master`, which work with built-in schemas
+  kubernetes_version:
+    "1.30.0" # Kubernetes version without leading `v` e.g. `1.29.1`.
+    # Defaults to `master`, which work with built-in schemas
   ignore_missing_schemas: "true" # Do not fail on missing schemas, only warn
-  strict: "true"                 # Do not allow properties not defined in the schema
+  strict: "true" # Do not allow properties not defined in the schema
   schema_locations: "/path/to/schemas,/another/path"
-  skip_kinds: ""                 # Comma-separated list of kinds to ignore in validation, e.g. 'v1/ConfigMap'
-  reject_kinds: ""               # Comma-separated list of kinds to reject in validation
+  skip_kinds: "" # Comma-separated list of kinds to ignore in validation, e.g. 'v1/ConfigMap'
+  reject_kinds: "" # Comma-separated list of kinds to reject in validation
 ```
 
 For settings `schema_locations`, see [kubeconform docs](https://github.com/yannh/kubeconform#overriding-schemas-location).
