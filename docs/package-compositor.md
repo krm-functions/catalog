@@ -138,10 +138,8 @@ Note, that no package merge strategies are supported.
 ## Example Usage
 
 ```shell
-export SOURCE_PACKAGES_IMAGE=ghcr.io/krm-functions/package-compositor@sha256:820c12e85908384cd6468e4dbda33908614a2f1d6680e2370d1ea7041260f895
-
 kpt fn source examples/package-compositor/specs | \
-  kpt fn eval - --network -i $(SOURCE_PACKAGES_IMAGE) | \
+  kpt fn eval - --network --image ghcr.io/krm-functions/package-compositor | \
   kpt fn sink fn-output
 
 kpt pkg tree fn-output
