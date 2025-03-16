@@ -10,13 +10,6 @@
     flake-utils.lib.eachDefaultSystem (system:
       let pkgs = nixpkgs.legacyPackages.${system}; in
       {
-        devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
-            gnumake
-            go_1_23
-            golangci-lint
-          ];
-        };
         packages.default = self.packages.${system}.krm-package-compositor;
         packages.krm-package-compositor = pkgs.buildGoModule {
           pname = "krm-package-compositor";
