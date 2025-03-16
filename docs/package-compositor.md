@@ -172,7 +172,7 @@ An alternative to mounting the SSH-agent socket into the container is to use the
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.6/.schema/devbox.schema.json",
-  "packages": ["github:krm-functions/catalog/04dd3ae"]
+  "packages": ["github:krm-functions/catalog/0cd01ed"]
 }
 ```
 
