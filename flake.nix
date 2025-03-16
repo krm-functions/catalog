@@ -20,10 +20,10 @@
         packages.default = self.packages.${system}.krm-package-compositor;
         packages.krm-package-compositor = pkgs.buildGoModule {
           pname = "krm-package-compositor";
-          version = "0.1.0";
+          version = "0.2.0";
           src = ./.;
           subPackages = [ "cmd/package-compositor" ];
-          vendorHash = "sha256-j5hyy36vMwMjDg1JwJgCFERKBg8Q/h1jWXfiamxqgYM=";
+          vendorHash = "sha256-IPEMf1fLvFQTsZwprswo+HUX3HuFLhO6og2yPPKkVYg=";
           # vendorHash = nixpkgs.lib.fakeHash;
           buildInputs = [
             # ...
