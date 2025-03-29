@@ -133,6 +133,14 @@ func PullChart(chart *t.HelmChartArgs, destinationPath string, username, passwor
 	}
 
 	if isOciRepo(chart) {
+		if username != nil && password != nil {
+			loginArgs := []string{"registry", "login", strings.TrimPrefix(chart.Repo, "oci://")}
+			loginArgs = append(loginArgs, "--username", *username, "--password", *password)
+			_, err := helmCtxt.Run(loginArgs...)
+			if err != nil {
+				return "", "", fmt.Errorf("registry login: %w", err)
+			}
+		}
 		_, err := helmCtxt.Run("pull", chart.Repo+"/"+chart.Name, "--version", chart.Version, "--destination", dest)
 		if err != nil {
 			return "", "", fmt.Errorf("pulling chart (oci): %w", err)
