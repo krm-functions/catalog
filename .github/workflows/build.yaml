@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - 'README.md'
       - 'Makefile.test'
+      - 'catalog.json'
       - 'scripts/**'
       - 'docs/**'
       - 'examples/**'
