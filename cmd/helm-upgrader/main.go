@@ -47,7 +47,7 @@ type UpgradeInfo struct {
 
 // evaluateChartVersion looks up versions and find a possible upgrade that fulfills upgradeConstraint
 // Returns repo-search for both existing and new chart
-func evaluateChartVersion(chart *t.HelmChartArgs, upgradeConstraint string, username, password *string) (currChartRepoSearch, newChartRepoSearch *helm.RepoSearch, err error) {
+func evaluateChartVersion(chart *t.HelmChartArgs, upgradeConstraint, username, password string) (currChartRepoSearch, newChartRepoSearch *helm.RepoSearch, err error) {
 	upgradesEvaluated++
 	if upgradeConstraint == "" {
 		upgradeConstraint = "*"
@@ -75,7 +75,7 @@ func evaluateChartVersion(chart *t.HelmChartArgs, upgradeConstraint string, user
 }
 
 // handleNewVersion applies new version to chart spec according to upgradeConstraint
-func handleNewVersion(currSearch, newVersion *helm.RepoSearch, curr *t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint string, uname, pword *string) (*t.HelmChartArgs, string, error) {
+func handleNewVersion(currSearch, newVersion *helm.RepoSearch, curr *t.HelmChartArgs, kubeObject *fn.KubeObject, idx int, upgradeConstraint, uname, pword string) (*t.HelmChartArgs, string, error) {
 	upgraded := *curr
 	var chartSum string
 	infoS := UpgradeInfo{}
@@ -190,11 +190,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 						return false, err
 					}
 				}
-				currSearch, newVersion, err = evaluateChartVersion(&helmChart.Args, upgradeConstraint, &uname, &pword)
+				currSearch, newVersion, err = evaluateChartVersion(&helmChart.Args, upgradeConstraint, uname, pword)
 				if err != nil {
 					return false, err
 				}
-				upgraded, info, err = handleNewVersion(currSearch, newVersion, &helmChart.Args, kubeObject, idx, upgradeConstraint, &uname, &pword)
+				upgraded, info, err = handleNewVersion(currSearch, newVersion, &helmChart.Args, kubeObject, idx, upgradeConstraint, uname, pword)
 				if err != nil {
 					return false, err
 				}
@@ -217,11 +217,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				continue
 			}
 			chartArgs := app.Spec.Source.ToKptSpec()
-			currSearch, newVersion, err := evaluateChartVersion(&chartArgs, upgradeConstraint, nil, nil) // FIXME private repo not supported with Argo apps
+			currSearch, newVersion, err := evaluateChartVersion(&chartArgs, upgradeConstraint, "", "") // FIXME private repo not supported with Argo apps
 			if err != nil {
 				return false, err
 			}
-			upgraded, info, err := handleNewVersion(currSearch, newVersion, &chartArgs, kubeObject, -1, upgradeConstraint, nil, nil)
+			upgraded, info, err := handleNewVersion(currSearch, newVersion, &chartArgs, kubeObject, -1, upgradeConstraint, "", "")
 			if err != nil {
 				return false, err
 			}

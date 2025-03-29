@@ -67,7 +67,7 @@ func (ctxt *RunContext) Run(args ...string) ([]byte, error) {
 	return stdout.Bytes(), nil
 }
 
-func SearchRepo(chart *t.HelmChartArgs, username, password *string) ([]RepoSearch, error) {
+func SearchRepo(chart *t.HelmChartArgs, username, password string) ([]RepoSearch, error) {
 	if isOciRepo(chart) {
 		ociSearch, err := skopeo.ListTags(chart)
 		if err != nil {
@@ -86,8 +86,8 @@ func SearchRepo(chart *t.HelmChartArgs, username, password *string) ([]RepoSearc
 	defer helmCtxt.DiscardContext()
 
 	addArgs := []string{"repo", "add", "tmprepo", chart.Repo}
-	if username != nil && password != nil {
-		addArgs = append(addArgs, "--username", *username, "--password", *password)
+	if username != "" && password != "" {
+		addArgs = append(addArgs, "--username", username, "--password", password)
 	}
 	_, err := helmCtxt.Run(addArgs...)
 	if err != nil {
@@ -121,7 +121,7 @@ func SearchRepo(chart *t.HelmChartArgs, username, password *string) ([]RepoSearc
 }
 
 // PullChart runs 'helm pull' and returns normalized tarball filename and tarball sha256sum
-func PullChart(chart *t.HelmChartArgs, destinationPath string, username, password *string) (tarballName, chartSha256Sum string, err error) {
+func PullChart(chart *t.HelmChartArgs, destinationPath, username, password string) (tarballName, chartSha256Sum string, err error) {
 	helmCtxt := NewRunContext()
 	defer helmCtxt.DiscardContext()
 
@@ -133,6 +133,14 @@ func PullChart(chart *t.HelmChartArgs, destinationPath string, username, passwor
 	}
 
 	if isOciRepo(chart) {
+		if username != "" && password != "" {
+			loginArgs := []string{"registry", "login", strings.TrimPrefix(chart.Repo, "oci://")}
+			loginArgs = append(loginArgs, "--username", username, "--password", password)
+			_, err := helmCtxt.Run(loginArgs...)
+			if err != nil {
+				return "", "", fmt.Errorf("registry login: %w", err)
+			}
+		}
 		_, err := helmCtxt.Run("pull", chart.Repo+"/"+chart.Name, "--version", chart.Version, "--destination", dest)
 		if err != nil {
 			return "", "", fmt.Errorf("pulling chart (oci): %w", err)
@@ -140,8 +148,8 @@ func PullChart(chart *t.HelmChartArgs, destinationPath string, username, passwor
 	} else {
 		repoAlias := "tmprepo"
 		addArgs := []string{"repo", "add", repoAlias, chart.Repo}
-		if username != nil && password != nil {
-			addArgs = append(addArgs, "--username", *username, "--password", *password)
+		if username != "" && password != "" {
+			addArgs = append(addArgs, "--username", username, "--password", password)
 		}
 		_, err := helmCtxt.Run(addArgs...)
 		if err != nil {
@@ -176,7 +184,7 @@ func PullChart(chart *t.HelmChartArgs, destinationPath string, username, passwor
 // SourceChart runs PullChart to retrieve chart and reads and returns raw tarball bytes.
 // If destination is not defined, a temporary directory will be used, and cleaned-up at function
 // exit. This means that only the returned chartData can be used and not the tarballName
-func SourceChart(chart *t.HelmChartArgs, destination string, username, password *string) (chartData []byte, tarballName, chartSha256Sum string, err error) {
+func SourceChart(chart *t.HelmChartArgs, destination, username, password string) (chartData []byte, tarballName, chartSha256Sum string, err error) {
 	var tmpDir string
 	if destination == "" {
 		tmpDir, err = os.MkdirTemp("", "chart-")
