@@ -10,7 +10,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/cyphar/filepath-securejoin v0.4.1
-	github.com/go-git/go-git/v5 v5.16.1
+	github.com/go-git/go-git/v5 v5.16.2
 	github.com/google/go-containerregistry v0.20.3
 	github.com/nephio-project/porch v1.3.1
 	github.com/stretchr/testify v1.10.0
