@@ -20,6 +20,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	cryptossh "golang.org/x/crypto/ssh"
 )
 
 type Repository struct {
@@ -34,12 +35,14 @@ type Repository struct {
 func Clone(uri, authMethod, username, password, fileBase string) (*Repository, error) {
 	var err error
 	var auth ssh.AuthMethod
+	var sshAgent *ssh.PublicKeysCallback
 	opts := &gogit.CloneOptions{
 		URL:   uri,
 		Depth: 1,
 	}
 	if authMethod == "sshAgent" {
-		auth, err = ssh.NewSSHAgentAuth(username)
+		sshAgent, err = ssh.NewSSHAgentAuth(username)
+		auth = sshAgent
 		if err != nil {
 			return nil, fmt.Errorf("sshAgent auth setup %v: %v", uri, err)
 		}
@@ -52,7 +55,34 @@ func Clone(uri, authMethod, username, password, fileBase string) (*Repository, e
 	opts.Auth = auth
 	repo, err := gogit.PlainClone(fileBase, false, opts)
 	if err != nil {
-		return nil, fmt.Errorf("cloning %v, authMethod: %v: %v", uri, authMethod, err)
+		// The local sshAgent may hold multiple keys.
+		// It's possible that the first key tried
+		// was authenticated but not authorized to the repo.
+		// If this is the case we should try each key available
+		// in turn before giving up.
+		success := false
+		if authMethod == "sshAgent" && sshAgent != nil {
+			var signers []cryptossh.Signer
+			signers, err = sshAgent.Callback()
+			if err != nil {
+				return nil, fmt.Errorf("sshAgent auth failed, and found no signers in sshAgent %v: %v", uri, err)
+			}
+			for _, signer := range signers {
+				auth = &ssh.PublicKeys{
+					User:   username,
+					Signer: signer,
+				}
+				opts.Auth = auth
+				repo, err = gogit.PlainClone(fileBase, false, opts)
+				if err == nil {
+					success = true
+					break // Successfully cloned with a different key
+				}
+			}
+		}
+		if !success {
+			return nil, fmt.Errorf("cloning %v, authMethod: %v: %v", uri, authMethod, err)
+		}
 	}
 	tree, err := repo.Worktree()
 	if err != nil {
