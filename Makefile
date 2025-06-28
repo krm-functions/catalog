@@ -68,7 +68,7 @@ ARCH := $(if $(GOARCH),$(GOARCH),$(shell GOTOOLCHAIN=local go env GOARCH))
 
 TAG := $(VERSION)__$(OS)_$(ARCH)
 
-GO_VERSION := 1.23
+GO_VERSION := 1.24
 BUILD_IMAGE := golang:$(GO_VERSION)-alpine
 
 BIN_EXTENSION :=
@@ -383,28 +383,31 @@ test: | $(BUILD_DIRS)
 	    $(BUILD_IMAGE)                                          \
 	    ./build/test.sh ./...
 
-lint: # @HELP runs golangci-lint
-lint: | $(BUILD_DIRS)
-	docker run                                                  \
-	    -i                                                      \
-	    --rm                                                    \
-	    -u $$(id -u):$$(id -g)                                  \
-	    -v $$(pwd):/src                                         \
-	    -w /src                                                 \
-	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin                \
-	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin/$(OS)_$(ARCH)  \
-	    -v $$(pwd)/.go/cache:/.cache                            \
-	    --env GOCACHE="/.cache/gocache"                         \
-	    --env GOMODCACHE="/.cache/gomodcache"                   \
-	    --env ARCH="$(ARCH)"                                    \
-	    --env OS="$(OS)"                                        \
-	    --env VERSION="$(VERSION)"                              \
-	    --env DEBUG="$(DBG)"                                    \
-	    --env GOFLAGS="$(GOFLAGS)"                              \
-	    --env HTTP_PROXY="$(HTTP_PROXY)"                        \
-	    --env HTTPS_PROXY="$(HTTPS_PROXY)"                      \
-	    $(BUILD_IMAGE)                                          \
-	    ./build/lint.sh ./...
+# lint: # @HELP runs golangci-lint
+lint:
+	golangci-lint run ./...
+
+# lint: | $(BUILD_DIRS)
+# 	docker run                                                  \
+# 	    -i                                                      \
+# 	    --rm                                                    \
+# 	    -u $$(id -u):$$(id -g)                                  \
+# 	    -v $$(pwd):/src                                         \
+# 	    -w /src                                                 \
+# 	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin                \
+# 	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin/$(OS)_$(ARCH)  \
+# 	    -v $$(pwd)/.go/cache:/.cache                            \
+# 	    --env GOCACHE="/.cache/gocache"                         \
+# 	    --env GOMODCACHE="/.cache/gomodcache"                   \
+# 	    --env ARCH="$(ARCH)"                                    \
+# 	    --env OS="$(OS)"                                        \
+# 	    --env VERSION="$(VERSION)"                              \
+# 	    --env DEBUG="$(DBG)"                                    \
+# 	    --env GOFLAGS="$(GOFLAGS)"                              \
+# 	    --env HTTP_PROXY="$(HTTP_PROXY)"                        \
+# 	    --env HTTPS_PROXY="$(HTTPS_PROXY)"                      \
+# 	    $(BUILD_IMAGE)                                          \
+# 	    ./build/lint.sh ./...
 
 fmt:
 	goimports-reviser cmd/ pkg/

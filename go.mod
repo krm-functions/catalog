@@ -1,6 +1,6 @@
 module github.com/krm-functions/catalog
 
-go 1.23.8
+go 1.24
 
 require (
 	github.com/GoogleContainerTools/kpt-functions-catalog/functions/go/apply-setters v0.2.0

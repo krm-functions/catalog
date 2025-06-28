@@ -107,7 +107,7 @@ func (f *FilterState) Each(items []*yaml.RNode) ([]*yaml.RNode, error) {
 }
 
 func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
-	f.Stats.Resources++
+	f.Resources++
 	objPath := object.GetAnnotations()[kioutil.PathAnnotation]
 	res := resource.Resource{
 		Path:  objPath,
@@ -119,11 +119,11 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 	case validator.Valid:
 		f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s", object.GetKind(), object.GetName())})
 	case validator.Skipped:
-		f.Stats.Skipped++
+		f.Skipped++
 		f.Results = append(f.Results, &framework.Result{Message: fmt.Sprintf("%s/%s: skipped!", object.GetKind(), object.GetName()),
 			Severity: framework.Warning})
 	case validator.Invalid:
-		f.Stats.Invalid++
+		f.Invalid++
 		for _, ve := range r.ValidationErrors {
 			msg := fmt.Sprintf("%s: %s\n", ve.Path, ve.Msg)
 			f.Results = append(f.Results, &framework.Result{
@@ -143,7 +143,7 @@ func (f *FilterState) Filter(object *yaml.RNode) (*yaml.RNode, error) {
 		}
 		err = fmt.Errorf("invalid %s/%s", object.GetKind(), object.GetName())
 	case validator.Error: // FIXME, combine with case above
-		f.Stats.Errors++
+		f.Errors++
 		msg := fmt.Sprintf("%s\n", r.Err)
 		f.Results = append(f.Results, &framework.Result{
 			Severity: framework.Error,

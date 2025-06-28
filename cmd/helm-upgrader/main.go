@@ -128,7 +128,7 @@ func handleNewVersion(currSearch, newVersion *helm.RepoSearch, curr *t.HelmChart
 			infoS.Upgraded.ChartSum = formatShaSum(chartSum)
 		}
 		infoS.Upgraded.HelmChartArgs = upgraded
-		infoS.Upgraded.HelmChartArgs.Auth = nil
+		infoS.Upgraded.Auth = nil
 		infoS.Upgraded.AppVersion = newVersion.AppVersion
 	} else if Config.AnnotateCurrentSum && kubeObject.GetAnnotation(api.HelmResourceAnnotationShaSum) == "" {
 		_, chartSum, err = helm.PullChart(curr, tmpDir, uname, pword)
@@ -143,7 +143,7 @@ func handleNewVersion(currSearch, newVersion *helm.RepoSearch, curr *t.HelmChart
 
 	// Common data, irrespective of upgrade or not...
 	infoS.Current.HelmChartArgs = *curr
-	infoS.Current.HelmChartArgs.Auth = nil
+	infoS.Current.Auth = nil
 	infoS.Current.AppVersion = currSearch.AppVersion
 	infoS.Constraint = upgradeConstraint
 	distance, err := semver.Diff(curr.Version, upgraded.Version)
