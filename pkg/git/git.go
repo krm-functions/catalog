@@ -40,13 +40,14 @@ func Clone(uri, authMethod, username, password, fileBase string) (*Repository, e
 		URL:   uri,
 		Depth: 1,
 	}
-	if authMethod == "sshAgent" {
+	switch authMethod {
+	case "sshAgent":
 		sshAgent, err = ssh.NewSSHAgentAuth(username)
 		auth = sshAgent
 		if err != nil {
 			return nil, fmt.Errorf("sshAgent auth setup %v: %v", uri, err)
 		}
-	} else if authMethod == "sshPrivateKey" {
+	case "sshPrivateKey":
 		auth, err = ssh.NewPublicKeys(username, []byte(password), "")
 		if err != nil {
 			return nil, fmt.Errorf("sshPrivateKey auth setup %v: %v", uri, err)

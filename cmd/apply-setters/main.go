@@ -118,19 +118,19 @@ func getReferenceSetters(rn *kyaml.RNode, resources []*kyaml.RNode) map[string]s
 			return nil
 		}
 
-		if err := getOrErr("source.group", &source.ResId.Gvk.Group); err != nil {
+		if err := getOrErr("source.group", &source.Group); err != nil {
 			return err
 		}
-		if err := getOrErr("source.version", &source.ResId.Gvk.Version); err != nil {
+		if err := getOrErr("source.version", &source.Version); err != nil {
 			return err
 		}
-		if err := getOrErr("source.kind", &source.ResId.Gvk.Kind); err != nil {
+		if err := getOrErr("source.kind", &source.Kind); err != nil {
 			return err
 		}
-		if err := getOrErr("source.name", &source.ResId.Name); err != nil {
+		if err := getOrErr("source.name", &source.Name); err != nil {
 			return err
 		}
-		if err := getOrErr("source.namespace", &source.ResId.Namespace); err != nil {
+		if err := getOrErr("source.namespace", &source.Namespace); err != nil {
 			return err
 		}
 		if err := getOrErr("source.fieldPath", &source.FieldPath); err != nil {

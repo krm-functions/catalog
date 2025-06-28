@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
-	"github.com/Masterminds/sprig/v3"
+	sprig "github.com/Masterminds/sprig/v3"
 	"github.com/krm-functions/catalog/pkg/api"
 	"github.com/krm-functions/catalog/pkg/git"
 	"github.com/krm-functions/catalog/pkg/kpt"
