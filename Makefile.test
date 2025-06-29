@@ -233,9 +233,9 @@ test-kubeconform-w-container:
 
 .PHONY: test-kubeconform-results
 test-kubeconform-results:
-	grep -e '.* /data/nested: expected string or null, but got object' tmp-results/results.yaml
+	grep -e '.* /data/nested: got object, want null or string' tmp-results/results.yaml
 	grep -e '.* name: invalid-nested-dict' tmp-results/results.yaml
-	grep -e '.* /data/a-number: expected string or null, but got number' tmp-results/results.yaml
+	grep -e '.* /data/a-number: got number, want null or string' tmp-results/results.yaml
 	grep -e '.* name: invalid-non-string-value' tmp-results/results.yaml
 
 LOCAL_PACKAGES_DIR ?= /tmp/package-compositor
