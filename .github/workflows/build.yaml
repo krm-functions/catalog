@@ -56,7 +56,7 @@ jobs:
         title: 'Update catalog.json for build ${{ github.sha }}'
         body: |
           Update catalog.json after release of build ${{ github.sha }}
-        labels: automated pr
+        #labels: automated pr
         branch: catalog/update
         delete-branch: true
         add-paths: catalog.json
