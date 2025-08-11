@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	maxChartTemplateFileLength = 1024 * 1024
+	maxChartTemplateFileLength = 1024 * 2048
 )
 
 // Template extracts a chart tarball and renders the chart using given
