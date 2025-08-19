@@ -10,7 +10,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.4.1
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/google/go-containerregistry v0.20.6
-	github.com/nephio-project/porch v1.5.1
+	github.com/nephio-project/porch v1.5.2
 	github.com/stretchr/testify v1.10.0
 	github.com/yannh/kubeconform v0.7.0
 	golang.org/x/crypto v0.39.0
