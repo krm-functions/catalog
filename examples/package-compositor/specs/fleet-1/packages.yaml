@@ -9,6 +9,8 @@ spec:
     type: git
     git:
       repo: https://github.com/krm-functions/catalog
+      CloneOptions:
+        depth: 2
 
   # These settings can also be given individually for each package
   defaults:

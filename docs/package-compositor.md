@@ -202,6 +202,23 @@ kubectl create secret generic foo --dry-run=client --type=kubernetes.io/ssh-auth
 The container's `known_hosts` file currently contain GitHub SSH hosts
 only. See the `ssh` folder.
 
+## Git Cloning
+
+Optional got clone options can be specified as follows. These follows the ordinary git clone options:
+
+```yaml
+upstreams:
+  - name: example-upstream
+    type: git
+    git:
+      repo: git@github.com:example-org/example-repo.git
+      authMethod: sshPrivateKey
+      cloneOptions:
+        depth: 1
+        singleBranch: true
+        referenceName: "feature/foo
+```
+
 ## Package Metadata
 
 The default behaviour of `package-compositor` is to create a
