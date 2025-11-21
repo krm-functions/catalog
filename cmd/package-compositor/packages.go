@@ -69,9 +69,10 @@ type Auth struct {
 }
 
 type UpstreamGit struct {
-	Repo       string `yaml:"repo,omitempty" json:"repo,omitempty"`
-	AuthMethod string `yaml:"authMethod,omitempty" json:"authMethod,omitempty"`
-	Auth       *Auth  `yaml:"auth,omitempty" json:"auth,omitempty"`
+	Repo         string           `yaml:"repo,omitempty" json:"repo,omitempty"`
+	AuthMethod   string           `yaml:"authMethod,omitempty" json:"authMethod,omitempty"`
+	Auth         *Auth            `yaml:"auth,omitempty" json:"auth,omitempty"`
+	CloneOptions git.CloneOptions `yaml:"cloneOptions,omitempty" json:"cloneOptions,omitempty"`
 }
 
 type PackageDefaults struct {
@@ -291,7 +292,7 @@ func NewPackageSource(u *Upstream, fileBase, username, password string) (*Packag
 		repoHash := base64.StdEncoding.EncodeToString([]byte(u.Git.Repo + "+" + u.Git.AuthMethod))
 		localPath := filepath.Join(fileBase, repoHash)
 		start := time.Now()
-		r, err := git.Clone(u.Git.Repo, u.Git.AuthMethod, username, password, localPath)
+		r, err := git.Clone(u.Git.Repo, u.Git.AuthMethod, username, password, localPath, u.Git.CloneOptions)
 		if err != nil {
 			return nil, fnResults, err
 		}

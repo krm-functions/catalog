@@ -32,14 +32,29 @@ type Repository struct {
 	CurrentHash     string
 }
 
-func Clone(uri, authMethod, username, password, fileBase string) (*Repository, error) {
+type CloneOptions struct {
+	Depth         *int   `yaml:"depth,omitempty" json:"depth,omitempty"`
+	SingleBranch  *bool  `yaml:"singleBranch,omitempty" json:"singleBranch,omitempty"`
+	ReferenceName string `yaml:"referenceName,omitempty" json:"referenceName,omitempty"`
+}
+
+func Clone(uri, authMethod, username, password, fileBase string, cloneOptions CloneOptions) (*Repository, error) {
 	var err error
 	var auth ssh.AuthMethod
 	var sshAgent *ssh.PublicKeysCallback
 	opts := &gogit.CloneOptions{
-		URL:   uri,
-		Depth: 1,
+		URL: uri,
 	}
+	if cloneOptions.Depth != nil {
+		opts.Depth = *cloneOptions.Depth
+	}
+	if cloneOptions.SingleBranch != nil {
+		opts.SingleBranch = *cloneOptions.SingleBranch
+	}
+	if cloneOptions.ReferenceName != "" {
+		opts.ReferenceName = plumbing.ReferenceName(cloneOptions.ReferenceName)
+	}
+
 	switch authMethod {
 	case "sshAgent":
 		sshAgent, err = ssh.NewSSHAgentAuth(username)
