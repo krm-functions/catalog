@@ -83,7 +83,7 @@ test-helm-upgrader:
 	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.yaml
 	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.yaml
 	grep -e '.*upgrade-available.0: .*karpenter:0.35.0' test-out.yaml
-	grep -e '.*upgrade-available.1: .*/external-secrets:0.19.1' test-out.yaml
+	grep -e '.*upgrade-available.1: .*/external-secrets:1.1.0' test-out.yaml
 	rm test-out.yaml
 	rm -rf tmp-results
 
@@ -124,7 +124,7 @@ render-with-kube-version:
 	scripts/source-chart.sh test-data/render-test-chart.yaml test-chart-0.1.0.tgz > _tmp/render.yaml
 	rm test-chart-0.1.0.tgz
 	# Note, no patch version
-	sed -i 's/kubeVersion: .*/kubeVersion: 1.29/' _tmp/render.yaml
+	sed -i 's/kubeVersion: .*/kubeVersion: 1.29.0/' _tmp/render.yaml
 	kpt fn source _tmp | kpt fn eval - ${HELM_RENDER} | kpt fn sink _tmp-output
 	cat _tmp-output/configmap_foo.yaml
 	grep -q 'kubeVersion: "v1.29.0"' _tmp-output/configmap_foo.yaml
