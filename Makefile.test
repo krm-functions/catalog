@@ -31,18 +31,18 @@ SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels:$(CONTAINER_TAG)
 endif
 
 ifeq ($(FN_MODE),exec)
-APPLY_SETTERS := --exec bin/linux_amd64/apply-setters
-DIGESTER := --exec bin/linux_amd64/digester
-GATEKEEPER_SET_ENFORCEMENT_ACTION := --exec bin/linux_amd64/gatekeeper-set-enforcement-action
-HELM_RENDER := --exec bin/linux_amd64/render-helm-chart
-HELM_SOURCE := --exec bin/linux_amd64/source-helm-chart
-HELM_UPGRADER := --exec bin/linux_amd64/helm-upgrader
-KUBECONFORM := --exec bin/linux_amd64/kubeconform
-TEMPLATE_KYAML := --exec bin/linux_amd64/template-kyaml
-PACKAGE_COMPOSITOR := --exec bin/linux_amd64/package-compositor
-REMOVE_LOCAL_CONFIG_RESOURCES := --exec bin/linux_amd64/remove-local-config-resources
-SET_ANNOTATIONS := --exec bin/linux_amd64/set-annotations
-SET_LABELS := --exec bin/linux_amd64/set-labels
+APPLY_SETTERS := --exec bin/apply-setters
+DIGESTER := --exec bin/digester
+GATEKEEPER_SET_ENFORCEMENT_ACTION := --exec bin/gatekeeper-set-enforcement-action
+HELM_RENDER := --exec bin/render-helm-chart
+HELM_SOURCE := --exec bin/source-helm-chart
+HELM_UPGRADER := --exec bin/helm-upgrader
+KUBECONFORM := --exec bin/kubeconform
+TEMPLATE_KYAML := --exec bin/template-kyaml
+PACKAGE_COMPOSITOR := --exec bin/package-compositor
+REMOVE_LOCAL_CONFIG_RESOURCES := --exec bin/remove-local-config-resources
+SET_ANNOTATIONS := --exec bin/set-annotations
+SET_LABELS := --exec bin/set-labels
 else
 APPLY_SETTERS := --image $(APPLY_SETTERS_IMAGE)
 DIGESTER := --network --image $(DIGESTER_IMAGE)
