@@ -16,6 +16,10 @@ BASE_IMAGE ?= alpine:3.20.3
 BASE_IMAGE_DISTROLESS ?= gcr.io/distroless/static
 
 CGO_ENABLED ?= 0
+GCFLAGS ?=
+LD_FLAGS += -s -w
+LD_FLAGS += -X '$(shell go list -m)/pkg/version.Version=$(VERSION)'
+
 BIN_DIR ?= bin
 MAKEFLAGS += --no-print-directory
 
@@ -60,6 +64,8 @@ build-package:
 	else \
 		CGO_ENABLED=$(CGO_ENABLED) \
 		go build \
+			-ldflags '$(LD_FLAGS)' \
+			-gcflags '$(GCFLAGS)' \
 			-o $(BIN_DIR)/$(notdir $(PACKAGE)) \
 			./$(PACKAGE); \
 	fi
