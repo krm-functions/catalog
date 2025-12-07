@@ -5,6 +5,8 @@ include Makefile.cosign
 # The packages to build
 GO_PACKAGES ?= cmd/apply-setters cmd/digester cmd/gatekeeper-set-enforcement-action cmd/helm-upgrader cmd/kubeconform cmd/remove-local-config-resources cmd/render-helm-chart cmd/set-annotations cmd/set-labels cmd/source-helm-chart cmd/package-compositor # cmd/template-kyaml
 
+KO_PACKAGES ?= cmd/kubeconform cmd/remove-local-config-resources
+
 # The platforms we support
 #ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64 linux/ppc64le linux/s390x
 ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64
@@ -26,7 +28,9 @@ MAKEFLAGS += --no-print-directory
 # For functions building on top of Helm
 HELM_VERSION=v3.16.1
 
-REGISTRY ?= ghcr.io/krm-functions
+# REGISTRY ?= ghcr.io/krm-functions
+REGISTRY ?= ko.local
+CONTAINER_PUSH ?= false
 
 # This version-strategy uses git tags to set the version string
 VERSION ?= $(shell git describe --tags --always --dirty)
@@ -69,6 +73,14 @@ build-package:
 			-o $(BIN_DIR)/$(notdir $(PACKAGE)) \
 			./$(PACKAGE); \
 	fi
+
+## Build all containers
+.PHONY: containers
+containers:
+	export KO_DOCKER_REPO=$(REGISTRY); \
+	for package in $(KO_PACKAGES); do \
+		ko build ./$$package --base-import-paths --push=$(CONTAINER_PUSH); \
+	done
 
 .PHONY: clean
 clean:
