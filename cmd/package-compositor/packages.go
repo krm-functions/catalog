@@ -397,7 +397,7 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 		s := filepath.Join(src.Path, p.SrcPath)
 		err = os.CopyFS(d, os.DirFS(s))
 		if err != nil {
-			return fnResults, fmt.Errorf("copying package %v dir (%v --> %v): %v", p.Name, p.SrcPath, p.dstRelPath, err)
+			return fnResults, fmt.Errorf("copying package %v dir (repo=%v, ref=%v, path=%v --> %v): %v", p.Name, u.Git.Repo, p.Ref, p.SrcPath, p.dstRelPath, err)
 		}
 		// TODO: assumes git upstream
 		err = p.renderTemplateMeta(src, p.dstAbsPath)

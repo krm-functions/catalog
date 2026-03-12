@@ -60,7 +60,7 @@ func evaluateChartVersion(chart *t.HelmChartArgs, upgradeConstraint, username, p
 	versions := helm.ToList(search)
 	newVersion, err := semver.Upgrade(versions, upgradeConstraint)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("chart=%v: %w", chart.Name, err)
 	}
 
 	currChartRepoSearch, err = helm.GetSearch(search, chart.Version)
