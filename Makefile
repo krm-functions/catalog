@@ -1,11 +1,7 @@
--include Makefile.local
-include Makefile.test
-include Makefile.cosign
-
 # The packages to build
 GO_PACKAGES ?= cmd/apply-setters cmd/digester cmd/gatekeeper-set-enforcement-action cmd/helm-upgrader cmd/kubeconform cmd/remove-local-config-resources cmd/render-helm-chart cmd/set-annotations cmd/set-labels cmd/source-helm-chart cmd/package-compositor # cmd/template-kyaml
 
-KO_PACKAGES ?= cmd/kubeconform cmd/remove-local-config-resources
+KO_PACKAGES ?= cmd/apply-setters cmd/digester cmd/gatekeeper-set-enforcement-action cmd/helm-upgrader cmd/kubeconform cmd/remove-local-config-resources cmd/render-helm-chart cmd/set-annotations cmd/set-labels cmd/source-helm-chart cmd/package-compositor
 
 # The platforms we support
 #ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64 linux/ppc64le linux/s390x
@@ -39,6 +35,10 @@ VERSION ?= $(shell git describe --tags --always --dirty)
 #VERSION ?= 1.2.3
 
 SHELL := /usr/bin/env bash -o errexit -o pipefail -o nounset
+
+-include Makefile.local
+include Makefile.test
+include Makefile.cosign
 
 ## test: run all tests
 .PHONY: test

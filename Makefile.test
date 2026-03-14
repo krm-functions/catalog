@@ -1,35 +1,36 @@
 # This makefile holds "end-to-end" tests, i.e. function usage with kpt and real manifest manipulation
 
-SHELL=/bin/bash -o pipefail
-
 FN_MODE ?= exec
+CONTAINER_TAG ?= latest
 
+# Containers can either use custom tag or hardcoded tag
 ifeq ($(CONTAINER_TAG),)
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:9f9bbe99598d28c9bd2e190f8f79abadab67a9072e90202100f677c5a1eca341
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:d2c8fdfffd6d20bd01ab618b4a24d33a86965f881053d5edac7eeabafdda0f87
-GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := ghcr.io/krm-functions/gatekeeper-set-enforcement-action@sha256:cd2
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:72dc31aea1386fae5c806c1443f4cd8bca75330cf81fe54473271c1ecec94118
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:1d6c09571f29b87f69ecc19bddb1d9db5e80cd041c68020c10f781edd011e358
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:f9098cedb738ac2da64821555bc64edcaa3e48c6895d81a4d2625b7c19b4f488
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:1f09796b0d03c55ad866c41e799849584f66fc84b637a5dbe0784e7975761905
-PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:294f270e76d276175112541e6d88c23800a3ca364043e09e8e9f8c40dd0a6155
-REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources@sha256:ec27c1c68f64643413d8c9bc1899ea2ae17d858c5fe906e49a99e765be7d5faf
-SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations@sha256:fa26a80d76841feed92d7b9f30e7823364d4adff566fdf442adf4861560d3184
-SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:41c32cdbd895ac46bc223fec9080a2008845573c6a9689fc5cdbac4a61c8a5b4
+APPLY_SETTERS_IMAGE := $(REGISTRY)/apply-setters@sha256:9f9bbe99598d28c9bd2e190f8f79abadab67a9072e90202100f677c5a1eca341
+DIGESTER_IMAGE := $(REGISTRY)/digester@sha256:d2c8fdfffd6d20bd01ab618b4a24d33a86965f881053d5edac7eeabafdda0f87
+GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := $(REGISTRY)/gatekeeper-set-enforcement-action@sha256:cd2
+HELM_RENDER_IMAGE := $(REGISTRY)/render-helm-chart@sha256:72dc31aea1386fae5c806c1443f4cd8bca75330cf81fe54473271c1ecec94118
+HELM_SOURCE_IMAGE := $(REGISTRY)/source-helm-chart@sha256:1d6c09571f29b87f69ecc19bddb1d9db5e80cd041c68020c10f781edd011e358
+HELM_UPGRADER_IMAGE := $(REGISTRY)/helm-upgrader@sha256:f9098cedb738ac2da64821555bc64edcaa3e48c6895d81a4d2625b7c19b4f488
+KUBECONFORM_IMAGE := $(REGISTRY)/kubeconform@sha256:1f09796b0d03c55ad866c41e799849584f66fc84b637a5dbe0784e7975761905
+PACKAGE_COMPOSITOR_IMAGE := $(REGISTRY)/package-compositor@sha256:294f270e76d276175112541e6d88c23800a3ca364043e09e8e9f8c40dd0a6155
+REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := $(REGISTRY)/remove-local-config-resources@sha256:ec27c1c68f64643413d8c9bc1899ea2ae17d858c5fe906e49a99e765be7d5faf
+SET_ANNOTATIONS_IMAGE := $(REGISTRY)/set-annotations@sha256:fa26a80d76841feed92d7b9f30e7823364d4adff566fdf442adf4861560d3184
+SET_LABELS_IMAGE := $(REGISTRY)/set-labels@sha256:41c32cdbd895ac46bc223fec9080a2008845573c6a9689fc5cdbac4a61c8a5b4
 else
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
-GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := ghcr.io/krm-functions/gatekeeper-set-enforcement-action:$(CONTAINER_TAG)
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart:$(CONTAINER_TAG)
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart:$(CONTAINER_TAG)
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader:$(CONTAINER_TAG)
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform:$(CONTAINER_TAG)
-PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor:$(CONTAINER_TAG)
-REMOVE_LOCAL_CONFIG_RESOURCES := ghcr.io/krm-functions/remove-local-config-resources:$(CONTAINER_TAG)
-SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations:$(CONTAINER_TAG)
-SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels:$(CONTAINER_TAG)
+APPLY_SETTERS_IMAGE := $(REGISTRY)/apply-setters:$(CONTAINER_TAG)
+DIGESTER_IMAGE := $(REGISTRY)/digester:$(CONTAINER_TAG)
+GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := $(REGISTRY)/gatekeeper-set-enforcement-action:$(CONTAINER_TAG)
+HELM_RENDER_IMAGE := $(REGISTRY)/render-helm-chart:$(CONTAINER_TAG)
+HELM_SOURCE_IMAGE := $(REGISTRY)/source-helm-chart:$(CONTAINER_TAG)
+HELM_UPGRADER_IMAGE := $(REGISTRY)/helm-upgrader:$(CONTAINER_TAG)
+KUBECONFORM_IMAGE := $(REGISTRY)/kubeconform:$(CONTAINER_TAG)
+PACKAGE_COMPOSITOR_IMAGE := $(REGISTRY)/package-compositor:$(CONTAINER_TAG)
+REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := $(REGISTRY)/remove-local-config-resources:$(CONTAINER_TAG)
+SET_ANNOTATIONS_IMAGE := $(REGISTRY)/set-annotations:$(CONTAINER_TAG)
+SET_LABELS_IMAGE := $(REGISTRY)/set-labels:$(CONTAINER_TAG)
 endif
 
+# Tests can either be executed using compiled binaries or containers
 ifeq ($(FN_MODE),exec)
 APPLY_SETTERS := --exec bin/apply-setters
 DIGESTER := --exec bin/digester
@@ -281,7 +282,7 @@ test-set-annotations:
 
 .PHONY: test-set-labels
 test-set-labels:
-	kpt fn source examples/set-labels | kpt fn eval - --truncate-output=false $(SET_LABELS) -o unwrap -- l1=v1 l2=v2 | \
+	kpt fn source examples/set-labels | kpt fn eval - --truncate-output=false $(SET_LABELS) -o unwrap -- l1=v1 l2=v2A | \
 		yq -e '.metadata.labels.l1|contains("v1")'
 	kpt fn source examples/set-labels | kpt fn eval - --truncate-output=false $(SET_LABELS) --fn-config example-function-configs/set-labels/configmap.yaml -o unwrap | \
 		yq -e '.metadata.labels.foo|contains("bar")'
