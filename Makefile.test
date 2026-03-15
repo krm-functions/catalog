@@ -150,7 +150,7 @@ test-apply-setters: test-apply-setters1 test-apply-setters2
 
 .PHONY: test-apply-setters1
 test-apply-setters1:
-	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/cm-setters.yaml | kpt fn eval - -i $(REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE) -o unwrap > test-out.yaml
+	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/cm-setters.yaml | kpt fn eval - $(REMOVE_LOCAL_CONFIG_RESOURCES) -o unwrap > test-out.yaml
 	grep -e 'foo: "valueFoo"' test-out.yaml
 	grep -e 'bar: "valueBar"' test-out.yaml
 	grep -e 'baz: "valueBaz"' test-out.yaml
@@ -161,7 +161,7 @@ test-apply-setters1:
 
 .PHONY: test-apply-setters2
 test-apply-setters2:
-	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/apply-setters-fn-config.yaml | kpt fn eval - -i $(REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE) -o unwrap > test-out.yaml
+	kpt fn source examples/apply-setters | kpt fn eval - --truncate-output=false $(APPLY_SETTERS) --fn-config example-function-configs/apply-setters/apply-setters-fn-config.yaml | kpt fn eval - $(REMOVE_LOCAL_CONFIG_RESOURCES) -o unwrap > test-out.yaml
 	grep -e 'foo: ""' test-out.yaml
 	grep -e 'bar: "valueBar"' test-out.yaml
 	grep -e 'baz: "valueBaz"' test-out.yaml
