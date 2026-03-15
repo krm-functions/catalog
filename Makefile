@@ -76,6 +76,7 @@ build-package:
 containers:
 	export KO_DOCKER_REPO=$(REGISTRY); \
 	export KO_DEFAULTPLATFORMS="$(PLATFORMS)"; \
+	export KO_DEFAULTBASEIMAGE=$(REGISTRY)/krm-functions-base-image:latest; \
 	for package in $(KO_PACKAGES); do \
 		ko build ./$$package --base-import-paths --push=$(CONTAINER_PUSH); \
 	done
@@ -84,6 +85,8 @@ containers:
 .PHONY: base-image
 base-image:
 	docker buildx build \
+		-t $(REGISTRY)/krm-functions-base-image:latest \
+		--progress=plain --no-cache\
 		--build-arg ARG_FROM=$(BASE_IMAGE) --build-arg ARG_BUILDER_IMAGE=$(BUILDER_IMAGE) \
 		--build-arg ARG_HELM_VERSION=$(HELM_VERSION) base-images/helm/
 
