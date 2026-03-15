@@ -26,5 +26,7 @@ ENV HELM_CACHE_HOME=/tmp/helm/cache
 
 RUN apk add skopeo
 
+COPY ssh/known_hosts /.ssh/known_hosts
+
 USER nobody:nobody
 ENV HOME=/

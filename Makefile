@@ -3,6 +3,10 @@ GO_PACKAGES ?= cmd/apply-setters cmd/digester cmd/gatekeeper-set-enforcement-act
 
 KO_PACKAGES ?= cmd/apply-setters cmd/digester cmd/gatekeeper-set-enforcement-action cmd/helm-upgrader cmd/kubeconform cmd/remove-local-config-resources cmd/render-helm-chart cmd/set-annotations cmd/set-labels cmd/source-helm-chart cmd/package-compositor
 
+# Some functions are not based on distroless base images because they need e.g. 'helm' or embed schemas
+# names here are paths in 'base-images'
+BASE_IMAGES ?= helm kubeconform
+
 # The platforms we support
 PLATFORMS ?= linux/amd64,linux/arm64 # linux/arm
 
@@ -76,19 +80,23 @@ build-package:
 containers:
 	export KO_DOCKER_REPO=$(REGISTRY); \
 	export KO_DEFAULTPLATFORMS="$(PLATFORMS)"; \
-	export KO_DEFAULTBASEIMAGE=$(REGISTRY)/krm-functions-base-image:latest; \
+	export KO_DEFAULTBASEIMAGE=$(REGISTRY)/krm-functions-base-image-helm:latest; \
 	for package in $(KO_PACKAGES); do \
 		ko build ./$$package --base-import-paths --push=$(CONTAINER_PUSH); \
 	done
 
-# --platform $(PLATFORMS)\
-.PHONY: base-image
-base-image:
-	docker buildx build \
-		-t $(REGISTRY)/krm-functions-base-image:latest \
-		--progress=plain --no-cache\
-		--build-arg ARG_FROM=$(BASE_IMAGE) --build-arg ARG_BUILDER_IMAGE=$(BUILDER_IMAGE) \
-		--build-arg ARG_HELM_VERSION=$(HELM_VERSION) base-images/helm/
+# --platform $(PLATFORMS)
+.PHONY: base-images
+base-images:
+	for image in $(BASE_IMAGES); do \
+		docker buildx build \
+			-t $(REGISTRY)/krm-functions-base-image-$$image:latest \
+			--progress=plain --no-cache\
+			--build-arg ARG_FROM=$(BASE_IMAGE) --build-arg ARG_BUILDER_IMAGE=$(BUILDER_IMAGE) \
+			--build-arg ARG_BASE_IMAGE_DISTROLESS=$(BASE_IMAGE_DISTROLESS) \
+			--build-arg ARG_HELM_VERSION=$(HELM_VERSION) \
+			-f base-images/$$image/Dockerfile .;\
+	done
 
 .PHONY: clean
 clean:
