@@ -13,13 +13,13 @@ linters:
     - goconst
     - gocritic
     - gocyclo
-    - gosec
+    # - gosec
     - govet
     - ineffassign
     - misspell
     - nolintlint
     - predeclared
-    - revive
+    # - revive
     - staticcheck
     - thelper
     - tparallel

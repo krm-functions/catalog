@@ -3,9 +3,9 @@ name: Run tests
 on:
   pull_request:
     paths-ignore:
-      - 'README.md'
-      - 'scripts/**'
-      - 'docs/**'
+      - "README.md"
+      - "scripts/**"
+      - "docs/**"
 
 jobs:
   test:
@@ -20,8 +20,13 @@ jobs:
     - name: build local binaries for test
       run: devbox run -- make build lint test
 
-    - name: code tests
-      run: make test GOFLAGS="-v"
+    - name: e2e tests
+      run: devbox run -- make e2e-tests
+      env:
+          FN_MODE: exec
 
     - name: e2e tests
       run: devbox run -- make e2e-tests
+      env:
+          FN_MODE: container
+
