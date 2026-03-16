@@ -40,7 +40,7 @@ jobs:
     - name: Push containers
       run: make manifest-list | tee manifest.log
 
-    - uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # tag=v3.9.2
+    - uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # tag=v4.1.0
 
     - name: Sign container
       run: make manifest-list-sign
