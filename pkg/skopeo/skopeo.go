@@ -42,9 +42,14 @@ func Run(args ...string) ([]byte, error) {
 	return stdout.Bytes(), nil
 }
 
-func ListTags(chart *t.HelmChartArgs) (*RepoTags, error) {
+func ListTags(chart *t.HelmChartArgs, username, password string) (*RepoTags, error) {
 	repo := regexp.MustCompile("^oci://").ReplaceAllString(chart.Repo, "docker://")
-	out, err := Run("list-tags", repo+"/"+chart.Name)
+	args := []string{"list-tags"}
+	if username != "" && password != "" {
+		args = append(args, "--creds", username+":"+password)
+	}
+	args = append(args, repo+"/"+chart.Name)
+	out, err := Run(args...)
 	if err != nil {
 		return nil, err
 	}

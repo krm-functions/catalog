@@ -69,7 +69,7 @@ func (ctxt *RunContext) Run(args ...string) ([]byte, error) {
 
 func SearchRepo(chart *t.HelmChartArgs, username, password string) ([]RepoSearch, error) {
 	if isOciRepo(chart) {
-		ociSearch, err := skopeo.ListTags(chart)
+		ociSearch, err := skopeo.ListTags(chart, username, password)
 		if err != nil {
 			return nil, err
 		}
