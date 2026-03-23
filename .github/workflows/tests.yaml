@@ -4,6 +4,7 @@ on:
   pull_request:
     paths-ignore:
       - 'README.md'
+      - 'Makefile.test'
       - 'scripts/**'
       - 'docs/**'
 
