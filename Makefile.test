@@ -292,3 +292,4 @@ test-set-labels:
 test-template-kyaml:
 	kpt fn source examples/template | kpt fn eval - --truncate-output=false $(TEMPLATE_KYAML) -- someConfig=aTestConfigString > test-out.txt
 	kpt fn source examples/template | kpt fn eval - --truncate-output=false $(TEMPLATE_KYAML) > test-out.txt
+
