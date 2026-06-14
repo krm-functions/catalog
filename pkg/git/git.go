@@ -19,6 +19,8 @@ import (
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	cryptossh "golang.org/x/crypto/ssh"
 )
@@ -27,7 +29,7 @@ type Repository struct {
 	URI             string
 	Repo            *gogit.Repository
 	Tree            *gogit.Worktree
-	AuthMethod      ssh.AuthMethod
+	AuthMethod      transport.AuthMethod
 	CurrentRevision string
 	CurrentHash     string
 }
@@ -40,7 +42,7 @@ type CloneOptions struct {
 
 func Clone(uri, authMethod, username, password, fileBase string, cloneOptions CloneOptions) (*Repository, error) {
 	var err error
-	var auth ssh.AuthMethod
+	var auth transport.AuthMethod
 	var sshAgent *ssh.PublicKeysCallback
 	opts := &gogit.CloneOptions{
 		URL: uri,
@@ -67,6 +69,10 @@ func Clone(uri, authMethod, username, password, fileBase string, cloneOptions Cl
 		if err != nil {
 			return nil, fmt.Errorf("sshPrivateKey auth setup %v: %v", uri, err)
 		}
+	case "httpsToken":
+		auth = &githttp.BasicAuth{Username: username, Password: password}
+	case "httpsGitHubToken":
+		auth = &githttp.BasicAuth{Username: "git", Password: password}
 	}
 	opts.Auth = auth
 	repo, err := gogit.PlainClone(fileBase, false, opts)

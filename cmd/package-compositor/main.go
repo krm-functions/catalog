@@ -60,9 +60,19 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			var username, password string
 			username = "git"
 			if u.Git.Auth != nil {
-				username, password, err = util.LookupSSHAuthSecret(u.Git.Auth.Name, u.Git.Auth.Namespace, rl)
+				switch u.Git.AuthMethod {
+				case "httpsToken":
+					username, password, err = util.LookupAuthSecret(u.Git.Auth.Name, u.Git.Auth.Namespace, rl)
+				default:
+					username, password, err = util.LookupSSHAuthSecret(u.Git.Auth.Name, u.Git.Auth.Namespace, rl)
+				}
 				if err != nil {
 					return false, err
+				}
+			} else if u.Git.AuthMethod == "httpsGitHubToken" {
+				password = os.Getenv("GITHUB_TOKEN")
+				if password == "" {
+					return false, fmt.Errorf("upstream %v, authMethod 'httpsGitHubToken' requires GITHUB_TOKEN environment variable", u.Name)
 				}
 			}
 
