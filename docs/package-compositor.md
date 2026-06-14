@@ -202,6 +202,50 @@ kubectl create secret generic foo --dry-run=client --type=kubernetes.io/ssh-auth
 The container's `known_hosts` file currently contain GitHub SSH hosts
 only. See the `ssh` folder.
 
+HTTPS repositories can be accessed using a personal access token (PAT) stored
+in a `Secret`:
+
+```yaml
+upstreams:
+  - name: example-upstream
+    type: git
+    git:
+      repo: https://github.com/example-org/example-repo.git
+      authMethod: httpsToken
+      auth:
+        kind: Secret
+        name: github-token
+```
+
+The `Secret` must have `username` and `password` fields, where `password` is
+the token:
+
+```shell
+kubectl create secret generic github-token --dry-run=client \
+  --from-literal username=git --from-literal password=<token> -o yaml
+```
+
+When running in a GitHub Action, the `GITHUB_TOKEN` environment variable can be
+used directly without a `Secret`:
+
+```yaml
+upstreams:
+  - name: example-upstream
+    type: git
+    git:
+      repo: https://github.com/example-org/example-repo.git
+      authMethod: httpsGitHubToken
+```
+
+Pass the token into the container via `-e GITHUB_TOKEN`:
+
+```shell
+kpt fn source specs | \
+  kpt fn eval - -e GITHUB_TOKEN --network \
+    --image ghcr.io/krm-functions/package-compositor | \
+  kpt fn sink fn-output
+```
+
 ## Git Cloning
 
 Optional got clone options can be specified as follows. These follows the ordinary git clone options:

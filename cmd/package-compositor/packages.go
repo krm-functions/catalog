@@ -164,6 +164,17 @@ func (fleet *Fleet) Validate() error {
 				if u.Git.Auth.Kind != "Secret" {
 					return fmt.Errorf("upstream %v, only auth kind 'Secret' supported", u.Name)
 				}
+			case "httpsToken":
+				if u.Git.Auth == nil {
+					return fmt.Errorf("upstream %v, auth method 'httpsToken' require auth specification", u.Name)
+				}
+				if u.Git.Auth.Kind != "Secret" {
+					return fmt.Errorf("upstream %v, only auth kind 'Secret' supported", u.Name)
+				}
+			case "httpsGitHubToken":
+				if u.Git.Auth != nil {
+					return fmt.Errorf("upstream %v, cannot use auth specification with method 'httpsGitHubToken'", u.Name)
+				}
 			default:
 				return fmt.Errorf("upstream %v, unsupported auth method: %v", u.Name, u.Git.AuthMethod)
 			}
