@@ -24,7 +24,7 @@
           version = "0.3.0";
           src = ./.;
           subPackages = [ "cmd/package-compositor" ];
-          vendorHash = "sha256-RpDrxltBYBYP6d6Y8KBh52h2uSfVwN8cLPmrtP6pvrY=";
+          vendorHash = "sha256-uwMuQESKiMG2MnwRIejoo3bop35dRNk25qEokQzej8o=";
           go = pkgs.go_1_24;
           # vendorHash = nixpkgs.lib.fakeHash;
           buildInputs = [
