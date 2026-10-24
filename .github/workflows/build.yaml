@@ -1,6 +1,7 @@
 name: Build and sign multi-arch container
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main" ]
     paths-ignore:
