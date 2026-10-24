@@ -366,6 +366,14 @@ func SourceEnsureVersion(src *PackageSource, ref SourceRef) (fn.Results, error) 
 	return fnResults, nil
 }
 
+// safeJoin joins base and rel, rejecting rel paths that escape base
+func safeJoin(base, rel string) (string, error) {
+	if !filepath.IsLocal(rel) {
+		return "", fmt.Errorf("invalid package path %q: must be relative and within output dir", rel)
+	}
+	return filepath.Join(base, rel), nil
+}
+
 // TossFiles copies package files
 func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, dstBaseDir, pkgsBasePath string) (fn.Results, error) {
 	var fnResults fn.Results
@@ -377,8 +385,11 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 	// Pre-create dirs to allow out-of-order tossing of packages
 	for idx := range outPackages {
 		p := &outPackages[idx]
-		d := filepath.Join(dstBaseDir, p.dstAbsPath)
-		err := os.MkdirAll(d, 0o700)
+		d, err := safeJoin(dstBaseDir, p.dstAbsPath)
+		if err != nil {
+			return fnResults, err
+		}
+		err = os.MkdirAll(d, 0o700)
 		if err != nil {
 			return fnResults, err
 		}
@@ -390,7 +401,10 @@ func (fleet *Fleet) TossFiles(sources []PackageSource, packages PackageSlice, ds
 	for idx := range outPackages {
 		p := &outPackages[idx]
 
-		d := filepath.Join(dstBaseDir, p.dstAbsPath)
+		d, err := safeJoin(dstBaseDir, p.dstAbsPath)
+		if err != nil {
+			return fnResults, err
+		}
 		u := UpstreamLookup(fleet, p.Upstream)
 		if u == nil {
 			return fnResults, fmt.Errorf("unknown upstream: %v", p.Upstream)

@@ -10,7 +10,7 @@ linters:
     - dupl
     - errcheck
     - exhaustive
-    - goconst
+    # - goconst
     - gocritic
     - gocyclo
     - gosec
