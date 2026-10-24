@@ -140,7 +140,7 @@ render-with-kube-version:
 .PHONY: test-source-helm-chart
 test-source-helm-chart:
 	kpt fn source examples/render-helm-chart3 | kpt fn eval - --truncate-output=false $(HELM_SOURCE) > test-out.txt
-	grep -e 'experimental.helm.sh/chart-sum/karpenter' test-out.txt
+	grep -e 'experimental.helm.sh/chart-sum/argo-workflows' test-out.txt
 	grep -e 'experimental.helm.sh/chart-sum/cert-manager' test-out.txt
 	rm test-out.txt
 
