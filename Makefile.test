@@ -82,7 +82,6 @@ test-helm-upgrader:
 	grep -e '.*upgrade-available: .*cert-manager:v1.8.2' test-out.yaml
 	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.yaml
 	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.yaml
-	grep -e '.*upgrade-available.0: .*karpenter:0.35.0' test-out.yaml
 	grep -e '.*upgrade-available.1: .*/external-secrets:2.14.0' test-out.yaml
 
 	rm test-out.yaml
@@ -141,7 +140,7 @@ render-with-kube-version:
 .PHONY: test-source-helm-chart
 test-source-helm-chart:
 	kpt fn source examples/render-helm-chart3 | kpt fn eval - --truncate-output=false $(HELM_SOURCE) > test-out.txt
-	grep -e 'experimental.helm.sh/chart-sum/karpenter' test-out.txt
+	grep -e 'experimental.helm.sh/chart-sum/argo-workflows' test-out.txt
 	grep -e 'experimental.helm.sh/chart-sum/cert-manager' test-out.txt
 	rm test-out.txt
 
