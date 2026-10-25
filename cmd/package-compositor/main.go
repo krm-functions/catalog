@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
 	"github.com/krm-functions/catalog/pkg/api"
@@ -107,7 +108,23 @@ func Run(rl *fn.ResourceList) (bool, error) {
 	return true, nil
 }
 
+// setKnownHosts prefers the known_hosts file shipped with the container image
+// ($KO_DATA_PATH), falling back to the go-git defaults. Missing files are ignored by go-git.
+func setKnownHosts() {
+	koData := os.Getenv("KO_DATA_PATH")
+	if os.Getenv("SSH_KNOWN_HOSTS") != "" || koData == "" {
+		return
+	}
+	files := []string{filepath.Join(koData, "known_hosts")}
+	if home, err := os.UserHomeDir(); err == nil {
+		files = append(files, filepath.Join(home, ".ssh", "known_hosts"))
+	}
+	files = append(files, "/etc/ssh/ssh_known_hosts")
+	os.Setenv("SSH_KNOWN_HOSTS", strings.Join(files, string(filepath.ListSeparator)))
+}
+
 func main() {
+	setKnownHosts()
 	if err := fn.AsMain(fn.ResourceListProcessorFunc(Run)); err != nil {
 		os.Exit(1)
 	}

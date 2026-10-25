@@ -1,19 +1,5 @@
 -include Makefile.local
 include Makefile.test
-include Makefile.cosign
-# Copyright 2016 The Kubernetes Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 DBG_MAKEFILE ?=
 ifeq ($(DBG_MAKEFILE),1)
@@ -27,27 +13,18 @@ endif
 # The binaries to build (just the basenames)
 BINS ?= apply-setters digester gatekeeper-set-enforcement-action helm-upgrader kubeconform remove-local-config-resources render-helm-chart set-annotations set-labels source-helm-chart package-compositor # template-kyaml
 
-# The platforms we support
-#ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64 linux/ppc64le linux/s390x
-ALL_PLATFORMS ?= linux/amd64 linux/arm linux/arm64
-#ALL_PLATFORMS ?= linux/amd64
+# Binaries building on top of Helm (and skopeo). Their images use the 'base-helm' image
+# built by apko, see 'build/base-helm.apko.yaml'. All other images use the
+# 'defaultBaseImage' from '.ko.yaml'.
+HELM_BINS ?= digester helm-upgrader render-helm-chart source-helm-chart
 
-# The "FROM" part of the Dockerfile.  This should be a manifest-list which
-# supports all of the platforms listed in ALL_PLATFORMS.
-BUILDER_IMAGE ?= alpine:3.24.3
-BASE_IMAGE ?= alpine:3.24.3
-BASE_IMAGE_DISTROLESS ?= gcr.io/distroless/static
-
-# For functions building on top of Helm
-HELM_VERSION=v4.3.1
-
+# The registry to push to. To test 'make push' locally, run a throwaway registry with
+# 'crane registry serve --address localhost:5001' and use REGISTRY=localhost:5001/krmfn
+# (or REGISTRY=ttl.sh/<random> VERSION=1h for short-lived public images).
 REGISTRY ?= ghcr.io/krm-functions
 
-# This version-strategy uses git tags to set the version string
+# The version string, from git tags
 VERSION ?= $(shell git describe --tags --always --dirty)
-#
-# This version-strategy uses a manual value to set the version string
-#VERSION ?= 1.2.3
 
 # Set this to 1 to build a debugger-friendly binaries.
 DBG ?=
@@ -62,379 +39,141 @@ MAKEFLAGS += --no-builtin-rules
 MAKEFLAGS += --warn-undefined-variables
 .SUFFIXES:
 
+# It's necessary to set this because some environments don't link sh -> bash.
+SHELL := /usr/bin/env bash -o errexit -o pipefail -o nounset
+
+# Used to pass a literal ',' to $(call)
+comma := ,
+
+# Satisfy --warn-undefined-variables.
+GOFLAGS ?=
+GOOS ?=
+GOARCH ?=
+
 # Used internally.  Users should pass GOOS and/or GOARCH.
 OS := $(if $(GOOS),$(GOOS),$(shell GOTOOLCHAIN=local go env GOOS))
 ARCH := $(if $(GOARCH),$(GOARCH),$(shell GOTOOLCHAIN=local go env GOARCH))
 
-TAG := $(VERSION)__$(OS)_$(ARCH)
+.DEFAULT_GOAL := build
+.PHONY: build kodata base-helm container push version test lint fmt clean help sign verify
 
-GO_VERSION := 1.27
-BUILD_IMAGE := golang:$(GO_VERSION)-alpine
-
-BIN_EXTENSION :=
-ifeq ($(OS), windows)
-  BIN_EXTENSION := .exe
+ifeq ($(DBG),1)
+# Debugging - disable optimizations and inlining
+GO_BUILD_FLAGS := -gcflags="all=-N -l"
+GO_LDFLAGS :=
+else
+# Not debugging - trim paths, disable symbols and DWARF (same as .ko.yaml)
+GO_BUILD_FLAGS := -trimpath
+GO_LDFLAGS := -s -w
 endif
 
-# It's necessary to set this because some environments don't link sh -> bash.
-SHELL := /usr/bin/env bash -o errexit -o pipefail -o nounset
+build: # @HELP builds binaries for one platform ($OS/$ARCH) into bin/$OS_$ARCH
+build:
+	echo "# building for $(OS)/$(ARCH)"
+	mkdir -p bin/$(OS)_$(ARCH)
+	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) GOFLAGS="$(GOFLAGS)"                    \
+	    go build -o bin/$(OS)_$(ARCH)/ $(GO_BUILD_FLAGS)                            \
+	    -ldflags="-X $$(go list -m)/pkg/version.Version=$(VERSION) $(GO_LDFLAGS)"   \
+	    $(addprefix ./cmd/,$(BINS))
 
-# This is used in docker buildx commands
-BUILDX_NAME := $(shell basename $$(pwd))
-
-# Satisfy --warn-undefined-variables.
-GOFLAGS ?=
-HTTP_PROXY ?=
-HTTPS_PROXY ?=
-
-# Because we store the module cache locally.
-GOFLAGS := $(GOFLAGS) -modcacherw
-
-# If you want to build all binaries, see the 'all-build' rule.
-# If you want to build all containers, see the 'all-container' rule.
-# If you want to build AND push all containers, see the 'all-push' rule.
-all: # @HELP builds binaries for one platform ($OS/$ARCH)
-all: build
-
-# For the following OS/ARCH expansions, we transform OS/ARCH into OS_ARCH
-# because make pattern rules don't match with embedded '/' characters.
-
-build-%:
-	$(MAKE) build                         \
-	    --no-print-directory              \
-	    GOOS=$(firstword $(subst _, ,$*)) \
-	    GOARCH=$(lastword $(subst _, ,$*))
-
-container-%:
-	$(MAKE) container                     \
-	    --no-print-directory              \
-	    GOOS=$(firstword $(subst _, ,$*)) \
-	    GOARCH=$(lastword $(subst _, ,$*))
-
-push-%:
-	$(MAKE) push                          \
-	    --no-print-directory              \
-	    GOOS=$(firstword $(subst _, ,$*)) \
-	    GOARCH=$(lastword $(subst _, ,$*))
-
-all-build: # @HELP builds binaries for all platforms
-all-build: $(addprefix build-, $(subst /,_, $(ALL_PLATFORMS)))
-
-all-container: # @HELP builds containers for all platforms
-all-container: $(addprefix container-, $(subst /,_, $(ALL_PLATFORMS)))
-
-all-push: # @HELP pushes containers for all platforms to the defined registry
-all-push: $(addprefix push-, $(subst /,_, $(ALL_PLATFORMS)))
-
-# The following structure defeats Go's (intentional) behavior to always touch
-# result files, even if they have not changed.  This will still run `go` but
-# will not trigger further work if nothing has actually changed.
-OUTBINS = $(foreach bin,$(BINS),bin/$(OS)_$(ARCH)/$(bin)$(BIN_EXTENSION))
-
-build: $(OUTBINS)
-	echo
-
-# Directories that we need created to build/test.
-BUILD_DIRS := bin/$(OS)_$(ARCH)                   \
-              bin/tools                           \
-              .go/bin/$(OS)_$(ARCH)               \
-              .go/bin/$(OS)_$(ARCH)/$(OS)_$(ARCH) \
-              .go/cache                           \
-              .go/pkg
-
-# Each outbin target is just a facade for the respective stampfile target.
-# This `eval` establishes the dependencies for each.
-$(foreach outbin,$(OUTBINS),$(eval  \
-    $(outbin): .go/$(outbin).stamp  \
-))
-# This is the target definition for all outbins.
-$(OUTBINS):
-	true
-
-# Each stampfile target can reference an $(OUTBIN) variable.
-$(foreach outbin,$(OUTBINS),$(eval $(strip   \
-    .go/$(outbin).stamp: OUTBIN = $(outbin)  \
-)))
-# This is the target definition for all stampfiles.
-# This will build the binary under ./.go and update the real binary iff needed.
-STAMPS = $(foreach outbin,$(OUTBINS),.go/$(outbin).stamp)
-.PHONY: $(STAMPS)
-$(STAMPS): go-build
-	echo -ne "binary: $(OUTBIN)  "
-	if ! cmp -s .go/$(OUTBIN) $(OUTBIN); then  \
-	    mv .go/$(OUTBIN) $(OUTBIN);            \
-	    date >$@;                              \
-	    echo;                                  \
-	else                                       \
-	    echo "(cached)";                       \
+# Extra files for the images. ko copies 'cmd/<bin>/kodata/' to '/var/run/ko' (KO_DATA_PATH).
+# ko rejects symlinks pointing outside kodata, so files are hard-linked copies.
+kodata:
+	rm -rf cmd/*/kodata
+	if [[ " $(BINS) " == *" kubeconform "* ]]; then                    \
+	    if [[ ! -d schema-bundle ]]; then                              \
+	        echo "schema-bundle missing, run scripts/source-schemas.sh"; \
+	        exit 1;                                                    \
+	    fi;                                                            \
+	    mkdir -p cmd/kubeconform/kodata;                               \
+	    cp -al schema-bundle cmd/kubeconform/kodata/schema-bundle;     \
+	fi
+	if [[ " $(BINS) " == *" package-compositor "* ]]; then             \
+	    mkdir -p cmd/package-compositor/kodata;                        \
+	    cp ssh/known_hosts cmd/package-compositor/kodata/known_hosts;  \
 	fi
 
-# This runs the actual `go build` which updates all binaries.
-go-build: | $(BUILD_DIRS)
-	echo "# building for $(OS)/$(ARCH)"
-	docker run                                                  \
-	    -i                                                      \
-	    --rm                                                    \
-	    -u $$(id -u):$$(id -g)                                  \
-	    -v $$(pwd):/src                                         \
-	    -w /src                                                 \
-	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin                \
-	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin/$(OS)_$(ARCH)  \
-	    -v $$(pwd)/.go/cache:/.cache                            \
-	    --env GOCACHE="/.cache/gocache"                         \
-	    --env GOMODCACHE="/.cache/gomodcache"                   \
-	    --env ARCH="$(ARCH)"                                    \
-	    --env OS="$(OS)"                                        \
-	    --env VERSION="$(VERSION)"                              \
-	    --env DEBUG="$(DBG)"                                    \
-	    --env GOFLAGS="$(GOFLAGS)"                              \
-	    --env HTTP_PROXY="$(HTTP_PROXY)"                        \
-	    --env HTTPS_PROXY="$(HTTPS_PROXY)"                      \
-	    $(BUILD_IMAGE)                                          \
-	    ./build/build.sh ./...
+BASE_HELM_REF = .base-helm.ref
+# The Helm-based binaries being built, the base-helm image is only needed for these
+BINS_ON_BASE_HELM := $(filter $(HELM_BINS),$(BINS))
 
-# Example: make shell CMD="-c 'date > datefile'"
-shell: # @HELP launches a shell in the containerized build environment
-shell: | $(BUILD_DIRS)
-	echo "# launching a shell in the containerized build environment"
-	docker run                                                  \
-	    -ti                                                     \
-	    --rm                                                    \
-	    -u $$(id -u):$$(id -g)                                  \
-	    -v $$(pwd):/src                                         \
-	    -w /src                                                 \
-	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin                \
-	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin/$(OS)_$(ARCH)  \
-	    -v $$(pwd)/.go/cache:/.cache                            \
-	    --env GOCACHE="/.cache/gocache"                         \
-	    --env GOMODCACHE="/.cache/gomodcache"                   \
-	    --env ARCH="$(ARCH)"                                    \
-	    --env OS="$(OS)"                                        \
-	    --env VERSION="$(VERSION)"                              \
-	    --env DEBUG="$(DBG)"                                    \
-	    --env GOFLAGS="$(GOFLAGS)"                              \
-	    --env HTTP_PROXY="$(HTTP_PROXY)"                        \
-	    --env HTTPS_PROXY="$(HTTPS_PROXY)"                      \
-	    $(BUILD_IMAGE)                                          \
-	    /bin/sh $(CMD)
+base-helm: # @HELP builds and pushes the multi-arch base image for Helm-based functions
+base-helm:
+	mkdir -p .apko-sbom
+	apko publish build/base-helm.apko.yaml $(REGISTRY)/base-helm:$(VERSION) --sbom-path .apko-sbom
+	# apko '--image-refs' also lists the per-arch images, we need the index
+	echo "$(REGISTRY)/base-helm@$$(crane digest $(REGISTRY)/base-helm:$(VERSION))" > $(BASE_HELM_REF)
+	echo "base-helm: $$(cat $(BASE_HELM_REF))"
 
-LICENSES = .licenses
-
-$(LICENSES): | $(BUILD_DIRS)
-	# Don't assume that `go` is available locally.
-	docker run                                 \
-	    -i                                     \
-	    --rm                                   \
-	    -u $$(id -u):$$(id -g)                 \
-	    -v $$(pwd)/tools:/src                  \
-	    -w /src                                \
-	    -v $$(pwd)/bin/tools:/go/bin           \
-	    -v $$(pwd)/.go/cache:/.cache           \
-	    --env GOCACHE="/.cache/gocache"        \
-	    --env GOMODCACHE="/.cache/gomodcache"  \
-	    --env CGO_ENABLED=0                    \
-	    --env HTTP_PROXY="$(HTTP_PROXY)"       \
-	    --env HTTPS_PROXY="$(HTTPS_PROXY)"     \
-	    $(BUILD_IMAGE)                         \
-	    go install github.com/google/go-licenses/v2
-	# The tool runs in a container because it execs `go`, which doesn't
-	# play nicely with CI.  The tool also wants its output dir to not
-	# exist, so we can't just volume mount $(LICENSES).
-	rm -rf $(LICENSES).tmp
-	mkdir $(LICENSES).tmp
-	docker run                              \
-	    -i                                  \
-	    --rm                                \
-	    -u $$(id -u):$$(id -g)              \
-	    -v $$(pwd)/$(LICENSES).tmp:/output  \
-	    -v $$(pwd):/src                     \
-	    -w /src                             \
-	    -v $$(pwd)/bin/tools:/go/bin        \
-	    -v $$(pwd)/.go/cache:/.cache        \
-	    -v $$(pwd)/.go/pkg:/go/pkg          \
-	    --env HTTP_PROXY="$(HTTP_PROXY)"    \
-	    --env HTTPS_PROXY="$(HTTPS_PROXY)"  \
-	    $(BUILD_IMAGE)                      \
-	    go-licenses save ./... --save_path=/output/licenses
-	rm -rf $(LICENSES)
-	mv $(LICENSES).tmp/licenses $(LICENSES)
-	rmdir $(LICENSES).tmp
-	find $(LICENSES) -type d | xargs chmod 0755
-	find $(LICENSES) -type f | xargs chmod 0644
-
-CONTAINER_DOTFILES = $(foreach bin,$(BINS),.container-$(subst /,_,$(REGISTRY)/$(bin))-$(TAG))
-
-# We print the container names here, rather than in CONTAINER_DOTFILES so
-# they are always at the end of the output.
-container containers: # @HELP builds containers for one platform ($OS/$ARCH)
-container containers: $(CONTAINER_DOTFILES)
-	for bin in $(BINS); do                           \
-	    echo "container: $(REGISTRY)/$$bin:$(TAG)";  \
+# Builds (or pushes) all images with ko. $(1) are the extra ko arguments.
+define ko-build
+	for bin in $(BINS); do                                                  \
+	    base="";                                                            \
+	    if [[ " $(HELM_BINS) " == *" $$bin "* ]]; then                      \
+	        base="$$(cat $(BASE_HELM_REF))";                                \
+	    fi;                                                                 \
+	    echo "container: $(REGISTRY)/$$bin:$(VERSION)";                     \
+	    env KO_DOCKER_REPO=$(REGISTRY)/$$bin                                \
+	    VERSION=$(VERSION)                                                  \
+	    $${base:+KO_DEFAULTBASEIMAGE=$$base}                                \
+	    ko build --bare --image-user 65535 $(1) ./cmd/$$bin;                \
 	done
-	echo
+endef
 
-# Each container-dotfile target can reference a $(BIN) variable.
-# This is done in 2 steps to enable target-specific variables.
-$(foreach bin,$(BINS),$(eval $(strip                                 \
-    .container-$(subst /,_,$(REGISTRY)/$(bin))-$(TAG): BIN = $(bin)  \
-)))
-$(foreach bin,$(BINS),$(eval                                         \
-    .container-$(subst /,_,$(REGISTRY)/$(bin))-$(TAG): bin/$(OS)_$(ARCH)/$(bin)$(BIN_EXTENSION) $(LICENSES) Dockerfile.in  \
-))
-# This is the target definition for all container-dotfiles.
-# These are used to track build state in hidden files.
-$(CONTAINER_DOTFILES): .buildx-initialized
-	echo
-	DOCKERFILE="Dockerfile.in"; \
-	[[ -f "cmd/$(BIN)/Dockerfile.in" ]] && DOCKERFILE="cmd/$(BIN)/Dockerfile.in"; \
-	sed                                            \
-	    -e 's|{ARG_BIN}|$(BIN)$(BIN_EXTENSION)|g'  \
-	    -e 's|{ARG_ARCH}|$(ARCH)|g'                \
-	    -e 's|{ARG_OS}|$(OS)|g'                    \
-	    -e 's|{ARG_BUILDER_IMAGE}|$(BUILDER_IMAGE)|g' \
-	    -e 's|{ARG_FROM}|$(BASE_IMAGE)|g'          \
-	    -e 's|{ARG_FROM_DISTROLESS}|$(BASE_IMAGE_DISTROLESS)|g'          \
-	    -e 's|{ARG_HELM_VERSION}|$(HELM_VERSION)|g'          \
-	    $$DOCKERFILE > .dockerfile-$(BIN)-$(OS)_$(ARCH)
-	HASH_LICENSES=$$(find $(LICENSES) -type f                       \
-		    | xargs md5sum | md5sum | cut -f1 -d' ');           \
-	HASH_BINARY=$$(md5sum bin/$(OS)_$(ARCH)/$(BIN)$(BIN_EXTENSION)  \
-		    | cut -f1 -d' ');                                   \
-	FORCE=0;                                                        \
-	docker buildx build                                             \
-	    --builder "$(BUILDX_NAME)"                                  \
-	    --build-arg FORCE_REBUILD="$$FORCE"                         \
-	    --build-arg HASH_LICENSES="$$HASH_LICENSES"                 \
-	    --build-arg HASH_BINARY="$$HASH_BINARY"                     \
-	    --progress=plain                                            \
-	    --load                                                      \
-	    --platform "$(OS)/$(ARCH)"                                  \
-	    --build-arg HTTP_PROXY="$(HTTP_PROXY)"                      \
-	    --build-arg HTTPS_PROXY="$(HTTPS_PROXY)"                    \
-	    -t $(REGISTRY)/$(BIN):$(TAG)                                \
-	    -f .dockerfile-$(BIN)-$(OS)_$(ARCH)                         \
-	    .
-	docker images -q $(REGISTRY)/$(BIN):$(TAG) > $@
-	echo
+container: # @HELP builds containers for all platforms (without pushing)
+container: kodata
+	$(if $(BINS_ON_BASE_HELM),test -f $(BASE_HELM_REF) || (echo "$(BASE_HELM_REF) missing, run 'make base-helm' first"; exit 1))
+	$(call ko-build,--push=false)
 
-push: # @HELP pushes the container for one platform ($OS/$ARCH) to the defined registry
-push: container
-	for bin in $(BINS); do                     \
-	    docker push $(REGISTRY)/$$bin:$(TAG);  \
+push: # @HELP builds and pushes multi-arch containers to the defined registry
+push: kodata $(if $(BINS_ON_BASE_HELM),base-helm)
+	rm -rf .ko-refs
+	mkdir -p .ko-refs
+	$(call ko-build,--tags $(VERSION)$(comma)latest --image-refs .ko-refs/$$bin)
+
+sign: # @HELP signs the multi-arch containers pushed by 'make push'
+sign:
+	# '.ko-refs/<bin>' is written by 'make push', the first line is the
+	# 'repo@sha256:...' reference of the multi-arch index (then per-platform images)
+	cosign sign --yes $$(head -qn1 .ko-refs/*)
+
+verify: # @HELP verifies cosign signatures of the pushed containers
+verify:
+	for bin in $(BINS); do                                                  \
+	    img=$(REGISTRY)/$$bin:$(VERSION);                                   \
+	    echo ">> Verify $$img";                                             \
+	    cosign verify                                                       \
+	        --certificate-identity-regexp 'https://github.com/krm-functions/catalog/.github/workflows/build.yaml@refs/.*' \
+	        --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+	        $$img | jq .;                                                   \
 	done
-	echo
-
-# This depends on github.com/estesp/manifest-tool.
-manifest-list: # @HELP builds a manifest list of containers for all platforms
-manifest-list: all-push manifest-tool
-	for bin in $(BINS); do                                    \
-	    platforms=$$(echo $(ALL_PLATFORMS) | sed 's/ /,/g');  \
-	    bin/tools/manifest-tool                               \
-	        push from-args                                    \
-	        --platforms "$$platforms"                         \
-	        --template $(REGISTRY)/$$bin:$(VERSION)__OS_ARCH  \
-		--tags latest                                     \
-	        --target $(REGISTRY)/$$bin:$(VERSION);            \
-	done
-
-manifest-tool: # @HELP builds manifest-tool
-manifest-tool:
-	# Don't assume that `go` is available locally.
-	docker run                                 \
-	    -i                                     \
-	    --rm                                   \
-	    -u $$(id -u):$$(id -g)                 \
-	    -v $$(pwd)/tools:/src                  \
-	    -w /src                                \
-	    -v $$(pwd)/bin/tools:/go/bin           \
-	    -v $$(pwd)/.go/cache:/.cache           \
-	    --env GOCACHE="/.cache/gocache"        \
-	    --env GOMODCACHE="/.cache/gomodcache"  \
-	    --env CGO_ENABLED=0                    \
-	    --env HTTP_PROXY="$(HTTP_PROXY)"       \
-	    --env HTTPS_PROXY="$(HTTPS_PROXY)"     \
-	    $(BUILD_IMAGE)                         \
-	    go install github.com/estesp/manifest-tool/v2/cmd/manifest-tool
 
 version: # @HELP outputs the version string
 version:
 	echo $(VERSION)
 
-test: # @HELP runs tests, as defined in ./build/test.sh
-test: | $(BUILD_DIRS)
-	docker run                                                  \
-	    -i                                                      \
-	    --rm                                                    \
-	    -u $$(id -u):$$(id -g)                                  \
-	    -v $$(pwd):/src                                         \
-	    -w /src                                                 \
-	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin                \
-	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin/$(OS)_$(ARCH)  \
-	    -v $$(pwd)/.go/cache:/.cache                            \
-	    --env GOCACHE="/.cache/gocache"                         \
-	    --env GOMODCACHE="/.cache/gomodcache"                   \
-	    --env ARCH="$(ARCH)"                                    \
-	    --env OS="$(OS)"                                        \
-	    --env VERSION="$(VERSION)"                              \
-	    --env DEBUG="$(DBG)"                                    \
-	    --env GOFLAGS="$(GOFLAGS)"                              \
-	    --env HTTP_PROXY="$(HTTP_PROXY)"                        \
-	    --env HTTPS_PROXY="$(HTTPS_PROXY)"                      \
-	    $(BUILD_IMAGE)                                          \
-	    ./build/test.sh ./...
+test: # @HELP runs tests
+test:
+	CGO_ENABLED=0 GOFLAGS="$(GOFLAGS)" go test ./...
 
-# lint: # @HELP runs golangci-lint
+lint: # @HELP runs golangci-lint
 lint:
 	golangci-lint run ./...
 
-# lint: | $(BUILD_DIRS)
-# 	docker run                                                  \
-# 	    -i                                                      \
-# 	    --rm                                                    \
-# 	    -u $$(id -u):$$(id -g)                                  \
-# 	    -v $$(pwd):/src                                         \
-# 	    -w /src                                                 \
-# 	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin                \
-# 	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin/$(OS)_$(ARCH)  \
-# 	    -v $$(pwd)/.go/cache:/.cache                            \
-# 	    --env GOCACHE="/.cache/gocache"                         \
-# 	    --env GOMODCACHE="/.cache/gomodcache"                   \
-# 	    --env ARCH="$(ARCH)"                                    \
-# 	    --env OS="$(OS)"                                        \
-# 	    --env VERSION="$(VERSION)"                              \
-# 	    --env DEBUG="$(DBG)"                                    \
-# 	    --env GOFLAGS="$(GOFLAGS)"                              \
-# 	    --env HTTP_PROXY="$(HTTP_PROXY)"                        \
-# 	    --env HTTPS_PROXY="$(HTTPS_PROXY)"                      \
-# 	    $(BUILD_IMAGE)                                          \
-# 	    ./build/lint.sh ./...
-
+fmt: # @HELP formats Go imports
 fmt:
 	goimports-reviser cmd/ pkg/
 
-$(BUILD_DIRS):
-	mkdir -p $@
-
 clean: # @HELP removes built binaries and temporary files
-clean: container-clean container-image-clean bin-clean
-
-container-clean:
-	rm -rf .container-* .dockerfile-* .push-* .buildx-initialized $(LICENSES)
-
-container-image-clean: # @HELP removes built container images
-container-image-clean:
-	for bin in $(BINS); do                                          \
-	  docker image ls $(REGISTRY)/$$bin -q | xargs docker image rm; \
-	done
-
-bin-clean:
-	test -d .go && chmod -R u+w .go || true
-	rm -rf .go bin
+clean:
+	rm -rf bin .ko-refs .apko-sbom $(BASE_HELM_REF) cmd/*/kodata
 
 help: # @HELP prints this message
 help:
 	echo "VARIABLES:"
 	echo "  BINS = $(BINS)"
+	echo "  HELM_BINS = $(HELM_BINS)"
+	echo "  VERSION = $(VERSION)"
 	echo "  OS = $(OS)"
 	echo "  ARCH = $(ARCH)"
 	echo "  DBG = $(DBG)"
@@ -442,16 +181,8 @@ help:
 	echo "  REGISTRY = $(REGISTRY)"
 	echo
 	echo "TARGETS:"
-	grep -E '^.*: *# *@HELP' $(MAKEFILE_LIST)     \
+	grep -hE '^.*: *# *@HELP' $(MAKEFILE_LIST)    \
 	    | awk '                                   \
 	        BEGIN {FS = ": *# *@HELP"};           \
 	        { printf "  %-30s %s\n", $$1, $$2 };  \
 	    '
-
-# Help set up multi-arch build tools.  This assumes you have the tools
-# installed.  If you already have a buildx builder available, you don't need
-# this.
-.buildx-initialized:
-	docker buildx create --name "$(BUILDX_NAME)" --node "$(BUILDX_NAME)-0" >/dev/null
-	docker run --rm --privileged multiarch/qemu-user-static --reset -p yes >/dev/null
-	date > $@

@@ -3,15 +3,14 @@
 RENDER_HELM_CHART_RESOURCE=$1
 CHART_FILE=$2 # Optional
 
-YQ=mikefarah/yq:4.24.5
-
-name=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.metadata.name' -)
-annotations=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.metadata.annotations' -)
-chartname=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].chartArgs.name' -)
-repo=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].chartArgs.repo' -)
-version=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].chartArgs.version' -)
-chartargs=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].chartArgs' -)
-templopts=$(cat $RENDER_HELM_CHART_RESOURCE | docker run --rm -i $YQ '.helmCharts | .[0].templateOptions' -)
+# Uses the jq-based yq from devbox.json (-r: raw strings, -y: YAML output)
+name=$(yq -r '.metadata.name' $RENDER_HELM_CHART_RESOURCE)
+annotations=$(yq -y '.metadata.annotations' $RENDER_HELM_CHART_RESOURCE)
+chartname=$(yq -r '.helmCharts | .[0].chartArgs.name' $RENDER_HELM_CHART_RESOURCE)
+repo=$(yq -r '.helmCharts | .[0].chartArgs.repo' $RENDER_HELM_CHART_RESOURCE)
+version=$(yq -r '.helmCharts | .[0].chartArgs.version' $RENDER_HELM_CHART_RESOURCE)
+chartargs=$(yq -y '.helmCharts | .[0].chartArgs' $RENDER_HELM_CHART_RESOURCE)
+templopts=$(yq -y '.helmCharts | .[0].templateOptions' $RENDER_HELM_CHART_RESOURCE)
 
 if [[ -z "$CHART_FILE" ]]; then
         outname="$chartname-$version.tgz" # FIXME, common format, but not guaranteed

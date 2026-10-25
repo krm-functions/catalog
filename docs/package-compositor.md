@@ -199,7 +199,7 @@ kubectl create secret generic foo --dry-run=client --type=kubernetes.io/ssh-auth
   --from-literal ssh-username=git --from-file ssh-privatekey=<key-file> -o yaml
 ```
 
-The container's `known_hosts` file currently contain GitHub SSH hosts
+The container's `known_hosts` file (`/var/run/ko/known_hosts`) currently contain GitHub SSH hosts
 only. See the `ssh` folder.
 
 HTTPS repositories can be accessed using a personal access token (PAT) stored
