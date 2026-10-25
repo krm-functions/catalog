@@ -3,17 +3,17 @@
 FN_MODE ?= exec
 
 ifeq ($(CONTAINER_TAG),)
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:5807049387f4f775464e7e41da251fe224ac8229fd307c32773949fd6187f256
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:1285722a33e42a25a6c63067ab3b6c4be084d085754465329cb875d01dd140a1
-GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := ghcr.io/krm-functions/gatekeeper-set-enforcement-action@sha256:cd2
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:ef7666e8ea762cdc32a53c50e00307cbe10e914f1aaf8cfd9b0bb5c7d278dfe7
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:865232a46bca8e1294c64d0de35437e18936b049159d8329000b44fd4c84c99f
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:c32150ceb6661532e85793db39749f7091a14af02eedb9d1685bda936ad03598
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:10b02b73da6e02957471957bded732fc8f4bb02045b6187a378fcf761251be43
-PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:04bdd68ece1e7f87c505394f56f82c761b65f42e8e063c9996b4764366fec195
-REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources@sha256:af7e984553154265adb2782924efe0687b19f4b8d8961e95e379f9bfd040dad8
-SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations@sha256:0d65e3637dbdc6b3397ccfb93f9d6864a263c92cb21524cf0f3ed4178cd32fe1
-SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:e49f8927f83d286d626c50f6c6df1e9e7896ec8f3192eb8bfdc3837c0098cadc
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:460a1a9893f60b9f0f9b629828fe4b3ab89a896d7bc2ab9b85dc74c2832bc3cb
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:b0771a5876240178d5e415720a400b99cc37874c6de99a95ac9ec355ad2dd07f
+GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := ghcr.io/krm-functions/gatekeeper-set-enforcement-action@sha256:f2dd9eff0eb36c32668d4432618866ebb1f0b0884870e49c38c4be040513864c
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:b6ac16ae409ce1ed88e1047bb79436e34c996a95f087caa0ed44f81230a5dc6e
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:9154fb54080b4c2f119adeba0480eadf3c467750318b88da1ab911b561b3a183
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:1d1dad04fbb06dd97a7f1767c64578a308ace1f4719b04afb54db821ff364de8
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:dea88700f25911dccc5429af3ab14702e716bd131bfa364fa28abb1952edc8e4
+PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:6b553354663fe9b099fd752b60e95594f921392fbc0db1826af3fc63b7e46a46
+REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources@sha256:7fdc4bc9d8b9df7f0e35b12d82e37fd04fa739a0df767e47f43a7e1bf6a0dd04
+SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations@sha256:506d96353476890be8e483a905829c223e18558e8a8a045a3d6871ebbdf93cbe
+SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:7d9008e799bf2173ae39446b42067a09599e0f1e070ecc12674142d38ad77ce2
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
@@ -214,19 +214,23 @@ test-gatekeeper-set-enforcement-action:
 	if [ "$$(grep 'enforcementAction: deny' test-out.yaml | wc -l)" != "2" ]; then echo "*** error setting enforcementAction"; exit 1; fi
 
 #KUBECONFORM_SCHEMA_LOCATIONS ?= "default"
+# Containers use the schema bundle shipped in the image (KO_DATA_PATH), the host path is not mounted
+ifeq ($(FN_MODE),exec)
 KUBECONFORM_SCHEMA_LOCATIONS ?= 'examples/kubeconform/schema-bundle/,examples/kubeconform/schema-bundle/CRDs-catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+endif
+KUBECONFORM_SCHEMA_ARG := $(if $(KUBECONFORM_SCHEMA_LOCATIONS),schema_locations=$(KUBECONFORM_SCHEMA_LOCATIONS))
 
 .PHONY: test-kubeconform
 test-kubeconform:
 	rm -rf tmp-results
 	#kpt fn source examples/kubeconform/manifests | kpt fn eval - --results-dir tmp-results --truncate-output=false $(KUBECONFORM) -- ignore_missing_schemas=true kubernetes_version=1.29.1 schema_locations=$(KUBECONFORM_SCHEMA_LOCATIONS) > test-out.txt || true
-	kpt fn source examples/kubeconform/manifests | kpt fn eval - --results-dir tmp-results --truncate-output=false $(KUBECONFORM) -- schema_locations=$(KUBECONFORM_SCHEMA_LOCATIONS) debug=true > test-out.txt || true
+	kpt fn source examples/kubeconform/manifests | kpt fn eval - --results-dir tmp-results --truncate-output=false $(KUBECONFORM) -- $(KUBECONFORM_SCHEMA_ARG) debug=true > test-out.txt || true
 	make test-kubeconform-results
 
 .PHONY: test-kubeconform-w-container
 test-kubeconform-w-container:
 	rm -rf tmp-results
-	kpt fn source examples/kubeconform/manifests | kpt fn eval - --results-dir tmp-results --truncate-output=false -i $(KUBECONFORM_IMAGE) -- ignore_missing_schemas=true schema_locations=$(KUBECONFORM_SCHEMA_LOCATIONS) > test-out.txt || true
+	kpt fn source examples/kubeconform/manifests | kpt fn eval - --results-dir tmp-results --truncate-output=false -i $(KUBECONFORM_IMAGE) -- ignore_missing_schemas=true > test-out.txt || true
 	make test-kubeconform-results
 
 .PHONY: test-kubeconform-results

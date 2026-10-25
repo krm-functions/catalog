@@ -87,4 +87,6 @@ $SCRIPTPATH/update-catalog.sh $IMAGE $DIGEST
 IMAGE=ghcr.io/krm-functions/gatekeeper-set-enforcement-action
 DIGEST=$(crane digest $IMAGE:$TAG)
 echo "gatekeeper-set-enforcement-action digest: $DIGEST"
+sed -i -E "s#(.*?ghcr.io/krm-functions/gatekeeper-set-enforcement-action.*@).*#\1$DIGEST#" docs/*.md
+sed -i -E "s#(.*?ghcr.io/krm-functions/gatekeeper-set-enforcement-action.*@).*#\1$DIGEST#" Makefile.test
 $SCRIPTPATH/update-catalog.sh $IMAGE $DIGEST
