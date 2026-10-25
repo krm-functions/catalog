@@ -1,5 +1,5 @@
 # ko build configuration, see https://ko.build/configuration/
-# Helm-based functions override the base image with KO_DEFAULTBASEIMAGE (see HELM_BINS in Makefile)
+# Functions needing external CLIs override the base image with KO_DEFAULTBASEIMAGE (see HELM_BINS in Makefile)
 defaultBaseImage: gcr.io/distroless/static
 defaultPlatforms:
   - linux/amd64

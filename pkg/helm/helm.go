@@ -15,18 +15,21 @@
 package helm
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/crane"
 	t "github.com/krm-functions/catalog/pkg/helmspecs"
-	"github.com/krm-functions/catalog/pkg/skopeo"
-	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
+	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/cli"
+	"helm.sh/helm/v4/pkg/getter"
+	"helm.sh/helm/v4/pkg/registry"
+	repo "helm.sh/helm/v4/pkg/repo/v1"
 )
 
 type RepoSearch struct {
@@ -36,142 +39,131 @@ type RepoSearch struct {
 	Description string `yaml:"description"`
 }
 
-type RunContext struct {
-	repoConfigDir string
-	repoConfig    string
-}
-
-func NewRunContext() *RunContext {
-	// To avoid modifying local Helm config file, we run Helm using a temporary repo config
-	repoCfgDir, err := os.MkdirTemp("", "helm-repo-cfg")
-	if err != nil {
-		panic(fmt.Errorf("error creating temp Helm config dir: %q", err.Error()))
-	}
-	return &RunContext{repoCfgDir, filepath.Join(repoCfgDir, "repository")}
-}
-
-func (ctxt *RunContext) DiscardContext() {
-	os.RemoveAll(ctxt.repoConfigDir)
-}
-
-func (ctxt *RunContext) Run(args ...string) ([]byte, error) {
-	a := append([]string{"--repository-config", ctxt.repoConfig}, args...)
-	cmd := exec.Command("helm", a...)
-	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	err := cmd.Run()
-	if err != nil {
-		return nil, fmt.Errorf("error running helm command: %q: %q (%q)", args, stderr, err.Error())
-	}
-	return stdout.Bytes(), nil
+// newSettings returns Helm settings with repo config and caches in
+// dir. This avoids modifying the local Helm config
+func newSettings(dir string) *cli.EnvSettings {
+	settings := cli.New()
+	settings.RepositoryConfig = filepath.Join(dir, "repositories.yaml")
+	settings.RepositoryCache = filepath.Join(dir, "repository")
+	settings.ContentCache = filepath.Join(dir, "content")
+	settings.RegistryConfig = filepath.Join(dir, "registry.json")
+	return settings
 }
 
 func SearchRepo(chart *t.HelmChartArgs, username, password string) ([]RepoSearch, error) {
 	if isOciRepo(chart) {
-		ociSearch, err := skopeo.ListTags(chart, username, password)
-		if err != nil {
-			return nil, err
-		}
-		versions := make([]RepoSearch, len(ociSearch.Tags))
-		for idx, v := range ociSearch.Tags {
-			versions[idx].Name = chart.Name
-			versions[idx].Version = v
-		}
-		return versions, nil
+		return searchOciRepo(chart, username, password)
 	}
 
 	// Plain HTTP Helm repo
-	helmCtxt := NewRunContext()
-	defer helmCtxt.DiscardContext()
-
-	addArgs := []string{"repo", "add", "tmprepo", chart.Repo}
-	if username != "" && password != "" {
-		addArgs = append(addArgs, "--username", username, "--password", password)
+	tmpDir, err := os.MkdirTemp("", "helm-")
+	if err != nil {
+		return nil, fmt.Errorf("creating tmp dir: %w", err)
 	}
-	_, err := helmCtxt.Run(addArgs...)
+	defer os.RemoveAll(tmpDir)
+	settings := newSettings(tmpDir)
+
+	entry := &repo.Entry{Name: "tmprepo", URL: chart.Repo, Username: username, Password: password}
+	chartRepo, err := repo.NewChartRepository(entry, getter.All(settings))
 	if err != nil {
 		return nil, err
 	}
+	chartRepo.CachePath = settings.RepositoryCache
+	indexFile, err := chartRepo.DownloadIndexFile()
+	if err != nil {
+		return nil, fmt.Errorf("downloading repo index: %w", err)
+	}
+	index, err := repo.LoadIndexFile(indexFile)
+	if err != nil {
+		return nil, fmt.Errorf("loading repo index: %w", err)
+	}
+	index.SortEntries()
 
-	_, err = helmCtxt.Run("repo", "update")
+	// Only stable releases, same as 'helm search repo' without '--devel'
+	stable, err := semver.NewConstraint(">0.0.0")
 	if err != nil {
 		return nil, err
 	}
-
-	// Search repo for chart, long listing in yaml format. May include other charts partially matching search
-	out, err := helmCtxt.Run("search", "repo", "-l", "-o", "yaml", chart.Name)
-	if err != nil {
-		return nil, err
-	}
-
 	var versions []RepoSearch
-	if err := kyaml.Unmarshal(out, &versions); err != nil {
-		return nil, fmt.Errorf("error parsing helm output: %q", err.Error())
+	for _, cv := range index.Entries[chart.Name] {
+		v, err := semver.NewVersion(cv.Version)
+		if err != nil || !stable.Check(v) {
+			continue
+		}
+		versions = append(versions, RepoSearch{
+			Version:     cv.Version,
+			AppVersion:  cv.AppVersion,
+			Name:        cv.Name,
+			Description: cv.Description,
+		})
 	}
-
-	// Normalize by stripping 'tmprepo/' chart name prefix
-	versionsNormalized := make([]RepoSearch, len(versions))
-	for idx, v := range versions {
-		v.Name = strings.TrimPrefix(v.Name, "tmprepo/")
-		versionsNormalized[idx] = v
-	}
-
-	return versionsNormalized, nil
+	return versions, nil
 }
 
-// PullChart runs 'helm pull' and returns normalized tarball filename and tarball sha256sum
+// searchOciRepo lists chart versions from the tags of an OCI repo
+func searchOciRepo(chart *t.HelmChartArgs, username, password string) ([]RepoSearch, error) {
+	ref := strings.TrimPrefix(chart.Repo, "oci://") + "/" + chart.Name
+	opt := crane.WithAuthFromKeychain(authn.DefaultKeychain)
+	if username != "" && password != "" {
+		opt = crane.WithAuth(&authn.Basic{Username: username, Password: password})
+	}
+	tags, err := crane.ListTags(ref, opt)
+	if err != nil {
+		return nil, fmt.Errorf("listing tags of %q: %w", ref, err)
+	}
+	versions := make([]RepoSearch, len(tags))
+	for idx, v := range tags {
+		versions[idx].Name = chart.Name
+		versions[idx].Version = v
+	}
+	return versions, nil
+}
+
+// PullChart pulls a chart like 'helm pull' and returns normalized tarball filename and tarball sha256sum
 func PullChart(chart *t.HelmChartArgs, destinationPath, username, password string) (tarballName, chartSha256Sum string, err error) {
-	helmCtxt := NewRunContext()
-	defer helmCtxt.DiscardContext()
+	tmpDir, err := os.MkdirTemp("", "helm-")
+	if err != nil {
+		return "", "", fmt.Errorf("creating tmp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+	settings := newSettings(tmpDir)
 
 	var dest string
 	if destinationPath == "" {
-		dest = helmCtxt.repoConfigDir
+		dest = tmpDir
 	} else {
 		dest = destinationPath
 	}
 
+	cfg := action.NewConfiguration()
+	pull := action.NewPull(action.WithConfig(cfg))
+	pull.Settings = settings
+	pull.Version = chart.Version
+	pull.DestDir = dest
+	pull.Username = username
+	pull.Password = password
+
 	if isOciRepo(chart) {
+		opts := []registry.ClientOption{registry.ClientOptCredentialsFile(settings.RegistryConfig)}
 		if username != "" && password != "" {
-			host, err := registryHost(chart.Repo)
-			if err != nil {
-				return "", "", fmt.Errorf("registry login: %w", err)
-			}
-			loginArgs := []string{"registry", "login", host}
-			loginArgs = append(loginArgs, "--username", username, "--password", password)
-			_, err = helmCtxt.Run(loginArgs...)
-			if err != nil {
-				return "", "", fmt.Errorf("registry login: %w", err)
-			}
+			opts = append(opts, registry.ClientOptBasicAuth(username, password))
 		}
-		_, err := helmCtxt.Run("pull", chart.Repo+"/"+chart.Name, "--version", chart.Version, "--destination", dest)
+		cfg.RegistryClient, err = registry.NewClient(opts...)
 		if err != nil {
+			return "", "", fmt.Errorf("creating registry client: %w", err)
+		}
+		if _, err = pull.Run(chart.Repo + "/" + chart.Name); err != nil {
 			return "", "", fmt.Errorf("pulling chart (oci): %w", err)
 		}
 	} else {
-		repoAlias := "tmprepo"
-		addArgs := []string{"repo", "add", repoAlias, chart.Repo}
-		if username != "" && password != "" {
-			addArgs = append(addArgs, "--username", username, "--password", password)
-		}
-		_, err := helmCtxt.Run(addArgs...)
-		if err != nil {
-			return "", "", fmt.Errorf("adding repo: %w", err)
-		}
-		_, err = helmCtxt.Run("repo", "update")
-		if err != nil {
-			return "", "", fmt.Errorf("updating repo: %w", err)
-		}
-		_, err = helmCtxt.Run("pull", repoAlias+"/"+chart.Name, "--version", chart.Version, "--destination", dest)
-		if err != nil {
+		pull.RepoURL = chart.Repo
+		if _, err = pull.Run(chart.Name); err != nil {
 			return "", "", fmt.Errorf("pulling chart: %w", err)
 		}
 	}
 
 	tarball := chartTarballName(chart)
-	if _, err := os.Stat(tarball); err != nil {
+	if _, err := os.Stat(filepath.Join(dest, tarball)); err != nil {
 		options, err := os.ReadDir(dest)
 		if err != nil {
 			return "", "", fmt.Errorf("read dir with chart tarball: %w", err)
@@ -218,19 +210,6 @@ func SourceChart(chart *t.HelmChartArgs, destination, username, password string)
 
 func isOciRepo(chart *t.HelmChartArgs) bool {
 	return strings.HasPrefix(chart.Repo, "oci://")
-}
-
-// registryHost returns the registry host (incl. port) of an 'oci://' repo URL.
-// Helm v4 'helm registry login' only accepts the host, not a full URL or path
-func registryHost(repo string) (string, error) {
-	u, err := url.Parse(repo)
-	if err != nil {
-		return "", fmt.Errorf("parsing repo url %q: %w", repo, err)
-	}
-	if u.Host == "" {
-		return "", fmt.Errorf("no registry host in repo url %q", repo)
-	}
-	return u.Host, nil
 }
 
 // chartTarballName returns the normalized tarball name 'name-v1.2.3.tgz'

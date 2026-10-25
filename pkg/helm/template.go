@@ -15,106 +15,131 @@
 package helm
 
 import (
-	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path"
-	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn"
-	securejoin "github.com/cyphar/filepath-securejoin"
 	t "github.com/krm-functions/catalog/pkg/helmspecs"
+	"helm.sh/helm/v4/pkg/action"
+	helmchart "helm.sh/helm/v4/pkg/chart"
+	"helm.sh/helm/v4/pkg/chart/common"
+	"helm.sh/helm/v4/pkg/chart/loader"
+	release "helm.sh/helm/v4/pkg/release/v1"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-const (
-	maxChartTemplateFileLength = 1024 * 2048
-)
-
-// Template extracts a chart tarball and renders the chart using given
-// values and `helm template`. The raw chart tarball data is given in
+// Template renders a chart tarball using given values, equivalent to
+// `helm template`. The raw chart tarball data is given in
 // `chartTarball` (note, not base64 encoded). Returns the rendered
 // text
 func Template(chart *t.HelmChart, chartTarball []byte) ([]byte, error) {
-	tmpDir, err := os.MkdirTemp("", "chart-")
+	chrt, err := loadChart(chartTarball)
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tmpDir)
 
-	err = ExtractChart(chartTarball, tmpDir)
+	vals, err := chartValues(chart)
 	if err != nil {
-		return nil, fmt.Errorf("extracting chart: %w", err)
+		return nil, fmt.Errorf("parsing values: %w", err)
 	}
 
-	valuesFile := filepath.Join(tmpDir, "values.yaml")
-	err = writeValuesFile(chart, valuesFile)
+	client, err := newTemplateInstall(chart)
 	if err != nil {
-		return nil, fmt.Errorf("writing values file: %w", err)
-	}
-	args := buildHelmTemplateArgs(chart)
-	args = append(args, "--values", valuesFile, filepath.Join(tmpDir, chart.Args.Name))
-
-	helmCtxt := NewRunContext()
-	defer helmCtxt.DiscardContext()
-	stdout, err := helmCtxt.Run(args...)
-	if err != nil {
-		return nil, fmt.Errorf("running helm template: %w", err)
+		return nil, err
 	}
 
-	return stdout, nil
+	ri, err := client.Run(chrt, vals)
+	if err != nil {
+		return nil, fmt.Errorf("rendering chart: %w", err)
+	}
+	rel, ok := ri.(*release.Release)
+	if !ok {
+		return nil, fmt.Errorf("unsupported release type: %T", ri)
+	}
+
+	// Same output format as `helm template`, i.e. the manifest followed by hooks
+	var manifests bytes.Buffer
+	fmt.Fprintln(&manifests, strings.TrimSpace(rel.Manifest))
+	for _, h := range rel.Hooks {
+		if chart.Options.SkipTests && slices.Contains(h.Events, release.HookTest) {
+			continue
+		}
+		fmt.Fprintf(&manifests, "---\n# Source: %s\n%s\n", h.Path, h.Manifest)
+	}
+	return manifests.Bytes(), nil
 }
 
-// ExtractChart extracts a chart tarball into destDir
-func ExtractChart(chartTarball []byte, destDir string) error {
-	gzr, err := gzip.NewReader(bytes.NewReader(chartTarball))
+// newTemplateInstall prepares a client-only install action, configured like `helm template`
+func newTemplateInstall(chart *t.HelmChart) (*action.Install, error) {
+	opts := chart.Options
+	client := action.NewInstall(action.NewConfiguration())
+	client.DryRunStrategy = action.DryRunClient
+	client.Replace = true // Skip the name check
+	client.ReleaseName = "release-name"
+	client.NameTemplate = opts.NameTemplate
+	client.Description = opts.Description
+	client.IncludeCRDs = opts.IncludeCRDs
+	client.APIVersions = common.VersionSet(opts.APIVersions)
+	client.Namespace = opts.Namespace
+	if client.Namespace == "" {
+		client.Namespace = "default"
+	}
+	if opts.KubeVersion != "" {
+		kubeVersion, err := common.ParseKubeVersion(opts.KubeVersion)
+		if err != nil {
+			return nil, fmt.Errorf("invalid kube version %q: %w", opts.KubeVersion, err)
+		}
+		client.KubeVersion = kubeVersion
+	}
+
+	// Release name resolution as `helm template [NAME] CHART`
+	args := []string{chart.Args.Name}
+	if opts.ReleaseName != "" {
+		args = []string{opts.ReleaseName, chart.Args.Name}
+	}
+	name, _, err := client.NameAndChart(args)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer gzr.Close()
-	tr := tar.NewReader(gzr)
+	client.ReleaseName = name
+	return client, nil
+}
 
-	// Extract tar archive files
-	for {
-		hdr, xtErr := tr.Next()
-		if xtErr == io.EOF {
-			break // End of archive
-		} else if xtErr != nil {
-			return xtErr
-		}
-		fname := hdr.Name
-		if path.IsAbs(fname) || strings.Contains(fname, "..") {
-			return errors.New("chart contains file with illegal path")
-		}
-		fileWithPath, fnerr := securejoin.SecureJoin(destDir, fname)
-		if fnerr != nil {
-			return fnerr
-		}
-		if hdr.Typeflag == tar.TypeReg {
-			fdir := filepath.Dir(fileWithPath)
-			if mkdErr := os.MkdirAll(fdir, 0o755); mkdErr != nil {
-				return mkdErr
-			}
-
-			file, fErr := os.Create(fileWithPath)
-
-			if fErr != nil {
-				return fErr
-			}
-			_, fErr = io.CopyN(file, tr, maxChartTemplateFileLength)
-			file.Close()
-			if fErr != nil && fErr != io.EOF {
-				return fErr
-			}
+// loadChart loads a chart tarball and rejects charts `helm template` would not render
+func loadChart(chartTarball []byte) (helmchart.Charter, error) {
+	chrt, err := loader.LoadArchive(bytes.NewReader(chartTarball))
+	if err != nil {
+		return nil, fmt.Errorf("loading chart: %w", err)
+	}
+	ac, err := helmchart.NewDefaultAccessor(chrt)
+	if err != nil {
+		return nil, err
+	}
+	switch typ := ac.MetadataAsMap()["Type"]; typ {
+	case nil, "", "application":
+	default:
+		return nil, fmt.Errorf("%s charts are not installable", typ)
+	}
+	if req := ac.MetaDependencies(); len(req) > 0 {
+		if err = action.CheckDependencies(chrt, req); err != nil {
+			return nil, errors.Join(errors.New("chart dependencies missing from chart tarball"), err)
 		}
 	}
-	return nil
+	return chrt, nil
+}
+
+// chartValues returns the inline chart values. Values are round-tripped
+// through YAML to get the same value types as when Helm reads a values file
+func chartValues(chart *t.HelmChart) (map[string]any, error) {
+	b, err := kyaml.Marshal(chart.Options.Values.ValuesInline)
+	if err != nil {
+		return nil, err
+	}
+	return common.ReadValues(b)
 }
 
 func ParseAsKubeObjects(rendered []byte) (fn.KubeObjects, error) {
@@ -150,45 +175,4 @@ func ParseAsRNodes(rendered []byte) ([]*kyaml.RNode, error) {
 		return nil, err
 	}
 	return nodes, nil
-}
-
-// writeValuesFile writes chart values to a file for passing to Helm
-func writeValuesFile(chart *t.HelmChart, valuesFilename string) error {
-	vals := chart.Options.Values.ValuesInline
-	b, err := kyaml.Marshal(vals)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(valuesFilename, b, 0o600)
-}
-
-// buildHelmTemplateArgs prepares arguments for `helm template`
-func buildHelmTemplateArgs(chart *t.HelmChart) []string {
-	opts := chart.Options
-	args := []string{"template"}
-	if opts.ReleaseName != "" {
-		args = append(args, opts.ReleaseName)
-	}
-	if opts.Namespace != "" {
-		args = append(args, "--namespace", opts.Namespace)
-	}
-	if opts.NameTemplate != "" {
-		args = append(args, "--name-template", opts.NameTemplate)
-	}
-	for _, apiVer := range opts.APIVersions {
-		args = append(args, "--api-versions", apiVer)
-	}
-	if opts.KubeVersion != "" {
-		args = append(args, "--kube-version", opts.KubeVersion)
-	}
-	if opts.Description != "" {
-		args = append(args, "--description", opts.Description)
-	}
-	if opts.IncludeCRDs {
-		args = append(args, "--include-crds")
-	}
-	if opts.SkipTests {
-		args = append(args, "--skip-tests")
-	}
-	return args
 }
