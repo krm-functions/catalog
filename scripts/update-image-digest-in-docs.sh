@@ -1,17 +1,17 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
 set -e
 
 TAG=$1
 
 SCRIPT=$(readlink -f $0)
-SCRIPTPATH=`dirname $SCRIPT`
+SCRIPTPATH=$(dirname $SCRIPT)
 
 if [ -z "$TAG" ]; then
-    # SHA=`git rev-parse --short HEAD`
-    # TAG="$SHA"
-    TAG=latest
-    echo "No image tag specified, using: $TAG"
+        # SHA=`git rev-parse --short HEAD`
+        # TAG="$SHA"
+        TAG=latest
+        echo "No image tag specified, using: $TAG"
 fi
 
 IMAGE=ghcr.io/krm-functions/helm-upgrader

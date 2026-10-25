@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -134,9 +135,13 @@ func PullChart(chart *t.HelmChartArgs, destinationPath, username, password strin
 
 	if isOciRepo(chart) {
 		if username != "" && password != "" {
-			loginArgs := []string{"registry", "login", strings.TrimPrefix(chart.Repo, "oci://")}
+			host, err := registryHost(chart.Repo)
+			if err != nil {
+				return "", "", fmt.Errorf("registry login: %w", err)
+			}
+			loginArgs := []string{"registry", "login", host}
 			loginArgs = append(loginArgs, "--username", username, "--password", password)
-			_, err := helmCtxt.Run(loginArgs...)
+			_, err = helmCtxt.Run(loginArgs...)
 			if err != nil {
 				return "", "", fmt.Errorf("registry login: %w", err)
 			}
@@ -213,6 +218,19 @@ func SourceChart(chart *t.HelmChartArgs, destination, username, password string)
 
 func isOciRepo(chart *t.HelmChartArgs) bool {
 	return strings.HasPrefix(chart.Repo, "oci://")
+}
+
+// registryHost returns the registry host (incl. port) of an 'oci://' repo URL.
+// Helm v4 'helm registry login' only accepts the host, not a full URL or path
+func registryHost(repo string) (string, error) {
+	u, err := url.Parse(repo)
+	if err != nil {
+		return "", fmt.Errorf("parsing repo url %q: %w", repo, err)
+	}
+	if u.Host == "" {
+		return "", fmt.Errorf("no registry host in repo url %q", repo)
+	}
+	return u.Host, nil
 }
 
 // chartTarballName returns the normalized tarball name 'name-v1.2.3.tgz'
