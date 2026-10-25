@@ -1,0 +1,13 @@
+# ko build configuration, see https://ko.build/configuration/
+# Helm-based functions override the base image with KO_DEFAULTBASEIMAGE (see HELM_BINS in Makefile)
+defaultBaseImage: gcr.io/distroless/static
+defaultPlatforms:
+  - linux/amd64
+  - linux/arm/v7
+  - linux/arm64
+defaultEnv:
+  - CGO_ENABLED=0
+defaultFlags:
+  - -trimpath
+defaultLdflags:
+  - -s -w -X github.com/krm-functions/catalog/pkg/version.Version={{.Env.VERSION}}

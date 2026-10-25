@@ -1,7 +1,5 @@
 # This makefile holds "end-to-end" tests, i.e. function usage with kpt and real manifest manipulation
 
-SHELL=/bin/bash -o pipefail
-
 FN_MODE ?= exec
 
 ifeq ($(CONTAINER_TAG),)

@@ -1,0 +1,39 @@
+# Base image for functions building on top of Helm (and skopeo).
+# Built and published with 'make base-helm', ko layers the function binaries on top.
+contents:
+  repositories:
+    - https://dl-cdn.alpinelinux.org/alpine/v3.24/main
+    - https://dl-cdn.alpinelinux.org/alpine/v3.24/community
+  keyring:
+    - https://alpinelinux.org/keys/alpine-devel@lists.alpinelinux.org-4a6a0840.rsa.pub
+    - https://alpinelinux.org/keys/alpine-devel@lists.alpinelinux.org-5243ef4b.rsa.pub
+    - https://alpinelinux.org/keys/alpine-devel@lists.alpinelinux.org-5261cecb.rsa.pub
+    - https://alpinelinux.org/keys/alpine-devel@lists.alpinelinux.org-6165ee59.rsa.pub
+    - https://alpinelinux.org/keys/alpine-devel@lists.alpinelinux.org-616ae350.rsa.pub
+    - https://alpinelinux.org/keys/alpine-devel@lists.alpinelinux.org-616adfeb.rsa.pub
+  packages:
+    - alpine-baselayout-data
+    - alpine-release
+    - ca-certificates-bundle
+    - skopeo
+    - helm=~3.19
+
+accounts:
+  run-as: 65535
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  HOME: /
+  HELM_PATH_CACHE: /var/cache
+  HELM_CONFIG_HOME: /tmp/helm/config
+  HELM_CACHE_HOME: /tmp/helm/cache
+
+paths:
+  - path: /tmp
+    type: directory
+    permissions: 0o1777
+
+archs:
+  - x86_64
+  - aarch64
+  - armv7

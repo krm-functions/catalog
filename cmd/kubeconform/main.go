@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/krm-functions/catalog/pkg/util"
@@ -75,6 +76,13 @@ func (fnCfg *FunctionConfig) Default() error { //nolint:unparam // this return i
 	}
 	if fnCfg.Data.SchemaLocations == "" {
 		fnCfg.Data.SchemaLocations = os.Getenv("KUBECONFORM_SCHEMA_LOCATIONS")
+	}
+	if fnCfg.Data.SchemaLocations == "" {
+		// Schema bundle shipped with the container image, see 'scripts/source-schemas.sh'
+		if koData := os.Getenv("KO_DATA_PATH"); koData != "" {
+			bundle := filepath.Join(koData, "schema-bundle")
+			fnCfg.Data.SchemaLocations = bundle + "/," + bundle + "/CRDs-catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+		}
 	}
 	if fnCfg.Data.Debug == "" {
 		fnCfg.Data.Debug = StringFalse
