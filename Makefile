@@ -13,10 +13,11 @@ endif
 # The binaries to build (just the basenames)
 BINS ?= apply-setters digester gatekeeper-set-enforcement-action helm-upgrader kubeconform remove-local-config-resources render-helm-chart set-annotations set-labels source-helm-chart package-compositor # template-kyaml
 
-# Binaries building on top of Helm (and skopeo). Their images use the 'base-helm' image
+# Binaries that need external CLIs at runtime. Their images use the 'base-helm' image
 # built by apko, see 'build/base-helm.apko.yaml'. All other images use the
-# 'defaultBaseImage' from '.ko.yaml'.
-HELM_BINS ?= digester helm-upgrader render-helm-chart source-helm-chart
+# 'defaultBaseImage' from '.ko.yaml'. Currently empty, the Helm-based functions use the
+# Helm Go SDK.
+HELM_BINS ?=
 
 # The registry to push to. To test 'make push' locally, run a throwaway registry with
 # 'crane registry serve --address localhost:5001' and use REGISTRY=localhost:5001/krmfn
@@ -94,10 +95,10 @@ kodata:
 	fi
 
 BASE_HELM_REF = .base-helm.ref
-# The Helm-based binaries being built, the base-helm image is only needed for these
+# The binaries being built that need the base-helm image
 BINS_ON_BASE_HELM := $(filter $(HELM_BINS),$(BINS))
 
-base-helm: # @HELP builds and pushes the multi-arch base image for Helm-based functions
+base-helm: # @HELP builds and pushes the multi-arch base image for functions needing external CLIs
 base-helm:
 	mkdir -p .apko-sbom
 	apko publish build/base-helm.apko.yaml $(REGISTRY)/base-helm:$(VERSION) --sbom-path .apko-sbom

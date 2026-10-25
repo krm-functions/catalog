@@ -1,4 +1,4 @@
-# Base image for functions building on top of Helm (and skopeo).
+# Base image for functions that need external CLIs at runtime, add those as packages.
 # Built and published with 'make base-helm', ko layers the function binaries on top.
 contents:
   repositories:
@@ -15,8 +15,6 @@ contents:
     - alpine-baselayout-data
     - alpine-release
     - ca-certificates-bundle
-    - skopeo
-    - helm=~3.19
 
 accounts:
   run-as: 65535
@@ -24,9 +22,6 @@ accounts:
 environment:
   PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   HOME: /
-  HELM_PATH_CACHE: /var/cache
-  HELM_CONFIG_HOME: /tmp/helm/config
-  HELM_CACHE_HOME: /tmp/helm/cache
 
 paths:
   - path: /tmp

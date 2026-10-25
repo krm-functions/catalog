@@ -18,7 +18,8 @@ make e2e-tests       # some tests run the function images and need docker/podman
 make push           # build and push multi-arch images with ko (REGISTRY=...)
 ```
 
-Images are built with [ko](https://ko.build). The Helm-based functions use a
-base image built with [apko](https://github.com/chainguard-dev/apko) (see
+Images are built with [ko](https://ko.build). Functions that need external
+CLIs at runtime (`HELM_BINS` in the Makefile, currently none) use a base image
+built with [apko](https://github.com/chainguard-dev/apko) (see
 `build/base-helm.apko.yaml`), the kubeconform schema bundle needs
 `scripts/source-schemas.sh` to be run first.
