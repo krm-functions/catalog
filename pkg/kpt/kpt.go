@@ -23,7 +23,7 @@ import (
 	"strings"
 	"text/template"
 
-	kptfile "github.com/nephio-project/porch/pkg/kpt/api/kptfile/v1"
+	kptfile "github.com/kptdev/kpt/api/kptfile/v1"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
@@ -67,16 +67,16 @@ func UpdateKptMetadata(path, pkgName string, metadata map[string]string, gitDire
 	kf.Namespace = ""
 	// Set source
 	kf.Upstream = &kptfile.Upstream{
-		Type: "git",
+		Type: kptfile.GitOrigin,
 		Git: &kptfile.Git{
 			Repo:      gitRepo,
 			Directory: "/" + gitDirectory,
 			Ref:       gitRev,
 		},
-		UpdateStrategy: "resource-merge",
+		UpdateStrategy: kptfile.ResourceMerge,
 	}
-	kf.UpstreamLock = &kptfile.UpstreamLock{
-		Type: "git",
+	kf.UpstreamLock = &kptfile.Locator{
+		Type: kptfile.GitOrigin,
 		Git: &kptfile.GitLock{
 			Repo:      gitRepo,
 			Directory: "/" + gitDirectory,
