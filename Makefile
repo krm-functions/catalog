@@ -39,7 +39,7 @@ BASE_IMAGE ?= alpine:3.24.3
 BASE_IMAGE_DISTROLESS ?= gcr.io/distroless/static
 
 # For functions building on top of Helm
-HELM_VERSION=v3.16.1
+HELM_VERSION=v4.3.1
 
 REGISTRY ?= ghcr.io/krm-functions
 

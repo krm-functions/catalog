@@ -25,7 +25,7 @@ HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart:$(CONTAINER_TAG)
 HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader:$(CONTAINER_TAG)
 KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform:$(CONTAINER_TAG)
 PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor:$(CONTAINER_TAG)
-REMOVE_LOCAL_CONFIG_RESOURCES := ghcr.io/krm-functions/remove-local-config-resources:$(CONTAINER_TAG)
+REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources:$(CONTAINER_TAG)
 SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations:$(CONTAINER_TAG)
 SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels:$(CONTAINER_TAG)
 endif
