@@ -17,7 +17,6 @@ package kpt
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,23 +49,33 @@ func UpdateKptMetadata(path, pkgName string, metadata map[string]string, gitDire
 	}
 
 	kfn := filepath.Join(path, kptfile.KptFileName)
-	var kf *kptfile.KptFile
+	var kf *yaml.RNode
 	_, err = os.Stat(kfn)
 	if err == nil {
-		// Kptfile exists already
-		kf, err = ReadKptfile(kfn)
+		// Kptfile exists already. Edit it as a node tree, a round-trip through the
+		// KptFile struct would drop comments, unknown fields and empty omitempty fields
+		kf, err = yaml.ReadFile(kfn)
+		if err != nil {
+			return fmt.Errorf("reading %v: %v", kfn, err)
+		}
+	} else {
+		kf, err = yaml.FromMap(map[string]any{
+			"apiVersion": kptfile.TypeMeta.APIVersion,
+			"kind":       kptfile.TypeMeta.Kind,
+		})
 		if err != nil {
 			return err
 		}
-	} else {
-		kf = &kptfile.KptFile{}
-		kf.ResourceMeta = kptfile.TypeMeta
 	}
 	// 'kpt kpg get' sets name to the name of the package create (to path) and removes namespace
-	kf.Name = pkgName
-	kf.Namespace = ""
+	if err = kf.SetName(pkgName); err != nil {
+		return err
+	}
+	if err = kf.SetNamespace(""); err != nil {
+		return err
+	}
 	// Set source
-	kf.Upstream = &kptfile.Upstream{
+	upstream := &kptfile.Upstream{
 		Type: kptfile.GitOrigin,
 		Git: &kptfile.Git{
 			Repo:      gitRepo,
@@ -75,7 +84,7 @@ func UpdateKptMetadata(path, pkgName string, metadata map[string]string, gitDire
 		},
 		UpdateStrategy: kptfile.ResourceMerge,
 	}
-	kf.UpstreamLock = &kptfile.Locator{
+	upstreamLock := &kptfile.Locator{
 		Type: kptfile.GitOrigin,
 		Git: &kptfile.GitLock{
 			Repo:      gitRepo,
@@ -84,12 +93,41 @@ func UpdateKptMetadata(path, pkgName string, metadata map[string]string, gitDire
 			Commit:    gitHash,
 		},
 	}
-
-	err = WriteKptfile(kfn, kf)
-	if err != nil {
+	// Insert in reverse order, both after 'metadata', which gives the same field order as kpt
+	if err = setFieldAfter(kf, "upstreamLock", upstreamLock, yaml.MetadataField); err != nil {
+		return err
+	}
+	if err = setFieldAfter(kf, "upstream", upstream, yaml.MetadataField); err != nil {
 		return err
 	}
 
+	return WriteKptfile(kfn, kf)
+}
+
+// setFieldAfter sets field to the YAML encoding of value. A new field is inserted
+// after the field named 'after', or appended if that field does not exist
+func setFieldAfter(rn *yaml.RNode, field string, value any, after string) error {
+	b, err := yaml.Marshal(value)
+	if err != nil {
+		return err
+	}
+	vn, err := yaml.Parse(string(b))
+	if err != nil {
+		return err
+	}
+	if rn.Field(field) != nil {
+		return rn.PipeE(yaml.SetField(field, vn))
+	}
+	content := rn.YNode().Content
+	pos := len(content)
+	for i := 0; i < len(content)-1; i += 2 {
+		if content[i].Value == after {
+			pos = i + 2
+			break
+		}
+	}
+	kv := []*yaml.Node{yaml.NewScalarRNode(field).YNode(), vn.YNode()}
+	rn.YNode().Content = append(content[:pos], append(kv, content[pos:]...)...)
 	return nil
 }
 
@@ -120,38 +158,12 @@ func writeTemplated(templateString, filename string, data map[string]any) error 
 	return pkgCtx.Execute(fh, data)
 }
 
-func ReadKptfile(filename string) (*kptfile.KptFile, error) {
-	kr, err := os.Open(filename)
-	if err != nil {
-		return nil, fmt.Errorf("opening %v: %v", filename, err)
-	}
-	b, err := io.ReadAll(kr)
-	if err != nil {
-		return nil, fmt.Errorf("reading %v: %v", filename, err)
-	}
-	return ParseKptfile(b)
-}
-
-func ParseKptfile(data []byte) (*kptfile.KptFile, error) {
-	kf := &kptfile.KptFile{}
-	if err := yaml.Unmarshal(data, kf); err != nil {
-		return nil, err
-	}
-	return kf, nil
-}
-
-func WriteKptfile(filename string, kf *kptfile.KptFile) error {
-	kw, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("opening for update %v: %v", filename, err)
-	}
-	defer kw.Close()
-	b, err := yaml.Marshal(kf)
+func WriteKptfile(filename string, kf *yaml.RNode) error {
+	s, err := kf.String()
 	if err != nil {
 		return err
 	}
-	_, err = kw.Write(b)
-	if err != nil {
+	if err = os.WriteFile(filename, []byte(s), 0o644); err != nil {
 		return fmt.Errorf("writing %v: %v", filename, err)
 	}
 	return nil
