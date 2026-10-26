@@ -85,6 +85,7 @@ upstreamLock:
 `
 
 func updateMetadata(t *testing.T, dir string) string {
+	t.Helper()
 	err := UpdateKptMetadata(dir, "foo", map[string]string{"name": "foo"}, "pkg1", "https://github.com/example/repo", "main", "abc123")
 	if err != nil {
 		t.Fatalf("UpdateKptMetadata: %v", err)

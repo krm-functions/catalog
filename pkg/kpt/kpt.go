@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -68,10 +69,10 @@ func UpdateKptMetadata(path, pkgName string, metadata map[string]string, gitDire
 		}
 	}
 	// 'kpt kpg get' sets name to the name of the package create (to path) and removes namespace
-	if err = kf.SetName(pkgName); err != nil {
+	if err := kf.SetName(pkgName); err != nil {
 		return err
 	}
-	if err = kf.SetNamespace(""); err != nil {
+	if err := kf.SetNamespace(""); err != nil {
 		return err
 	}
 	// Set source
@@ -94,14 +95,14 @@ func UpdateKptMetadata(path, pkgName string, metadata map[string]string, gitDire
 		},
 	}
 	// Insert in reverse order, both after 'metadata', which gives the same field order as kpt
-	if err = setFieldAfter(kf, "upstreamLock", upstreamLock, yaml.MetadataField); err != nil {
+	if err := setFieldAfter(kf, "upstreamLock", upstreamLock, yaml.MetadataField); err != nil {
 		return err
 	}
-	if err = setFieldAfter(kf, "upstream", upstream, yaml.MetadataField); err != nil {
+	if err := setFieldAfter(kf, "upstream", upstream, yaml.MetadataField); err != nil {
 		return err
 	}
 
-	return WriteKptfile(kfn, kf)
+	return yaml.WriteFile(kf, kfn)
 }
 
 // setFieldAfter sets field to the YAML encoding of value. A new field is inserted
@@ -127,7 +128,7 @@ func setFieldAfter(rn *yaml.RNode, field string, value any, after string) error 
 		}
 	}
 	kv := []*yaml.Node{yaml.NewScalarRNode(field).YNode(), vn.YNode()}
-	rn.YNode().Content = append(content[:pos], append(kv, content[pos:]...)...)
+	rn.YNode().Content = slices.Insert(content, pos, kv...)
 	return nil
 }
 
@@ -156,15 +157,4 @@ func writeTemplated(templateString, filename string, data map[string]any) error 
 	}
 	defer fh.Close()
 	return pkgCtx.Execute(fh, data)
-}
-
-func WriteKptfile(filename string, kf *yaml.RNode) error {
-	s, err := kf.String()
-	if err != nil {
-		return err
-	}
-	if err = os.WriteFile(filename, []byte(s), 0o644); err != nil {
-		return fmt.Errorf("writing %v: %v", filename, err)
-	}
-	return nil
 }
