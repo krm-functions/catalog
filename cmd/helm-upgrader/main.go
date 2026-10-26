@@ -178,6 +178,15 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			if err != nil {
 				return false, err
 			}
+			// Update the version in-place on the original nodes. Writing back spec.Charts would drop
+			// fields with omitempty, e.g. empty strings intended for kpt setters
+			chs, found, err := kubeObject.NestedSlice("helmCharts")
+			if !found {
+				return false, fmt.Errorf("helmCharts key not found in %s", kubeObject.GetName())
+			}
+			if err != nil {
+				return false, err
+			}
 			for idx := range spec.Charts {
 				helmChart := &spec.Charts[idx]
 				var upgraded *t.HelmChartArgs
@@ -198,12 +207,11 @@ func Run(rl *fn.ResourceList) (bool, error) {
 				if err != nil {
 					return false, err
 				}
-				helmChart.Args.Version = upgraded.Version
+				err = chs[idx].SetNestedField(upgraded.Version, "chartArgs", "version")
+				if err != nil {
+					return false, err
+				}
 				*results = append(*results, fn.ConfigObjectResult(info, kubeObject, fn.Info))
-			}
-			err = kubeObject.SetNestedField(spec.Charts, "helmCharts")
-			if err != nil {
-				return false, err
 			}
 		} else if kubeObject.IsGVK("argoproj.io", "", "Application") {
 			upgradeConstraint := kubeObject.GetAnnotation(api.HelmResourceAnnotationUpgradeConstraint)
