@@ -24,11 +24,11 @@
           version = "0.3.0";
           src = ./.;
           subPackages = [ "cmd/package-compositor" ];
-          vendorHash = "sha256-uwMuQESKiMG2MnwRIejoo3bop35dRNk25qEokQzej8o=";
-          go = pkgs.go_1_24;
+          vendorHash = "sha256-6eJlZLKu4koSPn+WP7YzK5wPFfwPC7OIPmI5uA/saxY=";
+          go = pkgs.go_1_26;
           # vendorHash = nixpkgs.lib.fakeHash;
           buildInputs = [
-            pkgs.go_1_24
+            pkgs.go_1_26
             # ...
           ];
           postInstall = ''

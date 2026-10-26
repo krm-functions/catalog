@@ -16,6 +16,7 @@ helmCharts:
       name: bar
   templateOptions:
     releaseName: cert-manager
+    kubeVersion: "" # kpt-set: ${krm-kube-version}
     namespace: cert-manager
     values:
       valuesInline:
