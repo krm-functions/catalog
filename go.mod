@@ -11,7 +11,7 @@ require (
 	github.com/google/go-containerregistry v0.22.1
 	github.com/kptdev/kpt/api v1.1.0
 	github.com/stretchr/testify v1.12.1
-	github.com/yannh/kubeconform v0.7.0
+	github.com/yannh/kubeconform v0.8.0
 	golang.org/x/crypto v0.58.0
 	helm.sh/helm/v4 v4.3.1
 	k8s.io/api v0.37.1
@@ -76,7 +76,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/ianlancetaylor/demangle v0.0.0-20240805132620-81f5be970eca // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
