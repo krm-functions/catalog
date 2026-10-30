@@ -28,6 +28,7 @@ import (
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/cli"
 	"helm.sh/helm/v4/pkg/getter"
+	"helm.sh/helm/v4/pkg/helmpath"
 	"helm.sh/helm/v4/pkg/registry"
 	repo "helm.sh/helm/v4/pkg/repo/v1"
 )
@@ -40,8 +41,14 @@ type RepoSearch struct {
 }
 
 // newSettings returns Helm settings with repo config and caches in
-// dir. This avoids modifying the local Helm config
+// dir. This avoids modifying the local Helm config. The Helm home
+// env vars are also set, since some Helm code paths ignore settings
+// and use helmpath defaults, e.g. repo.FindChartInRepoURL, which
+// would otherwise fall back to $HOME/.cache (not writable in containers)
 func newSettings(dir string) *cli.EnvSettings {
+	os.Setenv(helmpath.CacheHomeEnvVar, filepath.Join(dir, "cache"))
+	os.Setenv(helmpath.ConfigHomeEnvVar, filepath.Join(dir, "config"))
+	os.Setenv(helmpath.DataHomeEnvVar, filepath.Join(dir, "data"))
 	settings := cli.New()
 	settings.RepositoryConfig = filepath.Join(dir, "repositories.yaml")
 	settings.RepositoryCache = filepath.Join(dir, "repository")

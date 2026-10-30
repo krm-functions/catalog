@@ -195,3 +195,16 @@ func TestPullChart(t *testing.T) {
 	_, _, err = PullChart(chart, t.TempDir(), "", "")
 	a.Error(t, err)
 }
+
+// TestPullChartNoHome mimics running in a container where HOME is not writable
+func TestPullChartNoHome(t *testing.T) {
+	srv, _ := chartRepoServer(t)
+	chart := &specs.HelmChartArgs{Name: "test-chart", Version: "0.1.0", Repo: srv.URL}
+
+	t.Setenv("HOME", "/nonexistent")
+	for _, v := range []string{"HELM_CACHE_HOME", "HELM_CONFIG_HOME", "HELM_DATA_HOME", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME"} {
+		t.Setenv(v, "")
+	}
+	_, _, err := PullChart(chart, t.TempDir(), "", "")
+	r.NoError(t, err)
+}
