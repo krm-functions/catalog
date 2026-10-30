@@ -3,17 +3,17 @@
 FN_MODE ?= exec
 
 ifeq ($(CONTAINER_TAG),)
-APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:460a1a9893f60b9f0f9b629828fe4b3ab89a896d7bc2ab9b85dc74c2832bc3cb
-DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:b0771a5876240178d5e415720a400b99cc37874c6de99a95ac9ec355ad2dd07f
-GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := ghcr.io/krm-functions/gatekeeper-set-enforcement-action@sha256:f2dd9eff0eb36c32668d4432618866ebb1f0b0884870e49c38c4be040513864c
-HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:b6ac16ae409ce1ed88e1047bb79436e34c996a95f087caa0ed44f81230a5dc6e
-HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:9154fb54080b4c2f119adeba0480eadf3c467750318b88da1ab911b561b3a183
-HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:1d1dad04fbb06dd97a7f1767c64578a308ace1f4719b04afb54db821ff364de8
-KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:dea88700f25911dccc5429af3ab14702e716bd131bfa364fa28abb1952edc8e4
-PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:6b553354663fe9b099fd752b60e95594f921392fbc0db1826af3fc63b7e46a46
-REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources@sha256:7fdc4bc9d8b9df7f0e35b12d82e37fd04fa739a0df767e47f43a7e1bf6a0dd04
-SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations@sha256:506d96353476890be8e483a905829c223e18558e8a8a045a3d6871ebbdf93cbe
-SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:7d9008e799bf2173ae39446b42067a09599e0f1e070ecc12674142d38ad77ce2
+APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters@sha256:62726742e5dc2359bf600f97b32fb68f5c94b763048c2b1a75eb56ae98ccf82d
+DIGESTER_IMAGE := ghcr.io/krm-functions/digester@sha256:24bf2148833eb7f741ad1b7f1791e7538d4a4226e2589971282911421ee17454
+GATEKEEPER_SET_ENFORCEMENT_ACTION_IMAGE := ghcr.io/krm-functions/gatekeeper-set-enforcement-action@sha256:0f5b7ef75710d8101c9cf6c726be4eef6f44fb8d48da763d68418be058139c16
+HELM_RENDER_IMAGE := ghcr.io/krm-functions/render-helm-chart@sha256:48eedc82aa87c11c2f45d6a8cf8bee087a77741235f7b6dc4766c1c526096fe0
+HELM_SOURCE_IMAGE := ghcr.io/krm-functions/source-helm-chart@sha256:c2adad6d38f215fc818307c67b8ca8579b3573d600906abe2cf3d43ac5fc1b39
+HELM_UPGRADER_IMAGE := ghcr.io/krm-functions/helm-upgrader@sha256:3309809a07b1f2e4ac65c86753bc68918b4479150074aa8ee9454810e48863fd
+KUBECONFORM_IMAGE := ghcr.io/krm-functions/kubeconform@sha256:8698c91af403e145b9af93b03d65f40e173d5e2829a76f497f4b8f4b3eb1bdbf
+PACKAGE_COMPOSITOR_IMAGE := ghcr.io/krm-functions/package-compositor@sha256:c4d639b213690ad02f4bc0d9a8f85eb7860b9e9f18691021370d10af617822f0
+REMOVE_LOCAL_CONFIG_RESOURCES_IMAGE := ghcr.io/krm-functions/remove-local-config-resources@sha256:364a63d6ec7f0d5a8a06aa1e6206b185dde45f67c62207fb7c2f407848517c5d
+SET_ANNOTATIONS_IMAGE := ghcr.io/krm-functions/set-annotations@sha256:c4b6f161f34b7547113eddfb044341ee9be9ac010ef47686d39e1420e14a6c8b
+SET_LABELS_IMAGE := ghcr.io/krm-functions/set-labels@sha256:27084e3a336099aeff185bd11b3b1c8647907e973347c1abf8347b306364804f
 else
 APPLY_SETTERS_IMAGE := ghcr.io/krm-functions/apply-setters:$(CONTAINER_TAG)
 DIGESTER_IMAGE := ghcr.io/krm-functions/digester:$(CONTAINER_TAG)
@@ -81,6 +81,7 @@ test-helm-upgrader:
 	grep -e '.*upgrade-available.0: .*cert-manager:v1.12.1' test-out.yaml
 	grep -e '.*upgrade-available.0: .*metacontroller-helm:v4.10.0' test-out.yaml
 	grep -e '.*upgrade-available.1: .*/external-secrets:2.14.0' test-out.yaml
+	grep -e '.*upgrade-available.0: .*/external-secrets:2.14.0' test-out.yaml
 	grep -F 'kubeVersion: "" # kpt-set: $${argo-kube-version}' test-out.yaml
 	grep -F 'kubeVersion: "" # kpt-set: $${krm-kube-version}' test-out.yaml
 
@@ -142,6 +143,7 @@ test-source-helm-chart:
 	kpt fn source examples/render-helm-chart3 | kpt fn eval - --truncate-output=false $(HELM_SOURCE) > test-out.txt
 	grep -e 'experimental.helm.sh/chart-sum/argo-workflows' test-out.txt
 	grep -e 'experimental.helm.sh/chart-sum/cert-manager' test-out.txt
+	grep -e 'experimental.helm.sh/chart-sum/external-secrets' test-out.txt
 	rm test-out.txt
 
 .PHONY: test-apply-setters
