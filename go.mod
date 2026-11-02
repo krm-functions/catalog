@@ -14,7 +14,7 @@ require (
 	github.com/yannh/kubeconform v0.8.0
 	golang.org/x/crypto v0.58.0
 	helm.sh/helm/v4 v4.3.1
-	k8s.io/api v0.37.1
+	k8s.io/api v0.37.2
 	sigs.k8s.io/kustomize/api v0.21.1
 	sigs.k8s.io/kustomize/kyaml v0.21.2
 )
@@ -143,7 +143,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gotest.tools/v3 v3.2.0 // indirect
 	k8s.io/apiextensions-apiserver v0.37.1 // indirect
-	k8s.io/apimachinery v0.37.1 // indirect
+	k8s.io/apimachinery v0.37.2 // indirect
 	k8s.io/apiserver v0.37.1 // indirect
 	k8s.io/cli-runtime v0.37.1 // indirect
 	k8s.io/client-go v0.37.1 // indirect
