@@ -5,77 +5,77 @@
       "description": "Update resource field values through setters",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/apply-setters.md",
       "image": "ghcr.io/krm-functions/apply-setters",
-      "digest": "sha256:8f38c7ba568539696b1fe23a484f3ae96427480b90ed7d6637c86755c5f010e7",
+      "digest": "sha256:dd93ff62d21de305563534b93d73d7871fe2cbe370fc741adce5546999339bb2",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
       "description": "Lookup container image digests and write back into e.g. RenderHelmChart values",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/digester.md",
       "image": "ghcr.io/krm-functions/digester",
-      "digest": "sha256:e8bf97d008f3ea361463ef8ce16f191b1578ca4fac2cef265996f504e3c61e14",
+      "digest": "sha256:72077c140c80a7cc2b8112ad5099ee6cdc7adc53ecc4bb3bff18aaca6045c214",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
       "description": "Set enforcement action on GateKeeper constraint resources",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/gatekeeper-set-enforcement-action.md",
       "image": "ghcr.io/krm-functions/gatekeeper-set-enforcement-action",
-      "digest": "sha256:9128739fe00b86bcdbbab45d7bcf07517e1a0d802a1e63be57c83fc1287c6172",
+      "digest": "sha256:b0780d06728ad27b66cc848c2ac84fe1e9661ecc6a309aa9914ee8b6ef236b6d",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
       "description": "Lookup Helm chart upgrades and upgrade according to upgrade constraints",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/helm-upgrader.md",
       "image": "ghcr.io/krm-functions/helm-upgrader",
-      "digest": "sha256:540fec1d27e14b11d01eb579e72c43c5a6cc55ccaf11437418b3cafda5169127",
+      "digest": "sha256:473456da933d0e64f90fd6c3187b9d0e00f120e05ce44ea07c29f13bda298b34",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
       "description": "Validate resource schemas",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/kubeconform.md",
       "image": "ghcr.io/krm-functions/kubeconform",
-      "digest": "sha256:4a25f2a3ba4a72904780b8c998423cc910b934a6d209dcbfb296d3ed3ab89412",
+      "digest": "sha256:f1f0969030856ecca09f2bd862427dae7e9e2643f5c290e525382eea7eb29cce",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
       "description": "Compose packages from other packages",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/package-compositor.md",
       "image": "ghcr.io/krm-functions/package-compositor",
-      "digest": "sha256:5897d4aef38c4bae13def8838c8bf02c2b0f23782d2dcc571c8242dbd1c2b885",
+      "digest": "sha256:7059e547c6b7c02456ac11ae2b3451c2804cecd79988b7a9a460cfe73e2bd413",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
       "description": "Remove resources marked as local-config-only",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/remove-local-config-resources.md",
       "image": "ghcr.io/krm-functions/remove-local-config-resources",
-      "digest": "sha256:2b44261619598ad24f68b93dc12543ee87f693202aeccd0ff62bbee70bf73190",
+      "digest": "sha256:1c868e78a3729b7978615a1b4b8a759f9df0810188579282f30b84cb5c92b39e",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
       "description": "Render Helm chart",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/render-helm-chart.md",
       "image": "ghcr.io/krm-functions/render-helm-chart",
-      "digest": "sha256:9b256ee99623a5b0a2837677d3b4944afabafb09c118f50dbccd16c03802124c",
+      "digest": "sha256:07d0bb93d532a429ddb4b89bb914e79b5540ca213b9d488f7a49d3a848dced28",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
       "description": "Set resource annotations",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/set-annotations.md",
       "image": "ghcr.io/krm-functions/set-annotations",
-      "digest": "sha256:9fcc955c5ffde2005b3fd795703b7e4adcc20f0ecf70c4fc24a02d03c05d128e",
+      "digest": "sha256:1518e17b0b5a5b2425f64aab37610ad5c4c8a8780fa2f5a774dc64a694acb84c",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
       "description": "Set resource labels",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/set-labels.md",
       "image": "ghcr.io/krm-functions/set-labels",
-      "digest": "sha256:8570c701fa4eb205925297fa980d9ef957db22f67160baf4111e24e865b7e040",
+      "digest": "sha256:21827bb01895c15395eec08e19325a4860837fa3962b2566e455f636941253ef",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     },
     {
       "description": "Source a Helm chart for use with render-helm-chart function in declarative pipelines",
       "documentation": "https://github.com/krm-functions/catalog/blob/main/docs/source-helm-chart.md",
       "image": "ghcr.io/krm-functions/source-helm-chart",
-      "digest": "sha256:5985325ae408eee54412effc2eeea2f3457661b562a7394013bdb856c76d0239",
+      "digest": "sha256:ad0614d48ca7fd9ff118988992466d055de277b31326f7afd83b349a216954e7",
       "builder": "https://github.com/krm-functions/catalog/.github/workflows/build.yaml"
     }
   ]
